@@ -1,0 +1,18 @@
+{
+    "name": "@dyarchia/server",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "ASPIS_TOKEN=dev bun --watch src/main.ts serve --port 4319",
+        "compile": "bun build src/main.ts --compile --minify --target=bun-windows-x64 --outfile ../desktop/src-tauri/binaries/aspis-server-x86_64-pc-windows-msvc.exe",
+        "typecheck": "tsc --noEmit -p ."
+    },
+    "dependencies": {
+        "@dyarchia/core": "workspace:*",
+        "@dyarchia/store": "workspace:*",
+        "citty": "0.2.2",
+        "hono": "4.13.13"
+    },
+    "devDependencies": { "@types/bun": "1.4.3", "typescript": "7.0.2" }
+}

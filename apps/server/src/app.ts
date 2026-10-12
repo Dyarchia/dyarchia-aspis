@@ -1,0 +1,68 @@
+import type { Health, ServerEvent } from "@dyarchia/core";
+import type { Store } from "@dyarchia/store";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import pkg from "../../../package.json" with { type: "json" };
+
+const allowedOrigins = ["http://tauri.localhost", "https://tauri.localhost", "tauri://localhost", "http://localhost:1420"];
+
+export interface ServerOptions {
+    store: Store;
+    token: string;
+    hostname: string;
+    port: number;
+}
+
+export function startServer({ store, token, hostname, port }: ServerOptions) {
+    const startedAt = new Date().toISOString();
+    const authorized = (req: Request) =>
+        req.headers.get("authorization") === `Bearer ${token}` || new URL(req.url).searchParams.get("token") === token;
+
+    const app = new Hono()
+        .use("*", cors({ origin: allowedOrigins, allowHeaders: ["authorization", "content-type"] }))
+        .use("*", async (c, next) => {
+            if (!authorized(c.req.raw)) return c.json({ error: "unauthorized" }, 401);
+            await next();
+        })
+        .get("/health", (c) =>
+            c.json<Health>({
+                ok: true,
+                version: pkg.version,
+                schemaVersion: store.schemaVersion,
+                dbPath: store.path,
+                pid: process.pid,
+                startedAt,
+            }),
+        );
+
+    const server = Bun.serve({
+        hostname,
+        port,
+        fetch(req, srv) {
+            if (new URL(req.url).pathname === "/ws") {
+                if (!authorized(req)) return new Response("unauthorized", { status: 401 });
+                return srv.upgrade(req) ? undefined : new Response("upgrade failed", { status: 400 });
+            }
+            return app.fetch(req);
+        },
+        websocket: {
+            open(ws) {
+                ws.subscribe("events");
+                ws.send(JSON.stringify({ type: "hello", dataVersion: store.dataVersion } satisfies ServerEvent));
+            },
+            message() {},
+        },
+    });
+
+    const publish = (event: ServerEvent) => server.publish("events", JSON.stringify(event));
+    const stopWatching = store.watch((dataVersion) => publish({ type: "changed", dataVersion }));
+
+    return {
+        server,
+        publish,
+        stop() {
+            stopWatching();
+            server.stop(true);
+        },
+    };
+}
