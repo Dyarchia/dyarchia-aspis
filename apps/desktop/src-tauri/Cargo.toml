@@ -1,0 +1,23 @@
+[package]
+name = "dyarchia-aspis"
+version = "0.1.0-alpha"
+description = "Dyarchia Aspis desktop app"
+authors = ["Hector Cervera Panella"]
+license = "MIT"
+edition = "2024"
+
+[lib]
+name = "aspis_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.2", features = [] }
+
+[dependencies]
+getrandom = "0.4.3"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+tauri = { version = "2.12.3", features = [] }
+tauri-plugin-shell = "2.5.0"
+tauri-plugin-single-instance = "2.5.3"
+tokio = { version = "1.53.2", features = ["sync", "time"] }
