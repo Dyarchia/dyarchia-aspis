@@ -3,6 +3,7 @@ import type { Theme } from "@dyarchia/core";
 import { useState } from "react";
 import { readHint, writeHint } from "./hints.ts";
 import { type ServerState, useServer } from "./use-server.ts";
+import { useUpdates } from "./use-updates.ts";
 import { Gallery } from "./views/Gallery.tsx";
 import { Home } from "./views/Home.tsx";
 import { Pending } from "./views/Pending.tsx";
@@ -34,6 +35,7 @@ function Workspace() {
     const stored = readHint("view");
     const [view, setView] = useState<View>(isView(stored) ? stored : "home");
     const [palette, setPalette] = useState(false);
+    const updates = useUpdates((info) => toast({ text: `Version ${info.version} is available. Install it from Settings`, tone: "info" }));
 
     const go = (next: View) => {
         setView(next);
@@ -53,6 +55,12 @@ function Workspace() {
             hint: themeCatalog[theme].description,
             run: () => void chooseTheme(theme),
         })),
+        ...(updates.state.kind === "unsupported"
+            ? []
+            : [{ id: "update-check", label: "Check for updates", hint: "Looks for a newer release on GitHub", run: () => void updates.check() }]),
+        ...(updates.state.kind === "available"
+            ? [{ id: "update-install", label: `Install ${updates.state.info.version}`, hint: "Downloads, installs and restarts", run: () => void updates.install() }]
+            : []),
     ];
 
     useHotkeys({
@@ -83,7 +91,7 @@ function Workspace() {
                     />
                 )}
                 {view === "aspis" && <Gallery theme={server.settings.theme} onTheme={chooseTheme} />}
-                {view === "settings" && <SettingsView server={server} onTheme={chooseTheme} />}
+                {view === "settings" && <SettingsView server={server} updates={updates} onTheme={chooseTheme} />}
             </AppShell>
             <CommandPalette open={palette} onClose={() => setPalette(false)} commands={commands} />
             <KbdHint>

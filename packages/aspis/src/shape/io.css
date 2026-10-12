@@ -155,6 +155,10 @@
 
 [data-theme="io"] .aspis-group__actions {
     order: 3;
+    margin-left: auto;
+}
+
+[data-theme="io"] .aspis-group__count ~ .aspis-group__actions {
     margin-left: var(--aspis-space-4);
 }
 
