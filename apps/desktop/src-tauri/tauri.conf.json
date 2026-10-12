@@ -24,19 +24,40 @@
             }
         ],
         "security": {
-            "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:* ws://127.0.0.1:*; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:"
+            "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:* ws://127.0.0.1:* https://api.github.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:"
         }
     },
     "bundle": {
         "active": true,
-        "targets": ["nsis"],
+        "targets": [
+            "nsis"
+        ],
         "publisher": "Dyarchia",
         "copyright": "Copyright (c) 2026 Hector Cervera Panella",
         "shortDescription": "Dyarchia desktop app",
-        "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
-        "externalBin": ["binaries/aspis-server"],
+        "icon": [
+            "icons/32x32.png",
+            "icons/128x128.png",
+            "icons/128x128@2x.png",
+            "icons/icon.ico"
+        ],
+        "externalBin": [
+            "binaries/aspis-server"
+        ],
         "windows": {
-            "nsis": { "installMode": "currentUser" }
+            "nsis": {
+                "installMode": "currentUser"
+            }
+        },
+        "createUpdaterArtifacts": true
+    },
+    "plugins": {
+        "updater": {
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM3NTc4NEM5QTQxM0VBMjQKUldRazZoT2t5WVJYeHllV1dMN3h0NGhkY2VYOE5JQ1J1eXFzVTUrVUpmb3FCTnpUTjRNMlBMc3YK",
+            "endpoints": [],
+            "windows": {
+                "installMode": "passive"
+            }
         }
     }
 }
