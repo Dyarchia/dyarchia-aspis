@@ -9,6 +9,7 @@
         "typecheck": "tsc --noEmit -p ."
     },
     "dependencies": {
+        "@dyarchia/aspis": "workspace:*",
         "@dyarchia/core": "workspace:*",
         "@tauri-apps/api": "2.12.3",
         "react": "19.3.0",
