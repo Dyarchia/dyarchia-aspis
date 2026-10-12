@@ -13,11 +13,23 @@ elevation, and keeps its state in `~/.dyarchia-aspis/state.db`.
 - SQLite (`bun:sqlite`, WAL) as the shared source of truth
 - Aspis design system with two themes, io and nyx
 
+## Aspis
+
+Both themes render the exact same markup; a theme only decides the design.
+
+- `tokens/<theme>.css` defines the whole `--aspis-*` vocabulary for that theme.
+- `base.css` is the structure every theme shares and reads tokens only.
+- `shape/<theme>.css` holds what a token cannot express (focus dimming, bezels, rails, grain).
+- `aspis.test.ts` fails when the two themes drift apart: different token sets, a component without a shape in
+  either theme, literal colours in structure, or styled classes that no component renders.
+- The theme lives in `state.db` and is pushed to every open client. `T` toggles it, `Ctrl K` opens commands.
+
 ## Layout
 
 ```text
 packages/core      zod schemas and shared types
 packages/store     SQLite access, migrations and change watching
+packages/aspis     design system: --aspis-* tokens, io and nyx themes, React components
 apps/server        local HTTP and WebSocket server, compiled to the sidecar
 apps/ui            React views
 apps/desktop       Tauri shell and NSIS installer
@@ -34,10 +46,11 @@ bun run dev
 ```
 
 - `bun run dev:web` serves the UI on `http://localhost:1420` against a server on port 4319 (token `dev`).
-- `bun run test` and `bun run typecheck` are what CI runs.
+- `bun run test`, `bun run typecheck` and `bun run e2e` are what CI runs. `bun run e2e -- --update-snapshots`
+  refreshes the screenshot baselines in `e2e/__screenshots__` after an intended visual change.
 - `bun run release` builds the installer into `apps/desktop/src-tauri/target/release/bundle/nsis`.
-- `node scripts/snap-installed.ts out.png` launches the installed app with WebView2 remote debugging and
-  saves a screenshot of its window.
+- `node scripts/snap-installed.ts <prefix> [view key]` launches the installed app with WebView2 remote debugging
+  and saves its window in both themes.
 
 ## License
 

@@ -1,6 +1,6 @@
 {
     "name": "dyarchia-aspis",
-    "version": "0.1.0-alpha",
+    "version": "0.2.0-alpha",
     "private": true,
     "type": "module",
     "workspaces": ["packages/*", "apps/*"],
@@ -9,6 +9,7 @@
         "dev:web": "bun run --filter '@dyarchia/server' --filter '@dyarchia/ui' dev",
         "typecheck": "bun run --filter '*' typecheck",
         "test": "bun test packages apps/server",
+        "e2e": "playwright test",
         "sidecar": "bun run --cwd apps/server compile",
         "release": "bun run --cwd apps/desktop tauri build"
     },
