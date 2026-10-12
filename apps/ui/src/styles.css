@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+    --aspis-bg: #141413;
+    --aspis-ink-1: #faf9f5;
+    --aspis-ink-2: #b0aea5;
+    --aspis-ink-3: #87867f;
+    --aspis-line: #faf9f517;
+    --aspis-signal-ok: #7fd18b;
+    --aspis-font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --aspis-font-read: "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+    margin: 0;
+    background: var(--aspis-bg);
+    color: var(--aspis-ink-1);
+    font-family: var(--aspis-font-read);
+}
+
+.status {
+    padding: 36px;
+}
+
+.wordmark {
+    margin: 0;
+    font: 400 31.5px/1.1 var(--aspis-font-mono);
+}
+
+.subtitle {
+    margin: 8px 0 36px;
+    color: var(--aspis-ink-2);
+}
+
+.state {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font: 13.5px/1.5 var(--aspis-font-mono);
+    letter-spacing: 0.02em;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    background: var(--aspis-ink-3);
+}
+
+.dot.live {
+    background: var(--aspis-signal-ok);
+}
+
+.rows > div {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    padding: 12px 0;
+    border-top: 1px solid var(--aspis-line);
+    font: 15.75px/1.5 var(--aspis-font-mono);
+}
+
+.rows dt {
+    color: var(--aspis-ink-3);
+}
+
+.rows dd {
+    margin: 0;
+}
