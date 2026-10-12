@@ -1,0 +1,126 @@
+/*
+ * io: editorial terminal. Warm charcoal, mono for structure and sans for reading, zero radius, 1px lines,
+ * a single terracotta signature and focus that dims everything else.
+ */
+[data-theme="io"] {
+    color-scheme: dark;
+
+    --aspis-bg: #141413;
+    --aspis-bg-raised: #1a1a18;
+    --aspis-surface: #1e1d1b;
+    --aspis-surface-2: #161514;
+    --aspis-surface-deep: #121110;
+    --aspis-ink-1: #faf9f5;
+    --aspis-ink-2: #b0aea5;
+    --aspis-ink-3: #87867f;
+    --aspis-ink-4: #5e5d59;
+    --aspis-line-strong: #faf9f529;
+    --aspis-line: #faf9f517;
+    --aspis-line-faint: #faf9f50b;
+    --aspis-hover: #faf9f50b;
+    --aspis-fill: transparent;
+    --aspis-invert-bg: #faf9f5;
+    --aspis-invert-ink: #141413;
+    --aspis-accent: #d97757;
+    --aspis-accent-ink: #141413;
+    --aspis-scrim: #141413db;
+
+    --aspis-signal-ok: #7fd18b;
+    --aspis-signal-warn: #e6c200;
+    --aspis-signal-danger: #ff7b8b;
+    --aspis-signal-info: #9ac8ff;
+    --aspis-signal-violet: #c792ea;
+    --aspis-signal-indigo: #82aaff;
+    --aspis-signal-idle: #5e5d59;
+    --aspis-signal-glow: 0;
+
+    --aspis-syntax-keyword: #c792ea;
+    --aspis-syntax-function: #82aaff;
+    --aspis-syntax-literal: #c3e88d;
+    --aspis-syntax-argument: #89ddff;
+    --aspis-syntax-comment: #87867f;
+    --aspis-diff-add: #9ac29a;
+    --aspis-diff-del: #c29a9a;
+    --aspis-diff-add-bg: #78be7812;
+    --aspis-diff-del-bg: #be787812;
+
+    --aspis-term-bg: #1a1a18;
+    --aspis-term-bar: #1a1a18;
+    --aspis-term-ink: #faf9f5;
+    --aspis-term-dim: #b0aea5;
+    --aspis-term-rule: #5e5d59;
+    --aspis-term-highlight: #faf9f51a;
+
+    --aspis-font-ui: "Geist Mono Variable", ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --aspis-font-read: "Geist Variable", "Segoe UI", system-ui, sans-serif;
+    --aspis-font-display: "Geist Mono Variable", ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --aspis-font-mono: "Geist Mono Variable", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+    --aspis-type-display: 400 31.5px/1.1 var(--aspis-font-display);
+    --aspis-tracking-display: 0;
+    --aspis-type-title: 500 27px/1.3 var(--aspis-font-read);
+    --aspis-tracking-title: 0;
+    --aspis-type-lead: 400 18px/1.6 var(--aspis-font-read);
+    --aspis-type-body: 400 18px/1.65 var(--aspis-font-read);
+    --aspis-type-item: 400 18px/1.5 var(--aspis-font-read);
+    --aspis-type-ui: 400 13.5px/1.5 var(--aspis-font-ui);
+    --aspis-case-ui: uppercase;
+    --aspis-tracking-ui: 0.02em;
+    --aspis-type-label: 400 11.25px/1.5 var(--aspis-font-mono);
+    --aspis-case-label: uppercase;
+    --aspis-tracking-label: 0.02em;
+    --aspis-type-control: 400 16px/1 var(--aspis-font-read);
+    --aspis-case-control: none;
+    --aspis-tracking-control: 0;
+    --aspis-type-data: 400 15.75px/1.5 var(--aspis-font-mono);
+    --aspis-type-value: 400 18px/1.4 var(--aspis-font-mono);
+    --aspis-type-code: 400 13.5px/1.75 var(--aspis-font-mono);
+    --aspis-type-term: 400 13.5px/1.65 var(--aspis-font-mono);
+    --aspis-type-field: 400 18px/1.4 var(--aspis-font-read);
+
+    --aspis-radius-control: 0;
+    --aspis-radius-surface: 0;
+    --aspis-radius-inset: 0;
+    --aspis-radius-item: 0;
+    --aspis-radius-hint: 4px;
+    --aspis-radius-dot: 0;
+
+    --aspis-space-1: 4px;
+    --aspis-space-2: 8px;
+    --aspis-space-3: 12px;
+    --aspis-space-4: 16px;
+    --aspis-space-5: 22px;
+    --aspis-space-6: 36px;
+    --aspis-space-7: 72px;
+    --aspis-gutter: 36px;
+    --aspis-control-h: 36px;
+    --aspis-row-h: 40px;
+    --aspis-nav-w: 243px;
+    --aspis-bar-h: 28px;
+    --aspis-prose-max: 660px;
+    --aspis-content-max: 990px;
+    --aspis-border-w: 1px;
+
+    --aspis-ease-out: cubic-bezier(0.19, 1, 0.22, 1);
+    --aspis-ease-spring: cubic-bezier(0.55, 0, 0.1, 1);
+    --aspis-dur-fast: 0.15s;
+    --aspis-dur-base: 0.25s;
+    --aspis-dur-theme: 0.45s;
+    --aspis-dim: 0.35;
+    --aspis-lift: 0px;
+
+    --aspis-shadow-pop: 0 4px 16px #0000001a;
+    --aspis-shadow-ring: 0 0 0 2px #faf9f5;
+    --aspis-shadow-surface: none;
+    --aspis-focus-outline: 1px solid #faf9f5;
+    --aspis-focus-shadow: none;
+    --aspis-blur: 10px;
+    --aspis-glow: none;
+    --aspis-edge: none;
+    --aspis-noise: none;
+    --aspis-rail: transparent;
+    --aspis-glass: #141413;
+    --aspis-icon-stroke: 1.25;
+    --aspis-icon-cap: square;
+    --aspis-icon-join: miter;
+}

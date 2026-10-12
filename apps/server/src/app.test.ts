@@ -1,5 +1,5 @@
 import { afterAll, expect, test } from "bun:test";
-import { Health, ServerEvent } from "@dyarchia/core";
+import { Health, ServerEvent, Settings } from "@dyarchia/core";
 import { Store } from "@dyarchia/store";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -36,6 +36,24 @@ test("answers CORS preflight from the desktop origin", async () => {
     });
     expect(res.status).toBe(204);
     expect(res.headers.get("access-control-allow-origin")).toBe("http://tauri.localhost");
+});
+
+test("persists the theme and broadcasts it", async () => {
+    const auth = { authorization: "Bearer secret", "content-type": "application/json" };
+    const ws = new WebSocket(`ws://127.0.0.1:${server.port}/ws?token=secret`);
+    const events: ServerEvent[] = [];
+    ws.onmessage = (e) => events.push(ServerEvent.parse(JSON.parse(String(e.data))));
+    await new Promise((resolve) => (ws.onopen = resolve));
+
+    expect(Settings.parse(await (await fetch(`${base}/settings`, { headers: auth })).json()).theme).toBe("io");
+    const put = await fetch(`${base}/settings`, { method: "PUT", headers: auth, body: JSON.stringify({ theme: "nyx" }) });
+    expect(Settings.parse(await put.json()).theme).toBe("nyx");
+    expect(store.getSetting("theme")).toBe("nyx");
+    expect((await fetch(`${base}/settings`, { method: "PUT", headers: auth, body: JSON.stringify({ theme: "light" }) })).status).toBe(400);
+
+    await Bun.sleep(50);
+    ws.close();
+    expect(events).toContainEqual({ type: "settings", settings: { theme: "nyx" } });
 });
 
 test("pushes a change when another connection writes", async () => {

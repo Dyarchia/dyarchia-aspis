@@ -9,3 +9,4 @@ apps/desktop/src-tauri/binaries/
 *.db-*
 test-results/
 playwright-report/
+.claude/
