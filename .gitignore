@@ -1,0 +1,11 @@
+docs/
+.docs/
+.sprints/
+node_modules/
+dist/
+target/
+apps/desktop/src-tauri/binaries/
+*.db
+*.db-*
+test-results/
+playwright-report/
