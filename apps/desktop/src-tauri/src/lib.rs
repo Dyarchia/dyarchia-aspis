@@ -1,7 +1,9 @@
+mod update;
+
 use std::{sync::Mutex, time::Duration};
 
 use serde::{Deserialize, Serialize};
-use tauri::{App, Manager, RunEvent};
+use tauri::{App, AppHandle, Manager, RunEvent};
 use tauri_plugin_shell::{
     ShellExt,
     process::{CommandChild, CommandEvent},
@@ -38,6 +40,16 @@ fn token() -> String {
     let mut bytes = [0u8; 32];
     getrandom::fill(&mut bytes).expect("system entropy");
     bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+fn stop_sidecar(app: &AppHandle) {
+    if let Some(child) = app.state::<Sidecar>().child.lock().expect("sidecar lock").take() {
+        let _ = child.kill();
+    }
+}
+
+fn stop_sidecar_for(app: AppHandle) -> impl Fn() + Send + Sync + 'static {
+    move || stop_sidecar(&app)
 }
 
 fn spawn_sidecar(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
@@ -82,15 +94,15 @@ pub fn run() {
             }
         }))
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(update::PendingUpdate::default())
         .setup(spawn_sidecar)
-        .invoke_handler(tauri::generate_handler![server_info])
+        .invoke_handler(tauri::generate_handler![server_info, update::check_update, update::install_update])
         .build(tauri::generate_context!())
         .expect("failed to build the Aspis app")
         .run(|app, event| {
             if let RunEvent::Exit = event {
-                if let Some(child) = app.state::<Sidecar>().child.lock().expect("sidecar lock").take() {
-                    let _ = child.kill();
-                }
+                stop_sidecar(app);
             }
         });
 }

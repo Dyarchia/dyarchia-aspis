@@ -6,6 +6,9 @@ The Dyarchia desktop app: Build and Kanban over a single local source of truth.
 unsigned, so Windows SmartScreen warns about an unknown publisher. It installs for the current user, without
 elevation, and keeps its state in `~/.dyarchia-aspis/state.db`.
 
+The app updates itself: it looks for the newest release on GitHub (prereleases included), checks its signed
+`latest.json` and, on confirmation from Settings or the command palette, installs it and restarts.
+
 ## Stack
 
 - Tauri 2 shell with a Bun-compiled Hono sidecar (`aspis-server`)
@@ -48,7 +51,10 @@ bun run dev
 - `bun run dev:web` serves the UI on `http://localhost:1420` against a server on port 4319 (token `dev`).
 - `bun run test`, `bun run typecheck` and `bun run e2e` are what CI runs. `bun run e2e -- --update-snapshots`
   refreshes the screenshot baselines in `e2e/__screenshots__` after an intended visual change.
-- `bun run release` builds the installer into `apps/desktop/src-tauri/target/release/bundle/nsis`.
+- `bun run release` builds the installer into `apps/desktop/src-tauri/target/release/bundle/nsis`. Updater
+  artifacts are signed, so the build needs `TAURI_SIGNING_PRIVATE_KEY` (path or content of the private key)
+  and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`; CI reads both from repository secrets. The public key lives in
+  `tauri.conf.json`. Losing the private key means installed apps can no longer verify new releases.
 - `node scripts/snap-installed.ts <prefix> [view key]` launches the installed app with WebView2 remote debugging
   and saves its window in both themes.
 

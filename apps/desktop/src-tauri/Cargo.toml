@@ -1,6 +1,6 @@
 [package]
 name = "dyarchia-aspis"
-version = "0.2.0-alpha"
+version = "0.2.1-alpha"
 description = "Dyarchia Aspis desktop app"
 authors = ["Hector Cervera Panella"]
 license = "MIT"
@@ -20,4 +20,5 @@ serde_json = "1.0.154"
 tauri = { version = "2.12.3", features = [] }
 tauri-plugin-shell = "2.5.0"
 tauri-plugin-single-instance = "2.5.3"
+tauri-plugin-updater = "2.13.3"
 tokio = { version = "1.53.2", features = ["sync", "time"] }

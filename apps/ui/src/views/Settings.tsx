@@ -1,8 +1,28 @@
 import { Button, Chip, MetaTree, Page, PageHeader, Panel, Section, themeCatalog } from "@dyarchia/aspis";
 import type { Theme } from "@dyarchia/core";
 import type { ServerState } from "../use-server.ts";
+import type { UpdateState, Updates } from "../use-updates.ts";
 
-export function SettingsView({ server, onTheme }: { server: ServerState; onTheme: (theme: Theme) => void }) {
+const updateStatus = (state: UpdateState) => {
+    switch (state.kind) {
+        case "unsupported":
+            return "Updates run in the desktop app";
+        case "idle":
+            return "Not checked yet";
+        case "checking":
+            return "Checking GitHub releases";
+        case "current":
+            return "Up to date";
+        case "available":
+            return `Version ${state.info.version} is ready to install`;
+        case "installing":
+            return `Installing ${state.info.version}; the app closes and comes back on its own`;
+        case "error":
+            return state.message;
+    }
+};
+
+export function SettingsView({ server, updates, onTheme }: { server: ServerState; updates: Updates; onTheme: (theme: Theme) => void }) {
     const current = server.settings.theme;
     return (
         <Page head={<PageHeader title="Settings" explanation="Shared by every client." lead="The theme is stored in state.db, so every open client follows the change." />}>
@@ -24,10 +44,36 @@ export function SettingsView({ server, onTheme }: { server: ServerState; onTheme
                     ))}
                 </div>
             </Section>
+            <Section
+                label="Updates"
+                actions={
+                    updates.state.kind === "available" ? (
+                        <Button variant="primary" icon="arrow" onClick={() => void updates.install()}>
+                            Install {updates.state.info.version}
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="secondary"
+                            icon="history"
+                            disabled={["unsupported", "checking", "installing"].includes(updates.state.kind)}
+                            onClick={() => void updates.check()}
+                        >
+                            Check for updates
+                        </Button>
+                    )
+                }
+            >
+                <MetaTree
+                    items={[
+                        { term: "Installed", values: [server.health?.version ?? "..."] },
+                        { term: "Status", values: [updateStatus(updates.state)] },
+                        { term: "Channel", values: ["Alpha prereleases from github.com/Dyarchia/dyarchia-aspis, signed and verified"] },
+                    ]}
+                />
+            </Section>
             <Section label="About">
                 <MetaTree
                     items={[
-                        { term: "Version", values: [server.health?.version ?? "..."] },
                         { term: "State", values: [server.health?.dbPath ?? "..."] },
                         { term: "Shortcuts", values: ["H K B A S navigate", "T switches theme", "Ctrl K or / opens commands"] },
                     ]}
