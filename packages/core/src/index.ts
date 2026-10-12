@@ -19,7 +19,7 @@ export type Settings = z.infer<typeof Settings>;
 export const defaultSettings: Settings = { theme: "io" };
 
 export const ServerEvent = z.discriminatedUnion("type", [
-    z.object({ type: z.literal("hello"), dataVersion: z.number().int() }),
+    z.object({ type: z.literal("hello"), dataVersion: z.number().int(), settings: Settings }),
     z.object({ type: z.literal("changed"), dataVersion: z.number().int() }),
     z.object({ type: z.literal("settings"), settings: Settings }),
 ]);

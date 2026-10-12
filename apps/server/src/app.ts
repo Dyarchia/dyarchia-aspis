@@ -61,7 +61,7 @@ export function startServer({ store, token, hostname, port }: ServerOptions) {
         websocket: {
             open(ws) {
                 ws.subscribe("events");
-                ws.send(JSON.stringify({ type: "hello", dataVersion: store.dataVersion } satisfies ServerEvent));
+                ws.send(JSON.stringify({ type: "hello", dataVersion: store.dataVersion, settings: readSettings() } satisfies ServerEvent));
             },
             message() {},
         },

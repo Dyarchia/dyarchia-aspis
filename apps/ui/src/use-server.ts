@@ -1,6 +1,6 @@
 import { applyTheme } from "@dyarchia/aspis";
 import { Health, Settings, Theme } from "@dyarchia/core";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { readHint, writeHint } from "./hints.ts";
 import { type Connection, connect, request, subscribe } from "./server.ts";
 
@@ -20,6 +20,22 @@ export function useServer(): ServerState {
     const [live, setLive] = useState(false);
     const [dataVersion, setDataVersion] = useState<number>();
     const [error, setError] = useState<string>();
+    const revision = useRef(0);
+
+    /*
+     * Every source of settings (hello, a pushed event, a re-read, the answer to our own write) bumps or checks
+     * the revision, so an answer that left before a newer value arrived can never overwrite it.
+     */
+    const accept = useCallback((next: Settings) => {
+        revision.current++;
+        setSettings(next);
+    }, []);
+    const reread = useCallback((connection: Connection) => {
+        const at = revision.current;
+        return request(connection, "/settings", Settings).then((next) => {
+            if (revision.current === at) accept(next);
+        });
+    }, [accept]);
 
     useEffect(() => {
         let unsubscribe: (() => void) | undefined;
@@ -29,17 +45,17 @@ export function useServer(): ServerState {
             .then((connection) => {
                 if (cancelled) return;
                 setConn(connection);
-                /*
-                 * The socket opens first and every hello (first connect and each reconnect) triggers a full
-                 * re-read, so a change made between reading and subscribing can never be missed.
-                 */
                 unsubscribe = subscribe(
                     connection,
                     (event) => {
-                        if (event.type === "settings") return setSettings(event.settings);
+                        if (event.type === "settings") return accept(event.settings);
                         setDataVersion(event.dataVersion);
-                        if (event.type === "hello") void request(connection, "/health", Health).then(setHealth, fail);
-                        void request(connection, "/settings", Settings).then(setSettings, fail);
+                        if (event.type === "hello") {
+                            accept(event.settings);
+                            void request(connection, "/health", Health).then(setHealth, fail);
+                        } else {
+                            void reread(connection).catch(fail);
+                        }
                     },
                     setLive,
                 );
@@ -49,7 +65,7 @@ export function useServer(): ServerState {
             cancelled = true;
             unsubscribe?.();
         };
-    }, []);
+    }, [accept, reread]);
 
     useEffect(() => {
         applyTheme(settings.theme);
@@ -58,10 +74,13 @@ export function useServer(): ServerState {
 
     const setTheme = useCallback(
         async (theme: Theme) => {
-            setSettings((current) => ({ ...current, theme }));
-            if (conn) setSettings(await request(conn, "/settings", Settings, { method: "PUT", body: JSON.stringify({ theme }) }));
+            accept({ ...settings, theme });
+            if (!conn) return;
+            const at = revision.current;
+            const saved = await request(conn, "/settings", Settings, { method: "PUT", body: JSON.stringify({ theme }) });
+            if (revision.current === at) accept(saved);
         },
-        [conn],
+        [conn, settings, accept],
     );
 
     return { health, settings, live, dataVersion, error, setTheme };
