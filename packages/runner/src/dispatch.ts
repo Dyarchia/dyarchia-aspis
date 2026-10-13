@@ -2,8 +2,8 @@ import type { Card, Run, RunStatus } from "@dyarchia/core";
 import { Kanban, KanbanError, Runs, type Store } from "@dyarchia/store";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
-import { claudeArgs, claudeCommand, systemPrompt } from "./claude.ts";
-import { branchFor, checkout, commit, git, readiness } from "./git.ts";
+import { auditPrompt, auditorArgs, claudeCommand, implementerArgs, systemPrompt } from "./claude.ts";
+import { branchFor, checkout, commit, git, readiness, resolveBase } from "./git.ts";
 
 export interface DispatcherOptions {
     store: Store;
@@ -20,15 +20,33 @@ export interface Claim {
     fresh: boolean;
 }
 
+export interface Audit {
+    card: Card;
+    base: string;
+    branch: string;
+    run: Run;
+}
+
 interface Outcome {
     status: Exclude<RunStatus, "running">;
+    started?: boolean;
     session?: string;
     error?: string;
     summary?: string;
     question?: string;
 }
 
+interface Launch {
+    card: Card;
+    run: Run;
+    args: string[];
+    prompt: string;
+    header: string;
+    onInit?: () => void;
+}
+
 const clip = (text: string, length = 4000) => (text.length > length ? `${text.slice(0, length - 1)}…` : text);
+const lastLine = (text: string, pattern: RegExp) => [...text.matchAll(pattern)].at(-1);
 
 async function* lines(stream: ReadableStream<Uint8Array>) {
     const decoder = new TextDecoder();
@@ -58,10 +76,11 @@ function killTree(pid: number) {
 }
 
 /*
- * Runs the Scheduled route end to end. claim() finds what is due (and running cards a human unblocked or a dead
- * runner left behind), holds what cannot start yet with the reason, and moves the rest to Running as the system,
- * one per repository. execute() checks out the card branch, drives the harness with retries, commits what it
- * left, returns the repository to its base branch and moves the card to Archived or Blocked.
+ * Runs the headless work of the board. claim() finds the Scheduled cards that are due (and running ones a human
+ * unblocked or a dead runner left behind), holds what cannot start yet with the reason, and moves the rest to
+ * Running as the system, one per repository. execute() checks out the card branch, drives the harness with
+ * retries, commits what it left, returns the repository to its base branch and moves the card on. audits() and
+ * audit() do the same for Ready cards that reached Review: the auditor reads the branch and gives its verdict.
  */
 export class Dispatcher {
     readonly kanban: Kanban;
@@ -82,8 +101,9 @@ export class Dispatcher {
 
     async dispatch(): Promise<number[]> {
         const claims = await this.claim();
-        await Promise.all(claims.map((claim) => this.execute(claim)));
-        return claims.map((claim) => claim.card.id);
+        const audits = await this.audits();
+        await Promise.all([...claims.map((claim) => this.execute(claim)), ...audits.map((audit) => this.audit(audit))]);
+        return [...claims, ...audits].map((work) => work.card.id);
     }
 
     async claim(now = Date.now()): Promise<Claim[]> {
@@ -155,7 +175,7 @@ export class Dispatcher {
         let prompt = fresh || !session ? this.brief(card) : this.resumePrompt(card);
         let outcome: Outcome;
         for (;;) {
-            outcome = await this.attempt(card, run, branch, prompt, session);
+            outcome = await this.implement(card, run, branch, prompt, session);
             this.runs.finish(run.id, outcome.status, outcome.error ?? null);
             session = outcome.session ?? session;
             if (outcome.status !== "failed" || this.runs.failures(card.id) > card.retries) break;
@@ -182,6 +202,67 @@ export class Dispatcher {
         }
     }
 
+    /*
+     * Ready cards in Review that wait for their auditor. The rules let the human judge only after the auditor, so
+     * an auditor that cannot run (another harness, no claude, retries spent) records a failing verdict with the
+     * reason: the human can then send the card back instead of being stuck.
+     */
+    async audits(now = Date.now()): Promise<Audit[]> {
+        const audits: Audit[] = [];
+        for (const card of this.kanban.list()) {
+            if (card.phase !== "review" || card.route !== "ready" || card.auditorVerdict) continue;
+            if (this.runs.list(card.id, now).some((run) => run.kind === "audit" && run.live)) continue;
+            const refusal =
+                card.auditor.harness !== "claude-code"
+                    ? `${card.auditor.harness ?? "This harness"} cannot audit headless yet; audits use claude-code`
+                    : !this.claude
+                      ? "claude was not found on PATH"
+                      : !card.folder
+                        ? "The card has no folder"
+                        : undefined;
+            const base = refusal ? undefined : await resolveBase(card.folder!, card.baseBranch);
+            const reason = refusal ?? (base && "held" in base ? base.held : undefined);
+            if (reason || !base || !("base" in base)) {
+                this.kanban.verdict(card.id, "auditor", false, `Could not audit: ${reason}`, now);
+                continue;
+            }
+            const branch = branchFor(card.id, card.title);
+            audits.push({ card, base: base.base, branch, run: this.runs.start(card.id, branch, now, "audit") });
+        }
+        return audits;
+    }
+
+    async audit({ card, base, branch, run: first }: Audit): Promise<void> {
+        const summary =
+            this.kanban
+                .events(card.id)
+                .filter((event) => event.kind === "moved" && event.to === "review")
+                .at(-1)?.text ?? "";
+        let run = first;
+        for (;;) {
+            const outcome = await this.launch({
+                card,
+                run,
+                header: `Audit ${run.attempt} of ${branch} against ${base}`,
+                prompt: auditPrompt(card, summary, base, branch),
+                args: auditorArgs(card, { id: crypto.randomUUID(), resume: false }),
+            });
+            const verdict = outcome.status === "done" ? lastLine(outcome.summary ?? "", /^\s*VERDICT:\s*(PASS|FAIL)\b[\s:-]*(.*)$/gim) : undefined;
+            if (verdict) {
+                this.runs.finish(run.id, "done", null);
+                this.kanban.verdict(card.id, "auditor", verdict[1]!.toUpperCase() === "PASS", verdict[2]?.trim() || clip(outcome.summary ?? "", 600));
+                return;
+            }
+            const error = outcome.status === "done" ? "The auditor gave no VERDICT line" : (outcome.error ?? `The audit ended as ${outcome.status}`);
+            this.runs.finish(run.id, "failed", error);
+            if (this.runs.failures(card.id, "audit") > card.retries) {
+                this.kanban.verdict(card.id, "auditor", false, `Could not audit: ${error}`);
+                return;
+            }
+            run = this.runs.start(card.id, branch, Date.now(), "audit");
+        }
+    }
+
     private brief(card: Card): string {
         const files = card.files.map((file) => `- ${file.name}`).join("\n");
         return [card.brief.trim(), files && `Attached files:\n${files}`].filter(Boolean).join("\n\n");
@@ -196,15 +277,30 @@ export class Dispatcher {
         return "The previous run was interrupted. Continue the task from where it stopped.";
     }
 
-    private async attempt(card: Card, run: Run, branch: string, prompt: string, session: string | undefined): Promise<Outcome> {
+    private async implement(card: Card, run: Run, branch: string, prompt: string, session: string | undefined): Promise<Outcome> {
+        const files = join(this.kanban.filesDir, String(card.id));
+        const id = session ?? crypto.randomUUID();
+        const outcome = await this.launch({
+            card,
+            run,
+            header: `Attempt ${run.attempt} on ${branch}`,
+            prompt,
+            args: implementerArgs(card, { id, resume: Boolean(session) }, systemPrompt(card, branch, files), card.files.length > 0 ? [files] : []),
+            onInit: session ? undefined : () => this.kanban.setSession(card.id, id),
+        });
+        const resumable = session !== undefined || outcome.started ? id : undefined;
+        if (outcome.status !== "done") return { ...outcome, session: resumable };
+        const question = lastLine(outcome.summary ?? "", /^\s*BLOCKED:\s*(.+)$/gim)?.[1]?.trim();
+        return { ...outcome, session: resumable, ...(question ? { status: "blocked", question } : {}) };
+    }
+
+    private async launch({ card, run, args, prompt, header, onInit }: Launch): Promise<Outcome> {
         const log = this.runs.logPath(run);
         mkdirSync(dirname(log), { recursive: true });
         const write = (line: string) => appendFileSync(log, `${line}\n`);
-        write(JSON.stringify({ type: "aspis", text: `Attempt ${run.attempt} on ${branch}` }));
+        write(JSON.stringify({ type: "aspis", text: header }));
         write(JSON.stringify({ type: "aspis", kind: "prompt", text: prompt }));
-        const files = join(this.kanban.filesDir, String(card.id));
-        const id = session ?? crypto.randomUUID();
-        const proc = Bun.spawn([...this.claude!, ...claudeArgs(card, { id, resume: Boolean(session) }, systemPrompt(card, branch, files), card.files.length > 0 ? [files] : [])], {
+        const proc = Bun.spawn([...this.claude!, ...args], {
             cwd: card.folder!,
             stdin: new TextEncoder().encode(prompt),
             stdout: "pipe",
@@ -214,7 +310,7 @@ export class Dispatcher {
         this.runs.attach(run.id, proc.pid);
         let stopped = false;
         let timedOut = false;
-        let started = Boolean(session);
+        let started = false;
         let lastBeat = Date.now();
         const watch = setInterval(() => {
             if (Date.now() - lastBeat >= this.heartbeatMs) {
@@ -240,24 +336,19 @@ export class Dispatcher {
             const event = parse(line);
             if (!started && event?.type === "system" && event.subtype === "init") {
                 started = true;
-                this.kanban.setSession(card.id, id);
+                onInit?.();
             }
             if (event?.type === "result") result = event;
         }
         const code = await proc.exited;
         clearInterval(watch);
         clearTimeout(limit);
-        const sessionId = started ? id : undefined;
-        if (stopped) return { status: "stopped", session: sessionId };
-        if (timedOut) return { status: "failed", session: sessionId, error: `Time limit of ${card.timeLimitMin} min reached` };
-        if (code === 0 && result && !result.is_error) {
-            const summary = String(result.result ?? "").trim();
-            const question = [...summary.matchAll(/^\s*BLOCKED:\s*(.+)$/gim)].at(-1)?.[1]?.trim();
-            return question ? { status: "blocked", session: sessionId, summary, question } : { status: "done", session: sessionId, summary };
-        }
+        if (stopped) return { status: "stopped", started };
+        if (timedOut) return { status: "failed", started, error: `Time limit of ${card.timeLimitMin} min reached` };
+        if (code === 0 && result && !result.is_error) return { status: "done", started, summary: String(result.result ?? "").trim() };
         const errors = (await stderr).trim().split("\n").filter(Boolean);
         const error = (result?.is_error && String(result.result ?? "")) || errors.at(-1) || `claude exited with code ${code}`;
-        write(JSON.stringify({ type: "aspis", text: `Attempt ${run.attempt} failed: ${error}` }));
-        return { status: "failed", session: sessionId, error: clip(error, 600) };
+        write(JSON.stringify({ type: "aspis", text: `${header} failed: ${error}` }));
+        return { status: "failed", started, error: clip(error, 600) };
     }
 }

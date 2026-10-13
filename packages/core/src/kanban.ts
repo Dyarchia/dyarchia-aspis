@@ -252,6 +252,13 @@ export function verdict(card: Card, actor: Actor): string | undefined {
 }
 
 export const harnesses = ["claude-code", "codex", "kimi-code", "grok-build", "antigravity", "mistral-vibe"] as const;
+
+/* What the human types in each CLI that has the Aspis hooks, and how they reopen a card's session there. */
+export const pickupCommands: Partial<Record<string, string>> = { "claude-code": "/dya-pickup", "kimi-code": "/skill:dya-pickup" };
+export const resumeCommands: Partial<Record<string, (session: string) => string>> = {
+    "claude-code": (session) => `claude --resume ${session}`,
+    "kimi-code": (session) => `kimi --session ${session}`,
+};
 export const efforts = ["low", "medium", "high", "xhigh", "max"] as const;
 
 export const phaseLabels: Record<Phase, string> = {
@@ -268,6 +275,7 @@ export const phaseLabels: Record<Phase, string> = {
 export const CardDetail = z.object({
     card: Card,
     events: z.array(CardEvent),
+    delivered: z.number().int(),
     targets: z.array(z.object({ to: Phase, reason: z.string().optional(), note: z.string().optional() })),
 });
 export type CardDetail = z.infer<typeof CardDetail>;

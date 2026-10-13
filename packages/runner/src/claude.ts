@@ -1,4 +1,4 @@
-import type { Card, Permission } from "@dyarchia/core";
+import type { Card, Permission, Runner } from "@dyarchia/core";
 
 /*
  * Headless runs have nobody to answer a permission prompt, so "ask" becomes dontAsk: whatever would have asked is
@@ -10,6 +10,9 @@ const permissionArgs: Record<Permission, string[]> = {
     plan: ["--permission-mode", "plan"],
     bypass: ["--dangerously-skip-permissions"],
 };
+
+/* The auditor reads and inspects git history; it can never change the working tree. */
+const auditorAccess = ["--permission-mode", "dontAsk", "--allowedTools", "Read Grep Glob Bash(git diff:*) Bash(git log:*) Bash(git show:*) Bash(git status:*)"];
 
 export function claudeCommand(): string[] | undefined {
     const override = process.env.ASPIS_CLAUDE;
@@ -23,23 +26,34 @@ export interface Session {
     resume: boolean;
 }
 
-export function claudeArgs(card: Card, session: Session, system: string, dirs: readonly string[]): string[] {
-    const { model, effort } = card.implementer;
+interface Launch {
+    runner: Runner;
+    access: string[];
+    session: Session;
+    system?: string;
+    dirs?: readonly string[];
+}
+
+function claudeArgs({ runner, access, session, system, dirs = [] }: Launch): string[] {
     return [
         "-p",
         "--output-format",
         "stream-json",
         "--verbose",
         "--include-partial-messages",
-        ...(model ? ["--model", model] : []),
-        ...(effort ? ["--effort", effort] : []),
-        ...permissionArgs[card.permission],
+        ...(runner.model ? ["--model", runner.model] : []),
+        ...(runner.effort ? ["--effort", runner.effort] : []),
+        ...access,
         ...(session.resume ? ["--resume", session.id] : ["--session-id", session.id]),
-        "--append-system-prompt",
-        system,
+        ...(system ? ["--append-system-prompt", system] : []),
         ...dirs.flatMap((dir) => ["--add-dir", dir]),
     ];
 }
+
+export const implementerArgs = (card: Card, session: Session, system: string, dirs: readonly string[]) =>
+    claudeArgs({ runner: card.implementer, access: permissionArgs[card.permission], session, system, dirs });
+
+export const auditorArgs = (card: Card, session: Session) => claudeArgs({ runner: card.auditor, access: auditorAccess, session });
 
 export const systemPrompt = (card: Card, branch: string, files: string) =>
     [
@@ -50,3 +64,12 @@ export const systemPrompt = (card: Card, branch: string, files: string) =>
     ]
         .filter(Boolean)
         .join("\n");
+
+export const auditPrompt = (card: Card, summary: string, base: string, branch: string) =>
+    [
+        `You are the auditor of card #${card.id} "${card.title}" on the Dyarchia Aspis kanban. You only judge the work; you never change files, and nobody can answer you during this run.`,
+        `Brief given to the implementer:\n${card.brief.trim()}`,
+        `What the implementer says it delivered:\n${summary.trim() || "(no summary)"}`,
+        `The work is on the branch ${branch}, made from ${base}, in ${card.folder}. Inspect it with git diff ${base}...${branch}, git log ${base}..${branch} and git show ${branch}:<path>.`,
+        "Judge whether the branch does what the brief asks, correctly and completely. End your answer with exactly one line: VERDICT: PASS <why> or VERDICT: FAIL <why>.",
+    ].join("\n\n");

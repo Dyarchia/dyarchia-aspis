@@ -1,3 +1,4 @@
+mod hook;
 mod scheduler;
 mod update;
 
@@ -87,8 +88,12 @@ fn spawn_sidecar(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub fn run() {
-    if std::env::args().any(|arg| arg == "--dispatch") {
+    let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|arg| arg == "--dispatch") {
         std::process::exit(scheduler::dispatch());
+    }
+    if let Some(at) = args.iter().position(|arg| arg == "--hook") {
+        std::process::exit(hook::run(args.get(at + 1).map_or("claude-code", String::as_str)));
     }
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
