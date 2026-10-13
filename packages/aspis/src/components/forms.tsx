@@ -1,4 +1,4 @@
-import { type InputHTMLAttributes, type KeyboardEvent, type SelectHTMLAttributes, useId } from "react";
+import { type InputHTMLAttributes, type KeyboardEvent, type SelectHTMLAttributes, type TextareaHTMLAttributes, useId } from "react";
 import { Icon, cx } from "./primitives.tsx";
 
 interface FieldFrame {
@@ -16,6 +16,22 @@ export function TextField({ label, hint, className, id, ...rest }: FieldFrame & 
             </label>
             <div className="aspis-field__control">
                 <input id={inputId} className="aspis-field__input" {...rest} />
+            </div>
+            {hint && <p className="aspis-field__hint">{hint}</p>}
+        </div>
+    );
+}
+
+export function TextArea({ label, hint, className, id, ...rest }: FieldFrame & TextareaHTMLAttributes<HTMLTextAreaElement>) {
+    const autoId = useId();
+    const areaId = id ?? autoId;
+    return (
+        <div className={cx("aspis-field", className)}>
+            <label className="aspis-field__label" htmlFor={areaId}>
+                {label}
+            </label>
+            <div className="aspis-field__control" data-kind="area">
+                <textarea id={areaId} className="aspis-field__input" {...rest} />
             </div>
             {hint && <p className="aspis-field__hint">{hint}</p>}
         </div>

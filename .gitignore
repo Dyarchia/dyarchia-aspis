@@ -10,3 +10,4 @@ apps/desktop/src-tauri/binaries/
 test-results/
 playwright-report/
 .claude/
+.e2e-state/

@@ -246,3 +246,24 @@ export function verdict(card: Card, actor: Actor): string | undefined {
     if (actor === "human") return card.auditorVerdict ? undefined : "The auditor speaks first";
     return "Only the auditor and you give verdicts";
 }
+
+export const harnesses = ["claude-code", "codex", "kimi-code", "grok-build", "antigravity", "mistral-vibe"] as const;
+export const efforts = ["low", "medium", "high", "xhigh", "max"] as const;
+
+export const phaseLabels: Record<Phase, string> = {
+    triage: "Triage",
+    scheduled: "Scheduled",
+    ready: "Ready",
+    running: "Running",
+    blocked: "Blocked",
+    review: "Review",
+    done: "Done",
+    archived: "Archived",
+};
+
+export const CardDetail = z.object({
+    card: Card,
+    events: z.array(CardEvent),
+    targets: z.array(z.object({ to: Phase, reason: z.string().optional(), note: z.string().optional() })),
+});
+export type CardDetail = z.infer<typeof CardDetail>;

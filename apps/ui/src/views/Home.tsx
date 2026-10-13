@@ -3,9 +3,9 @@ import type { ServerState } from "../use-server.ts";
 
 const sprints: { id: string; title: string; detail: string; state: string; tone: Tone }[] = [
     { id: "S0", title: "Foundation", detail: "Tauri shell, Bun sidecar, state.db, installer", state: "Shipped", tone: "ok" },
-    { id: "S1", title: "Aspis", detail: "Design system, io and nyx, shared theme", state: "Current", tone: "info" },
-    { id: "S2", title: "Kanban", detail: "Board over state.db, sync under a second", state: "Next", tone: "idle" },
-    { id: "S3", title: "Scheduled cards", detail: "Agent SDK, Task Scheduler, live runs, stop", state: "Planned", tone: "idle" },
+    { id: "S1", title: "Aspis", detail: "Design system, io and nyx, shared theme, self-update", state: "Shipped", tone: "ok" },
+    { id: "S2", title: "Kanban", detail: "Board with its rules, panel, thread, sync under a second", state: "Shipped", tone: "ok" },
+    { id: "S3", title: "Scheduled cards", detail: "Headless runs, Task Scheduler, queue per repo, live log", state: "Next", tone: "info" },
     { id: "S4", title: "Ready cards", detail: "Guard hook, pickup skill, MCP", state: "Planned", tone: "idle" },
     { id: "S5", title: "Build", detail: "mantinea library and publishing", state: "Planned", tone: "idle" },
 ];
@@ -57,7 +57,7 @@ export function Home({ server, onNavigate }: { server: ServerState; onNavigate: 
                             lead={sprint.id}
                             title={sprint.title}
                             meta={[sprint.detail]}
-                            active={sprint.state === "Current"}
+                            active={sprint.state === "Next"}
                             trail={<Chip tone={sprint.tone}>{sprint.state}</Chip>}
                             onSelect={sprint.id === "S2" ? () => onNavigate("kanban") : undefined}
                         />

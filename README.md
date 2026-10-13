@@ -9,6 +9,13 @@ elevation, and keeps its state in `~/.dyarchia-aspis/state.db`.
 The app updates itself: it looks for the newest release on GitHub (prereleases included), checks its signed
 `latest.json` and, on confirmation from Settings or the command palette, installs it and restarts.
 
+## Kanban
+
+Eight fixed phases: Triage, Scheduled, Ready, Running, Blocked, Review, Done and Archived. The rules (who may
+move a card, from where to where and under which condition) live in one pure function in `packages/core`, and
+the store only moves cards through it. Scheduled cards run headless and archive themselves; Ready cards are
+picked up interactively and end in Review, where an auditor and then you must both approve before Done.
+
 ## Stack
 
 - Tauri 2 shell with a Bun-compiled Hono sidecar (`aspis-server`)
