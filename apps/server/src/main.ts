@@ -1,8 +1,10 @@
-import { Dispatcher } from "@dyarchia/runner";
+import { Agents, Dispatcher, Ready, hookHarnesses } from "@dyarchia/runner";
 import { Store } from "@dyarchia/store";
 import { defineCommand, runMain } from "citty";
 import pkg from "../../../package.json" with { type: "json" };
+import { installedExe, wiring } from "./agents.ts";
 import { type Extension, startServer } from "./app.ts";
+import { serveMcp } from "./mcp.ts";
 
 const serve = (actors?: Extension) =>
     defineCommand({
@@ -46,10 +48,58 @@ const dispatch = defineCommand({
     },
 });
 
+/*
+ * Called by the CLIs' hooks on every prompt, tool call and turn end of every session on the machine, so a session
+ * without a card must cost almost nothing, and nothing here may ever break the CLI: any failure lets the call through.
+ */
+const hook = defineCommand({
+    meta: { name: "hook", description: "Handle a CLI hook event read from stdin" },
+    args: { harness: { type: "string", required: true, description: "The CLI calling: claude-code or kimi-code" } },
+    async run({ args }) {
+        let exit = 0;
+        try {
+            const harness = hookHarnesses.find((candidate) => candidate === args.harness);
+            const event = JSON.parse(await Bun.stdin.text());
+            if (harness && event.session_id) {
+                const store = new Store();
+                try {
+                    const reply = await new Ready(store).hook(event, harness);
+                    if (reply.stdout) process.stdout.write(reply.stdout);
+                    if (reply.stderr) process.stderr.write(reply.stderr);
+                    exit = reply.exit;
+                } finally {
+                    store.close();
+                }
+            }
+        } catch (error) {
+            process.stderr.write(`aspis hook: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        process.exit(exit);
+    },
+});
+
+const mcp = defineCommand({
+    meta: { name: "mcp", description: "Serve the aspis MCP tools over stdio" },
+    run: () => serveMcp(),
+});
+
+const agents = defineCommand({
+    meta: { name: "agents", description: "Manage the CLI wiring" },
+    subCommands: {
+        remove: defineCommand({
+            meta: { name: "remove", description: "Remove the hooks, skill and MCP server from every CLI" },
+            async run() {
+                const exe = installedExe() ?? process.execPath;
+                for (const harness of hookHarnesses) await new Agents(wiring(exe)).remove(harness).catch(() => undefined);
+            },
+        }),
+    },
+});
+
 export const cli = (actors?: Extension) =>
     defineCommand({
         meta: { name: "aspis-server", version: pkg.version, description: "Dyarchia Aspis local server" },
-        subCommands: { serve: serve(actors), dispatch },
+        subCommands: { serve: serve(actors), dispatch, hook, mcp, agents },
     });
 
 if (import.meta.main) void runMain(cli());

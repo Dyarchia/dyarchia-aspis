@@ -3,6 +3,8 @@ import { type Run, type RunStatus, runLines } from "@dyarchia/core";
 import { useEffect, useMemo, useState } from "react";
 import type { BoardApi } from "./use-board.ts";
 
+const kindLabels: Record<Run["kind"], string> = { headless: "Run", interactive: "Session", audit: "Audit" };
+
 const statusLabels: Record<RunStatus, [string, Tone]> = {
     running: ["Running", "info"],
     done: ["Done", "ok"],
@@ -22,7 +24,7 @@ function status(run: Run): [string, Tone] {
  * The attempts of a card and the log of the selected one. A live log is read from where the last read stopped,
  * a few times per second, so the answer appears as the harness writes it; a finished log is read once.
  */
-export function RunHistory({ cardId, board, changes }: { cardId: number; board: BoardApi; changes: number }) {
+export function RunHistory({ cardId, board, changes, empty }: { cardId: number; board: BoardApi; changes: number; empty: string }) {
     const [runs, setRuns] = useState<Run[]>([]);
     const [selected, setSelected] = useState<string>();
     const [text, setText] = useState("");
@@ -59,7 +61,7 @@ export function RunHistory({ cardId, board, changes }: { cardId: number; board: 
     }, [cardId, run?.id, live]);
 
     const lines = useMemo(() => runLines(text), [text]);
-    if (!run) return <span className="aspis-field__hint">No runs yet. The dispatcher starts the card when its time comes.</span>;
+    if (!run) return <span className="aspis-field__hint">{empty}</span>;
     const [label, tone] = status(run);
 
     return (
@@ -69,7 +71,7 @@ export function RunHistory({ cardId, board, changes }: { cardId: number; board: 
                     label="Attempts"
                     value={String(run.id)}
                     onChange={setSelected}
-                    tabs={[...runs].reverse().map((candidate) => ({ id: String(candidate.id), label: `#${candidate.attempt} ${clock(candidate.startedAt)}` }))}
+                    tabs={[...runs].reverse().map((candidate) => ({ id: String(candidate.id), label: `${kindLabels[candidate.kind]} ${candidate.attempt} · ${clock(candidate.startedAt)}` }))}
                 />
             )}
             <div className="h-[340px]">

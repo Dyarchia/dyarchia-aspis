@@ -211,3 +211,38 @@ test("stop ends a live run and blocks the card with the reason", async ({ page, 
     await page.keyboard.press("Escape");
     await expect(column(page, "Blocked").getByText("Long migration #slow")).toBeVisible();
 });
+
+function hook(event: Record<string, unknown>) {
+    const output = execFileSync("bun", ["apps/server/src/dev.ts", "hook", "--harness", "claude-code"], {
+        input: JSON.stringify(event),
+        env: { ...process.env, ASPIS_HOME: process.env.ASPIS_E2E_HOME },
+    }).toString();
+    return output ? JSON.parse(output).hookSpecificOutput : undefined;
+}
+
+test("a CLI session picks up a ready card, receives your note, and the auditor judges its delivery", async ({ page, request }) => {
+    const folder = repository("pickup");
+    const id = await card(request, "Cover the bulk path", { folder, auditor: runner });
+    await move(request, id, "ready");
+    await openBoard(page);
+    await column(page, "Ready").getByText("Cover the bulk path").click();
+    const panel = page.locator(".aspis-dialog__box");
+    await expect(panel.locator(".aspis-code")).toContainText("/dya-pickup");
+
+    const picked = hook({ hook_event_name: "UserPromptSubmit", session_id: "e2e-session", cwd: folder, prompt: "/dya-pickup" });
+    expect(picked.additionalContext).toContain(`picked up card #${id}`);
+    await expect(panel.getByText("claude --resume e2e-session")).toBeVisible();
+    await expect(panel.locator(".aspis-log")).toContainText("Picked up by claude-code session e2e-session");
+
+    await panel.getByRole("textbox", { name: "Note" }).fill("Keep the old signature");
+    await panel.getByRole("button", { name: "Add note" }).click();
+    const delivered = hook({ hook_event_name: "PreToolUse", session_id: "e2e-session", cwd: folder, tool_name: "Bash", tool_input: { command: "git status" } });
+    expect(delivered.additionalContext).toContain("Keep the old signature");
+    await expect(panel.locator(".aspis-thread__when", { hasText: "delivered" })).toHaveCount(1);
+    await expect(panel.locator(".aspis-log")).toContainText("Bash git status");
+
+    await act(request, id, "agent", "review", { note: "Bulk path covered" });
+    await call(request, "/dev/dispatch", "POST");
+    await expect(panel.locator(".aspis-mark", { hasText: "Auditor" })).toHaveAttribute("data-state", "ok", { timeout: 15_000 });
+    await expect(panel.getByText("The branch does what the brief asks", { exact: true })).toBeVisible();
+});

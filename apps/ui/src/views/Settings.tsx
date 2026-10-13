@@ -1,5 +1,6 @@
 import { Button, Chip, MetaTree, Page, PageHeader, Panel, Section, themeCatalog } from "@dyarchia/aspis";
 import type { Theme } from "@dyarchia/core";
+import { useAgents } from "../use-agents.ts";
 import type { ServerState } from "../use-server.ts";
 import type { UpdateState, Updates } from "../use-updates.ts";
 
@@ -24,6 +25,7 @@ const updateStatus = (state: UpdateState) => {
 
 export function SettingsView({ server, updates, onTheme }: { server: ServerState; updates: Updates; onTheme: (theme: Theme) => void }) {
     const current = server.settings.theme;
+    const agents = useAgents(server);
     return (
         <Page head={<PageHeader title="Settings" explanation="Shared by every client." lead="The theme is stored in state.db, so every open client follows the change." />}>
             <Section label="Theme" count={Object.keys(themeCatalog).length}>
@@ -79,6 +81,28 @@ export function SettingsView({ server, updates, onTheme }: { server: ServerState
                         { term: "Runs", values: ["claude -p on a feature/develop/card-<id> branch, committed there, never pushed"] },
                     ]}
                 />
+            </Section>
+            <Section label="Agent CLIs" count={agents.agents?.length}>
+                <div className="flex flex-col gap-[var(--aspis-space-4)]">
+                    <p className="aspis-field__hint m-0">
+                        Wiring a CLI writes three things to its user settings: hooks that hand a session its card and your messages, the dya-pickup skill you type
+                        to pick a card up, and the aspis MCP server the agent uses to note, block and deliver. Remove takes exactly those back out.
+                    </p>
+                    {agents.agents?.map((agent) => (
+                        <div key={agent.harness} className="flex flex-wrap items-center gap-[var(--aspis-space-4)]">
+                            <span className="min-w-[120px]">{agent.harness}</span>
+                            <Chip tone={agent.installed ? "ok" : agent.cli ? "idle" : "warn"}>{agent.installed ? "Wired" : agent.cli ? "Not wired" : "CLI not found"}</Chip>
+                            <Button
+                                variant={agent.installed ? "secondary" : "primary"}
+                                disabled={!agents.installable || agents.busy !== undefined || (!agent.cli && !agent.installed)}
+                                onClick={() => void (agent.installed ? agents.remove(agent.harness) : agents.install(agent.harness))}
+                            >
+                                {agent.installed ? "Remove" : "Wire it"}
+                            </Button>
+                        </div>
+                    ))}
+                    {agents.installable === false && <span className="aspis-field__hint">CLIs are wired from the installed desktop app.</span>}
+                </div>
             </Section>
             <Section label="About">
                 <MetaTree
