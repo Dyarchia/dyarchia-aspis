@@ -5,6 +5,8 @@ import { readHint, writeHint } from "./hints.ts";
 import { type Connection, connect, request, subscribe } from "./server.ts";
 
 export interface ServerState {
+    conn?: Connection;
+    changes: number;
     health?: Health;
     settings: Settings;
     live: boolean;
@@ -20,6 +22,7 @@ export function useServer(): ServerState {
     const [live, setLive] = useState(false);
     const [dataVersion, setDataVersion] = useState<number>();
     const [error, setError] = useState<string>();
+    const [changes, setChanges] = useState(0);
     const revision = useRef(0);
 
     /*
@@ -50,6 +53,7 @@ export function useServer(): ServerState {
                     (event) => {
                         if (event.type === "settings") return accept(event.settings);
                         setDataVersion(event.dataVersion);
+                        setChanges((count) => count + 1);
                         if (event.type === "hello") {
                             accept(event.settings);
                             void request(connection, "/health", Health).then(setHealth, fail);
@@ -83,5 +87,5 @@ export function useServer(): ServerState {
         [conn, settings, accept],
     );
 
-    return { health, settings, live, dataVersion, error, setTheme };
+    return { conn, changes, health, settings, live, dataVersion, error, setTheme };
 }

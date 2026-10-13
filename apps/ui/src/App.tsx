@@ -7,11 +7,12 @@ import { useUpdates } from "./use-updates.ts";
 import { Gallery } from "./views/Gallery.tsx";
 import { Home } from "./views/Home.tsx";
 import { Pending } from "./views/Pending.tsx";
+import { Kanban } from "./views/kanban/Kanban.tsx";
 import { SettingsView } from "./views/Settings.tsx";
 
 const nav = [
     { id: "home", label: "Home", icon: "home", hotkey: "H" },
-    { id: "kanban", label: "Kanban", icon: "board", hotkey: "K", badge: "S2" },
+    { id: "kanban", label: "Kanban", icon: "board", hotkey: "K" },
     { id: "build", label: "Build", icon: "layers", hotkey: "B", badge: "S5" },
     { id: "aspis", label: "Aspis", icon: "shield", hotkey: "A" },
     { id: "settings", label: "Settings", icon: "settings", hotkey: "S" },
@@ -74,14 +75,7 @@ function Workspace() {
         <>
             <AppShell brand="Dyarchia Aspis" nav={nav} active={view} onNavigate={go} status={<ServerStatus server={server} />}>
                 {view === "home" && <Home server={server} onNavigate={go} />}
-                {view === "kanban" && (
-                    <Pending
-                        title="Kanban"
-                        explanation="Eight fixed phases."
-                        sprint="S2"
-                        text="The board over state.db: Triage, Scheduled, Ready, Running, Review, Blocked, Done and Archived, with every client in sync in under a second."
-                    />
-                )}
+                {view === "kanban" && <Kanban server={server} />}
                 {view === "build" && (
                     <Pending
                         title="Build"

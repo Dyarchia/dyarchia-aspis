@@ -1,11 +1,14 @@
 import {
     Bars,
+    Board,
     Button,
     Chip,
     CodeBlock,
+    Column,
     type CodeLine,
     CommandPalette,
     DataTable,
+    Dialog,
     Divider,
     EmptyState,
     Icon,
@@ -13,6 +16,7 @@ import {
     List,
     ListRow,
     LiveLog,
+    Mark,
     type LogLine,
     MetaTree,
     Page,
@@ -24,7 +28,10 @@ import {
     Status,
     Switch,
     Tabs,
+    TextArea,
     TextField,
+    Thread,
+    Tile,
     iconNames,
     themeCatalog,
     useToast,
@@ -61,6 +68,7 @@ export function Gallery({ theme, onTheme }: { theme: Theme; onTheme: (theme: The
     const [phase, setPhase] = useState("triage");
     const [palette, setPalette] = useState(false);
     const [shown, setShown] = useState(3);
+    const [drawer, setDrawer] = useState(false);
 
     useEffect(() => {
         const timer = setInterval(() => setShown((count) => (count >= script.length ? 3 : count + 1)), 1400);
@@ -216,6 +224,47 @@ export function Gallery({ theme, onTheme }: { theme: Theme; onTheme: (theme: The
                 <div className="h-[360px]">
                     <LiveLog title="card 42 · claude-opus-5-5" status="Running" tone="info" lines={script.slice(0, shown)} streaming />
                 </div>
+            </Section>
+
+            <Section label="Kanban">
+                <div className="h-[300px]">
+                    <Board label="Sample board">
+                        <Column title="Ready" count={1}>
+                            <Tile reference="#4" title="Cover the callout retry path" meta={["P1", "claude-code", "ivirma-crm"]} onOpen={() => setDrawer(true)} />
+                        </Column>
+                        <Column title="Blocked" count={1} drop="refused">
+                            <Tile reference="#6" title="Fix the flow fault path" note="Which org has the failing flow?" meta={["claude-code"]} onOpen={() => setDrawer(true)} />
+                        </Column>
+                        <Column title="Review" count={1} drop="allowed">
+                            <Tile
+                                reference="#7"
+                                title="Archive stale Quote fields"
+                                active
+                                meta={["codex"]}
+                                marks={
+                                    <>
+                                        <Mark ok label="Auditor" />
+                                        <Mark ok={null} label="You" />
+                                    </>
+                                }
+                                onOpen={() => setDrawer(true)}
+                            />
+                        </Column>
+                    </Board>
+                </div>
+                <Thread
+                    entries={[
+                        { id: 1, who: "You", when: "Oct 13 09:02", kind: "note", text: "Use the UAT sandbox for the mocks" },
+                        { id: 2, who: "Agent", when: "Oct 13 09:40", kind: "moved", text: "Running → Review\nRemoved 14 fields, tests green" },
+                        { id: 3, who: "Auditor", when: "Oct 13 09:44", kind: "verdict", text: "✓ Diff matches the brief" },
+                    ]}
+                />
+                <Button variant="secondary" onClick={() => setDrawer(true)}>
+                    Open card panel
+                </Button>
+                <Dialog open={drawer} onClose={() => setDrawer(false)} title="#7 Archive stale Quote fields" footer={<Button variant="primary" onClick={() => setDrawer(false)}>Done</Button>}>
+                    <TextArea label="Brief" defaultValue="Remove fields unused for twelve months" />
+                </Dialog>
             </Section>
 
             <Section label="Overlays">

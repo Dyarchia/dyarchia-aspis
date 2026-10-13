@@ -1,6 +1,14 @@
 import { defineConfig } from "@playwright/test";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { rmSync } from "node:fs";
+import { resolve } from "node:path";
+
+/*
+ * The config is evaluated again inside every worker, so the state directory is a fixed path rather than one
+ * derived from a pid, and only the main process wipes it before the dev server starts.
+ */
+const home = resolve(".e2e-state");
+if (!process.env.TEST_WORKER_INDEX) rmSync(home, { recursive: true, force: true });
+process.env.ASPIS_E2E_HOME = home;
 
 export default defineConfig({
     testDir: "e2e",
@@ -14,6 +22,6 @@ export default defineConfig({
         command: "bun run dev:web",
         url: "http://localhost:1420",
         reuseExistingServer: false,
-        env: { ASPIS_HOME: join(tmpdir(), `aspis-e2e-${process.pid}`) },
+        env: { ASPIS_HOME: home },
     },
 });
