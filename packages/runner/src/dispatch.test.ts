@@ -9,8 +9,6 @@ import { git } from "./git.ts";
 
 const fake = join(import.meta.dir, "fake-claude.ts");
 const runner = { harness: "claude-code", model: "claude-opus-5-5", effort: "high" };
-const identity = { GIT_AUTHOR_NAME: "Aspis Test", GIT_AUTHOR_EMAIL: "test@aspis.local", GIT_COMMITTER_NAME: "Aspis Test", GIT_COMMITTER_EMAIL: "test@aspis.local" };
-Object.assign(process.env, identity);
 
 let dir: string;
 let repo: string;
@@ -20,6 +18,8 @@ let dispatcher: Dispatcher;
 async function makeRepo(path: string) {
     mkdirSync(path, { recursive: true });
     await git(path, "init", "-q", "-b", "develop");
+    await git(path, "config", "user.name", "Aspis Test");
+    await git(path, "config", "user.email", "test@aspis.local");
     writeFileSync(join(path, "README.md"), "# repo\n");
     await git(path, "add", "-A");
     await git(path, "commit", "-q", "-m", "init");

@@ -42,9 +42,10 @@ async function openBoard(page: Page, theme: "io" | "nyx" = "io") {
 function repository(name: string) {
     const dir = join(process.env.ASPIS_E2E_HOME!, "repos", name);
     mkdirSync(dir, { recursive: true });
-    const env = { ...process.env, GIT_AUTHOR_NAME: "Aspis e2e", GIT_AUTHOR_EMAIL: "e2e@aspis.local", GIT_COMMITTER_NAME: "Aspis e2e", GIT_COMMITTER_EMAIL: "e2e@aspis.local" };
-    const git = (...args: string[]) => execFileSync("git", args, { cwd: dir, env });
+    const git = (...args: string[]) => execFileSync("git", args, { cwd: dir });
     git("init", "-q", "-b", "develop");
+    git("config", "user.name", "Aspis e2e");
+    git("config", "user.email", "e2e@aspis.local");
     writeFileSync(join(dir, "README.md"), "# e2e");
     git("add", "-A");
     git("commit", "-q", "-m", "init");

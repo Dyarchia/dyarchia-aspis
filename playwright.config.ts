@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 /*
  * The config is evaluated again inside every worker, so the state directory is a fixed path rather than one
  * derived from a pid, and only the main process wipes it before the dev server starts. Scheduled runs use the
- * fake claude and a fixed git identity, so they behave the same on a machine without either.
+ * fake claude, so they behave the same on a machine without the CLI or a login.
  */
 const home = resolve(".e2e-state");
 if (!process.env.TEST_WORKER_INDEX) rmSync(home, { recursive: true, force: true });
@@ -26,10 +26,6 @@ export default defineConfig({
         env: {
             ASPIS_HOME: home,
             ASPIS_CLAUDE: resolve("packages/runner/src/fake-claude.ts"),
-            GIT_AUTHOR_NAME: "Aspis e2e",
-            GIT_AUTHOR_EMAIL: "e2e@aspis.local",
-            GIT_COMMITTER_NAME: "Aspis e2e",
-            GIT_COMMITTER_EMAIL: "e2e@aspis.local",
         },
     },
 });
