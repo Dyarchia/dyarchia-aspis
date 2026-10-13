@@ -19,6 +19,13 @@ export function runRoutes(kanban: Kanban, runs: Runs, changed: () => void) {
             const end = bytes.lastIndexOf(10) + 1;
             return c.json<RunLog>({ text: decoder.decode(bytes.subarray(0, end)), next: from + end, live: run.live });
         })
+        .post("/:id/audit", (c) => {
+            const card = kanban.get(id(c.req.param("id")));
+            if (card.phase !== "review" || card.route !== "ready" || card.auditorVerdict || !card.held) throw new KanbanError("Only an audit that could not run can be retried", 409);
+            kanban.hold(card.id, null);
+            changed();
+            return c.body(null, 204);
+        })
         .post("/:id/stop", (c) => {
             const card = kanban.get(id(c.req.param("id")));
             if (card.phase !== "running" || card.route !== "scheduled") throw new KanbanError("Only a running Scheduled card can be stopped", 409);

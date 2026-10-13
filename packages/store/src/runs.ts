@@ -8,6 +8,7 @@ interface RunRow {
     card_id: number;
     attempt: number;
     kind: RunKind;
+    session_id: string | null;
     status: RunStatus;
     branch: string;
     pid: number | null;
@@ -63,14 +64,18 @@ export class Runs {
         );
     }
 
-    start(cardId: number, branch: string, now = Date.now(), kind: RunKind = "headless"): Run {
+    start(cardId: number, branch: string, now = Date.now(), kind: RunKind = "headless", sessionId: string | null = null): Run {
         const attempt = this.db.query<{ n: number }, [number, string]>("SELECT COUNT(*) AS n FROM runs WHERE card_id = ? AND kind = ?").get(cardId, kind)!.n + 1;
         const id = Number(
             this.db
-                .query("INSERT INTO runs (card_id, attempt, kind, status, branch, started_at, heartbeat_at) VALUES (?, ?, ?, 'running', ?, ?, ?)")
-                .run(cardId, attempt, kind, branch, now, now).lastInsertRowid,
+                .query("INSERT INTO runs (card_id, attempt, kind, session_id, status, branch, started_at, heartbeat_at) VALUES (?, ?, ?, ?, 'running', ?, ?, ?)")
+                .run(cardId, attempt, kind, sessionId, branch, now, now).lastInsertRowid,
         );
         return this.get(id, now);
+    }
+
+    setSession(id: number, sessionId: string): void {
+        this.db.query("UPDATE runs SET session_id = ? WHERE id = ?").run(sessionId, id);
     }
 
     attach(id: number, pid: number): void {
@@ -123,6 +128,16 @@ export class Runs {
             .run(now, now - staleAfterMs).changes;
     }
 
+    /* Headless runs and audits whose process is gone (killed by an update, a crash) fail at once, not after the beat. */
+    reapDead(alive: (pid: number) => boolean, now = Date.now()): number {
+        const dead = this.db
+            .query<{ id: number; pid: number }, []>("SELECT id, pid FROM runs WHERE status = 'running' AND kind != 'interactive' AND pid IS NOT NULL")
+            .all()
+            .filter((row) => !alive(row.pid));
+        for (const row of dead) this.finish(row.id, "failed", "The run's process is gone", now);
+        return dead.length;
+    }
+
     logPath(run: Pick<Run, "id" | "cardId">): string {
         return join(this.dir, String(run.cardId), `${run.id}.log`);
     }
@@ -133,6 +148,7 @@ export class Runs {
             cardId: row.card_id,
             attempt: row.attempt,
             kind: row.kind,
+            sessionId: row.session_id,
             status: row.status,
             branch: row.branch,
             startedAt: row.started_at,

@@ -242,12 +242,22 @@ export function CardPanel({
                     <div className="flex flex-col gap-[var(--aspis-space-3)]">
                         <div className="flex flex-wrap items-center gap-[var(--aspis-space-3)]">
                             <Mark ok={card.auditorVerdict?.ok ?? null} label="Auditor" />
-                            <span className="aspis-field__hint">{card.auditorVerdict?.reason ?? "Waiting for the auditor"}</span>
+                            <span className="aspis-field__hint">{card.auditorVerdict?.reason ?? card.held ?? "The auditor is reading the branch"}</span>
                         </div>
                         <div className="flex flex-wrap items-center gap-[var(--aspis-space-3)]">
                             <Mark ok={card.humanVerdict?.ok ?? null} label="You" />
                             <span className="aspis-field__hint">{card.humanVerdict?.reason ?? (card.auditorVerdict ? "Your check" : "After the auditor")}</span>
                         </div>
+                        {!card.auditorVerdict && card.held && (
+                            <div className="flex gap-[var(--aspis-space-3)]">
+                                <Button variant="primary" icon="history" onClick={() => void board.retryAudit(card.id)}>
+                                    Retry audit
+                                </Button>
+                                <Button variant="secondary" icon="close" onClick={() => ask(`Check #${card.id}`, "Why you reject it", "Reject", (text) => void board.verdict(card.id, false, text))}>
+                                    Reject
+                                </Button>
+                            </div>
+                        )}
                         {card.auditorVerdict && (
                             <div className="flex gap-[var(--aspis-space-3)]">
                                 <Button variant="primary" icon="check" onClick={() => ask(`Check #${card.id}`, "Why you approve it", "Approve", (text) => void board.verdict(card.id, true, text))}>
@@ -277,19 +287,26 @@ export function CardPanel({
                     )}
                     {card.auditor.harness !== "claude-code" && (
                         <span className="aspis-field__hint">
-                            The auditor ({card.auditor.harness ?? "not set"}) cannot run headless yet: in Review it records a failing verdict with the reason.
+                            The auditor ({card.auditor.harness ?? "not set"}) cannot run headless yet: in Review you will be able to retry the audit or reject the card.
                         </span>
                     )}
                 </Block>
             )}
 
-            {withAgent && (
+            {card.sessionId && (
                 <Block label="Session">
                     <span className="aspis-field__hint">
-                        What you write in the thread reaches the agent at its next tool call or when its turn ends. A session that sits idle gets it once you
-                        resume it.
+                        {withAgent
+                            ? "What you write in the thread reaches the agent at its next tool call or when its turn ends. A session that sits idle gets it once you resume it."
+                            : card.phase === "running"
+                              ? "The implementer's session. Resume it to talk to it once this run ends; resuming while it runs would split the conversation."
+                              : "The implementer's session. Resume it in its folder to ask it about the work."}
                     </span>
-                    {resume && <CodeBlock title="Resume the session" lang={harness} lines={[{ text: `cd "${card.folder}"` }, { text: resume }]} />}
+                    {resume ? (
+                        <CodeBlock title={`Session ${card.sessionId}`} lang={harness} lines={[{ text: `cd "${card.folder}"` }, { text: resume }]} />
+                    ) : (
+                        <span className="aspis-field__hint">Session {card.sessionId}</span>
+                    )}
                 </Block>
             )}
 
@@ -305,7 +322,7 @@ export function CardPanel({
                     }
                 >
                     <RunHistory
-                        cardId={card.id}
+                        card={card}
                         board={board}
                         changes={server.changes}
                         empty={

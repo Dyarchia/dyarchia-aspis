@@ -72,6 +72,8 @@ const migrations = [
     `ALTER TABLE runs ADD COLUMN kind TEXT NOT NULL DEFAULT 'headless';
      ALTER TABLE cards ADD COLUMN delivered INTEGER NOT NULL DEFAULT 0;
      CREATE INDEX cards_session ON cards (session_id);`,
+    `ALTER TABLE runs ADD COLUMN session_id TEXT;
+     ALTER TABLE cards ADD COLUMN wake_at INTEGER;`,
 ];
 
 export const aspisHome = () => process.env.ASPIS_HOME ?? join(homedir(), ".dyarchia-aspis");

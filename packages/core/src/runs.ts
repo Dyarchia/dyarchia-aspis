@@ -11,6 +11,7 @@ export const Run = z.object({
     cardId: z.number().int(),
     attempt: z.number().int(),
     kind: RunKind,
+    sessionId: z.string().nullable(),
     status: RunStatus,
     branch: z.string(),
     startedAt: z.number(),

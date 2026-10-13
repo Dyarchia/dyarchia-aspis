@@ -3,10 +3,12 @@ import { Kanban, KanbanError, Runs, type Store } from "@dyarchia/store";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { auditPrompt, auditorArgs, claudeCommand, implementerArgs, systemPrompt } from "./claude.ts";
+import { Desktop, alive, retryAfterMs } from "./desktop.ts";
 import { branchFor, checkout, commit, git, readiness, resolveBase } from "./git.ts";
 
 export interface DispatcherOptions {
     store: Store;
+    desktop?: Desktop;
     claude?: string[];
     pollMs?: number;
     heartbeatMs?: number;
@@ -85,12 +87,14 @@ function killTree(pid: number) {
 export class Dispatcher {
     readonly kanban: Kanban;
     readonly runs: Runs;
+    readonly desktop: Desktop;
     private readonly pollMs: number;
     private readonly heartbeatMs: number;
 
     constructor(private readonly options: DispatcherOptions) {
         this.kanban = new Kanban(options.store);
         this.runs = new Runs(options.store);
+        this.desktop = options.desktop ?? new Desktop({ store: options.store });
         this.pollMs = options.pollMs ?? 1000;
         this.heartbeatMs = options.heartbeatMs ?? 10_000;
     }
@@ -99,15 +103,26 @@ export class Dispatcher {
         return this.options.claude ?? claudeCommand();
     }
 
+    /*
+     * Starts everything that can start now and keeps going: whenever a card finishes, its repository is free
+     * again, so the next card waiting on it starts right away. At the end Task Scheduler is set to match the board.
+     */
     async dispatch(): Promise<number[]> {
-        const claims = await this.claim();
-        const audits = await this.audits();
-        await Promise.all([...claims.map((claim) => this.execute(claim)), ...audits.map((audit) => this.audit(audit))]);
-        return [...claims, ...audits].map((work) => work.card.id);
+        const started: number[] = [];
+        const round = async (): Promise<void> => {
+            const claims = await this.claim();
+            const audits = await this.audits();
+            started.push(...[...claims, ...audits].map((work) => work.card.id));
+            await Promise.all([...claims.map((claim) => this.execute(claim).then(round)), ...audits.map((audit) => this.audit(audit))]);
+        };
+        await round();
+        await this.desktop.sync({ kick: false });
+        return started;
     }
 
     async claim(now = Date.now()): Promise<Claim[]> {
         this.runs.reap(now);
+        this.runs.reapDead(alive, now);
         this.options.store.setMeta("dispatch.last", String(now));
         const cards = this.kanban.list();
         const orphans = cards.filter((card) => card.phase === "running" && card.route === "scheduled" && !this.runs.live(card.id, now));
@@ -119,7 +134,7 @@ export class Dispatcher {
         for (const card of [...orphans, ...due]) {
             const ready = await this.check(card, taken, now);
             if ("held" in ready) {
-                this.kanban.hold(card.id, ready.held);
+                this.kanban.hold(card.id, ready.held, now + retryAfterMs);
                 continue;
             }
             const claim = this.take(card, ready.base, now);
@@ -157,7 +172,7 @@ export class Dispatcher {
                 .immediate();
         } catch (error) {
             if (!(error instanceof KanbanError)) throw error;
-            this.kanban.hold(card.id, error.message);
+            if (this.kanban.get(card.id).phase === card.phase) this.kanban.hold(card.id, error.message, now + retryAfterMs);
             return undefined;
         }
     }
@@ -203,14 +218,14 @@ export class Dispatcher {
     }
 
     /*
-     * Ready cards in Review that wait for their auditor. The rules let the human judge only after the auditor, so
-     * an auditor that cannot run (another harness, no claude, retries spent) records a failing verdict with the
-     * reason: the human can then send the card back instead of being stuck.
+     * Ready cards that just reached Review get their auditor. An auditor that cannot run (another harness, no
+     * claude, retries spent, no verdict) never gets a verdict invented for it: the reason is held on the card and
+     * written in the thread, the human is told, and they can retry the audit or reject the card.
      */
     async audits(now = Date.now()): Promise<Audit[]> {
         const audits: Audit[] = [];
         for (const card of this.kanban.list()) {
-            if (card.phase !== "review" || card.route !== "ready" || card.auditorVerdict) continue;
+            if (card.phase !== "review" || card.route !== "ready" || card.auditorVerdict || card.held) continue;
             if (this.runs.list(card.id, now).some((run) => run.kind === "audit" && run.live)) continue;
             const refusal =
                 card.auditor.harness !== "claude-code"
@@ -223,7 +238,7 @@ export class Dispatcher {
             const base = refusal ? undefined : await resolveBase(card.folder!, card.baseBranch);
             const reason = refusal ?? (base && "held" in base ? base.held : undefined);
             if (reason || !base || !("base" in base)) {
-                this.kanban.verdict(card.id, "auditor", false, `Could not audit: ${reason}`, now);
+                this.unable(card, reason ?? "no base branch");
                 continue;
             }
             const branch = branchFor(card.id, card.title);
@@ -240,27 +255,38 @@ export class Dispatcher {
                 .at(-1)?.text ?? "";
         let run = first;
         for (;;) {
+            const session = crypto.randomUUID();
+            this.runs.setSession(run.id, session);
             const outcome = await this.launch({
                 card,
                 run,
                 header: `Audit ${run.attempt} of ${branch} against ${base}`,
                 prompt: auditPrompt(card, summary, base, branch),
-                args: auditorArgs(card, { id: crypto.randomUUID(), resume: false }),
+                args: auditorArgs(card, { id: session, resume: false }),
             });
             const verdict = outcome.status === "done" ? lastLine(outcome.summary ?? "", /^\s*VERDICT:\s*(PASS|FAIL)\b[\s:-]*(.*)$/gim) : undefined;
             if (verdict) {
                 this.runs.finish(run.id, "done", null);
-                this.kanban.verdict(card.id, "auditor", verdict[1]!.toUpperCase() === "PASS", verdict[2]?.trim() || clip(outcome.summary ?? "", 600));
+                const ok = verdict[1]!.toUpperCase() === "PASS";
+                const reason = verdict[2]?.trim() || clip(outcome.summary ?? "", 600);
+                this.kanban.verdict(card.id, "auditor", ok, reason);
+                this.desktop.notify(`Card #${card.id} · Auditor ${ok ? "✓" : "✗"}`, [card.title, clip(reason, 200)]);
                 return;
             }
             const error = outcome.status === "done" ? "The auditor gave no VERDICT line" : (outcome.error ?? `The audit ended as ${outcome.status}`);
             this.runs.finish(run.id, "failed", error);
             if (this.runs.failures(card.id, "audit") > card.retries) {
-                this.kanban.verdict(card.id, "auditor", false, `Could not audit: ${error}`);
+                this.unable(card, error);
                 return;
             }
             run = this.runs.start(card.id, branch, Date.now(), "audit");
         }
+    }
+
+    private unable(card: Card, reason: string) {
+        this.kanban.hold(card.id, `Could not audit: ${reason}`);
+        this.kanban.note(card.id, `The audit could not run: ${reason}. Retry it from the card, or reject the card and send it back.`, "system");
+        this.desktop.notify(`Card #${card.id} · The audit could not run`, [card.title, clip(reason, 200)]);
     }
 
     private brief(card: Card): string {
@@ -280,6 +306,7 @@ export class Dispatcher {
     private async implement(card: Card, run: Run, branch: string, prompt: string, session: string | undefined): Promise<Outcome> {
         const files = join(this.kanban.filesDir, String(card.id));
         const id = session ?? crypto.randomUUID();
+        this.runs.setSession(run.id, id);
         const outcome = await this.launch({
             card,
             run,

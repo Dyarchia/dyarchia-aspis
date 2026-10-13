@@ -76,13 +76,38 @@ describe("the scheduled route", () => {
         writeFileSync(join(repo, "scratch.txt"), "work in progress");
         expect(await dispatcher.dispatch()).toEqual([]);
         expect(kanban().get(id)).toMatchObject({ phase: "scheduled", held: "repo has uncommitted changes" });
+        expect(kanban().get(id).wakeAt! - Date.now()).toBeGreaterThan(14 * 60_000);
         rmSync(join(repo, "scratch.txt"));
         await git(repo, "switch", "-q", "-c", "other");
         await dispatcher.dispatch();
         expect(kanban().get(id).held).toBe("repo is on other, not develop");
         await git(repo, "switch", "-q", "develop");
         expect(await dispatcher.dispatch()).toEqual([id]);
-        expect(kanban().get(id)).toMatchObject({ phase: "archived", held: null });
+        expect(kanban().get(id)).toMatchObject({ phase: "archived", held: null, wakeAt: null });
+    });
+
+    test("when a card finishes, the next one waiting on its repository starts in the same dispatch", async () => {
+        const first = scheduled("First in line", "Anything", { priority: 1 });
+        const second = scheduled("Second in line", "Anything");
+        expect(await dispatcher.dispatch()).toEqual([first, second]);
+        expect(kanban().get(first).phase).toBe("archived");
+        expect(kanban().get(second).phase).toBe("archived");
+    });
+
+    test("a run whose process is gone is failed at once and its card starts again", async () => {
+        const id = scheduled("Killed by an update", "Anything", { retries: 1 });
+        const [claim] = await dispatcher.claim();
+        dispatcher.runs.attach(claim!.run.id, 999_999);
+        expect(dispatcher.runs.reapDead((pid) => pid !== 999_999)).toBe(1);
+        expect(await dispatcher.dispatch()).toEqual([id]);
+        expect(dispatcher.runs.list(id).map((run) => run.status)).toEqual(["done", "failed"]);
+    });
+
+    test("every run keeps the session it can be resumed with", async () => {
+        const id = scheduled("Resumable", "Anything");
+        await dispatcher.dispatch();
+        const [run] = dispatcher.runs.list(id);
+        expect(run!.sessionId).toBe(kanban().get(id).sessionId);
     });
 
     test("only claude-code runs headless and future cards are left alone", async () => {

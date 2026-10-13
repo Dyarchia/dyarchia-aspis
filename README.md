@@ -18,16 +18,20 @@ picked up interactively and end in Review, where an auditor and then you must bo
 
 ## Scheduled runs
 
-- Windows Task Scheduler starts `dyarchia-aspis.exe --dispatch` every minute as the signed-in user, so cards run
-  with the app closed. The app registers the task on every start; the uninstaller removes it.
+- Nothing polls. Each Scheduled card has its own one-shot Task Scheduler entry at its time, which starts
+  `dyarchia-aspis.exe --dispatch` as the signed-in user, so cards run with the app closed. Work that is due right
+  now (a card past its time, one you unblocked, an audit) is started at once. Any change to the board brings Task
+  Scheduler in line with it; the uninstaller removes every entry.
 - The dispatcher starts every due card with `claude -p` in its folder, one card per repository at a time. A
-  repository that is not on the base branch, or has uncommitted changes, holds the card and the board shows why.
+  repository that is not on the base branch, or has uncommitted changes, holds the card, the board shows why and
+  the card looks again in 15 minutes. When a card finishes, the next one waiting on its repository starts.
 - Each card works on `feature/develop/card-<id>-<slug>`, branched from its base (the card's own, else
   `develop`, else origin's default). When the run ends the runner commits there, never pushes, and returns the
   repository to the base branch.
 - Failures retry in the same session up to the card's retries, then block it. A final `BLOCKED: <question>` line
   blocks it for you to answer; moving it back to Running resumes the session with your answer. Stop ends a live
-  run. Logs live in `~/.dyarchia-aspis/runs/` and stream into the card panel.
+  run. Logs live in `~/.dyarchia-aspis/runs/` and stream into the card panel. Every run keeps its session id, so
+  any implementer or auditor session can be resumed from the card to talk to it.
 
 ## Ready runs
 
@@ -42,8 +46,11 @@ picked up interactively and end in Review, where an auditor and then you must bo
   at its next tool call or turn end. Sessions that hold no card cost a file lookup and nothing else.
 - The agent answers with the MCP tools `card_note`, `card_block` and `card_deliver`. Delivering commits on the card
   branch and moves the card to Review.
-- In Review the dispatcher runs the card's auditor headless and read-only over `git diff base...branch`; it ends
-  with a `VERDICT: PASS|FAIL` line that becomes the auditor's check. Then it is your turn.
+- Delivering starts the card's auditor at once, headless and read-only over `git diff base...branch`; its last
+  `VERDICT: PASS|FAIL` line becomes the auditor's check and a Windows notification tells you. An auditor that
+  cannot run never gets a verdict invented: the reason stays on the card, and you retry the audit or reject it.
+- While the card waits on you (Blocked, Review) the agent may still read and answer; anything that changes the
+  repository or runs commands is stopped.
 
 ## Stack
 

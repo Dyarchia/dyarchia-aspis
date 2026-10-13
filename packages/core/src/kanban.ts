@@ -52,6 +52,7 @@ export const Card = z.object({
     humanVerdict: Verdict.nullable(),
     blockedReason: z.string().nullable(),
     held: z.string().nullable(),
+    wakeAt: z.number().nullable(),
     dependsOn: z.array(z.number().int()),
     files: z.array(CardFile),
     createdAt: z.number(),
@@ -173,7 +174,7 @@ const rules: Rule[] = [
         from: "review",
         to: "running",
         actor: "human",
-        guards: [needs((card) => card.auditorVerdict, "The auditor has not given a verdict yet")],
+        guards: [needs((card) => card.auditorVerdict?.ok === false || card.humanVerdict?.ok === false, "A rejection from the auditor or from you comes first")],
         note: "The rejection notes",
         effect: () => ({ auditorVerdict: null, humanVerdict: null }),
     },
@@ -244,11 +245,17 @@ export function canEdit(card: Card, actor: Actor) {
     return actor === "human" && (card.phase === "triage" || card.phase === "scheduled" || card.phase === "ready");
 }
 
-export function verdict(card: Card, actor: Actor): string | undefined {
+/*
+ * The auditor speaks first and you decide after it. The one exception is an audit that could not run (its reason
+ * is held on the card): you may still reject the card and send it back, but approving it always needs the auditor.
+ */
+export function verdict(card: Card, actor: Actor, ok = true): string | undefined {
     if (card.phase !== "review") return "Verdicts only exist in Review";
     if (actor === "auditor") return card.auditorVerdict ? "The auditor already gave its verdict" : undefined;
-    if (actor === "human") return card.auditorVerdict ? undefined : "The auditor speaks first";
-    return "Only the auditor and you give verdicts";
+    if (actor !== "human") return "Only the auditor and you give verdicts";
+    if (card.auditorVerdict) return undefined;
+    if (card.held && !ok) return undefined;
+    return card.held ? "Approving needs the auditor; you can still reject it" : "The auditor speaks first";
 }
 
 export const harnesses = ["claude-code", "codex", "kimi-code", "grok-build", "antigravity", "mistral-vibe"] as const;
