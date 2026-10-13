@@ -25,7 +25,7 @@ test("rejects requests without the token", async () => {
 test("serves health with the token", async () => {
     const res = await fetch(`${base}/health`, { headers: { authorization: "Bearer secret" } });
     const health = Health.parse(await res.json());
-    expect(health.schemaVersion).toBe(4);
+    expect(health.schemaVersion).toBe(5);
     expect(health.dbPath).toBe(store.path);
 });
 

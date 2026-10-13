@@ -60,6 +60,7 @@ export function useBoard(server: ServerState) {
         fileUrl: (id: number, file: number) => (conn ? `${conn.base}/cards/${id}/files/${file}?token=${encodeURIComponent(conn.token)}` : undefined),
         runs: (id: number) => api(`/cards/${id}/runs`, z.array(Run)),
         log: (id: number, run: number, from: number) => api(`/cards/${id}/runs/${run}/log?from=${from}`, RunLog),
+        retryAudit: (id: number) => run(() => api(`/cards/${id}/audit`, z.null(), { method: "POST" })),
         stop: (id: number) => run(() => api(`/cards/${id}/stop`, z.null(), { method: "POST" })),
         dispatch: () => run(() => api("/dev/dispatch", z.object({ started: z.array(z.number()) }), { method: "POST" })),
         act: (id: number, actor: Actor, move: MoveRequest) => run(() => api(`/dev/cards/${id}/move`, Card, json("POST", { ...move, actor }))),

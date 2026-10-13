@@ -1,5 +1,5 @@
-import { LiveLog, Tabs, type Tone } from "@dyarchia/aspis";
-import { type Run, type RunStatus, runLines } from "@dyarchia/core";
+import { CodeBlock, LiveLog, Tabs, type Tone } from "@dyarchia/aspis";
+import { type Card, type Run, type RunStatus, resumeCommands, runLines } from "@dyarchia/core";
 import { useEffect, useMemo, useState } from "react";
 import type { BoardApi } from "./use-board.ts";
 
@@ -24,7 +24,8 @@ function status(run: Run): [string, Tone] {
  * The attempts of a card and the log of the selected one. A live log is read from where the last read stopped,
  * a few times per second, so the answer appears as the harness writes it; a finished log is read once.
  */
-export function RunHistory({ cardId, board, changes, empty }: { cardId: number; board: BoardApi; changes: number; empty: string }) {
+export function RunHistory({ card, board, changes, empty }: { card: Card; board: BoardApi; changes: number; empty: string }) {
+    const cardId = card.id;
     const [runs, setRuns] = useState<Run[]>([]);
     const [selected, setSelected] = useState<string>();
     const [text, setText] = useState("");
@@ -78,6 +79,16 @@ export function RunHistory({ cardId, board, changes, empty }: { cardId: number; 
                 <LiveLog title={run.branch} status={label} tone={tone} lines={lines} streaming={live} />
             </div>
             {run.error && <span className="aspis-field__hint">{run.error}</span>}
+            {run.sessionId && run.kind !== "interactive" && (
+                <CodeBlock
+                    title={`${kindLabels[run.kind]} ${run.attempt} session`}
+                    lang={(run.kind === "audit" ? card.auditor.harness : card.implementer.harness) ?? undefined}
+                    lines={[
+                        { text: `cd "${card.folder}"` },
+                        { text: resumeCommands[(run.kind === "audit" ? card.auditor.harness : card.implementer.harness) ?? ""]?.(run.sessionId) ?? run.sessionId },
+                    ]}
+                />
+            )}
         </div>
     );
 }

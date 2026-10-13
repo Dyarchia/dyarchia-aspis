@@ -49,6 +49,7 @@ interface CardRow {
     blocked_reason: string | null;
     held: string | null;
     delivered: number;
+    wake_at: number | null;
     created_at: number;
     updated_at: number;
 }
@@ -73,6 +74,7 @@ const columns: Record<string, string> = {
     humanVerdict: "human_verdict",
     blockedReason: "blocked_reason",
     held: "held",
+    wakeAt: "wake_at",
 };
 
 const json = new Set(["implementer", "auditor", "auditorVerdict", "humanVerdict"]);
@@ -169,7 +171,7 @@ export class Kanban {
         const result = move(card, request, { actor, now, dependencies: this.dependencyPhases(card) });
         if (!result.ok) throw new KanbanError(result.reason, 409);
         this.db.transaction(() => {
-            this.write(id, { ...result.patch, held: null }, now);
+            this.write(id, { ...result.patch, held: null, wakeAt: null }, now);
             this.record(id, actor, "moved", card.phase, request.to, request.note ?? null, now);
             if (result.next) this.repeat(card, result.next, now);
         })();
@@ -180,8 +182,8 @@ export class Kanban {
      * Why a due Scheduled card has not started yet (repository busy, uncommitted changes...). The dispatcher writes
      * it every minute, so it only touches the row when the reason changes and never bumps updated_at.
      */
-    hold(id: number, reason: string | null): boolean {
-        return this.db.query("UPDATE cards SET held = ?1 WHERE id = ?2 AND held IS NOT ?1").run(reason, id).changes > 0;
+    hold(id: number, reason: string | null, wakeAt: number | null = null): boolean {
+        return this.db.query("UPDATE cards SET held = ?1, wake_at = ?3 WHERE id = ?2 AND (held IS NOT ?1 OR wake_at IS NOT ?3)").run(reason, id, wakeAt).changes > 0;
     }
 
     /* The card a CLI session took with dya-pickup, the most recent one when the session took several. */
@@ -225,7 +227,7 @@ export class Kanban {
 
     verdict(id: number, actor: Actor, ok: boolean, reason: string, now = Date.now()): Card {
         const card = this.get(id);
-        const refusal = verdict(card, actor);
+        const refusal = verdict(card, actor, ok);
         if (refusal) throw new KanbanError(refusal, 409);
         const why = reason.trim();
         if (!why) throw new KanbanError("A verdict needs its reason", 400);
@@ -365,6 +367,7 @@ export class Kanban {
             humanVerdict: verdictOf(row.human_verdict),
             blockedReason: row.blocked_reason,
             held: row.held,
+            wakeAt: row.wake_at,
             dependsOn: this.db
                 .query<{ depends_on: number }, [number]>("SELECT depends_on FROM card_dependencies WHERE card_id = ? ORDER BY depends_on")
                 .all(row.id)

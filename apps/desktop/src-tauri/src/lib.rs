@@ -1,4 +1,5 @@
 mod hook;
+mod notify;
 mod scheduler;
 mod update;
 
@@ -92,6 +93,9 @@ pub fn run() {
     if args.iter().any(|arg| arg == "--dispatch") {
         std::process::exit(scheduler::dispatch());
     }
+    if let Some(at) = args.iter().position(|arg| arg == "--notify") {
+        std::process::exit(notify::run(&args[at + 1..]));
+    }
     if let Some(at) = args.iter().position(|arg| arg == "--hook") {
         std::process::exit(hook::run(args.get(at + 1).map_or("claude-code", String::as_str)));
     }
@@ -105,16 +109,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(update::PendingUpdate::default())
-        .setup(|app| {
-            if !cfg!(debug_assertions) {
-                std::thread::spawn(|| {
-                    if let Err(error) = scheduler::register() {
-                        eprintln!("dispatcher task: {error}");
-                    }
-                });
-            }
-            spawn_sidecar(app)
-        })
+        .setup(spawn_sidecar)
         .invoke_handler(tauri::generate_handler![server_info, update::check_update, update::install_update])
         .build(tauri::generate_context!())
         .expect("failed to build the Aspis app")
