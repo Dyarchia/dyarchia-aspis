@@ -20,9 +20,10 @@ export function actorRoutes({ store, kanban, changed }: ExtensionContext) {
         .post("/dispatch", async (c) => {
             dispatcher ??= new Dispatcher({ store: new Store(store.path) });
             const claims = await dispatcher.claim();
-            void Promise.all(claims.map((claim) => dispatcher!.execute(claim)));
+            const audits = await dispatcher.audits();
+            void Promise.all([...claims.map((claim) => dispatcher!.execute(claim)), ...audits.map((audit) => dispatcher!.audit(audit))]);
             changed();
-            return c.json({ started: claims.map((claim) => claim.card.id) });
+            return c.json({ started: [...claims, ...audits].map((work) => work.card.id) });
         })
         .post("/cards/:id/move", async (c) => {
             const { actor, ...request } = ActorMove.parse(await c.req.json());

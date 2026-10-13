@@ -30,7 +30,7 @@ export function cardRoutes(kanban: Kanban, changed: () => void) {
         })
         .get("/:id", (c) => {
             const card = id(c.req.param("id"));
-            return c.json({ card: kanban.get(card), events: kanban.events(card), targets: kanban.targets(card, "human") });
+            return c.json({ card: kanban.get(card), events: kanban.events(card), delivered: kanban.delivered(card), targets: kanban.targets(card, "human") });
         })
         .patch("/:id", async (c) => {
             const edit = CardEdit.parse(await c.req.json());

@@ -14,8 +14,7 @@ The app updates itself: it looks for the newest release on GitHub (prereleases i
 Eight fixed phases: Triage, Scheduled, Ready, Running, Blocked, Review, Done and Archived. The rules (who may
 move a card, from where to where and under which condition) live in one pure function in `packages/core`, and
 the store only moves cards through it. Scheduled cards run headless and archive themselves; Ready cards are
-picked up interactively and end in Review, where an auditor and then you must both approve before Done. Ready
-pickup and the auditor arrive in the next sprint.
+picked up interactively and end in Review, where an auditor and then you must both approve before Done.
 
 ## Scheduled runs
 
@@ -29,6 +28,22 @@ pickup and the auditor arrive in the next sprint.
 - Failures retry in the same session up to the card's retries, then block it. A final `BLOCKED: <question>` line
   blocks it for you to answer; moving it back to Running resumes the session with your answer. Stop ends a live
   run. Logs live in `~/.dyarchia-aspis/runs/` and stream into the card panel.
+
+## Ready runs
+
+- Settings, Agent CLIs wires Claude Code or Kimi Code with one click: hooks that call `dyarchia-aspis.exe --hook`,
+  the `dya-pickup` skill and the `aspis` MCP server, all in that CLI's user settings. Remove takes them back out,
+  and so does the uninstaller.
+- In the card folder, typing `/dya-pickup` (Kimi: `/skill:dya-pickup`) hands that session the highest-priority
+  Ready card for the folder and the CLI, moves it to Running with the session id and puts the repository on the
+  card branch. Only a prompt the human types can claim a card.
+- Every tool call goes through the guard: a session acts only on its own card, a Blocked or in-Review card stops
+  its session, the call is recorded in the card's activity, and what you write in the thread reaches the agent
+  at its next tool call or turn end. Sessions that hold no card cost a file lookup and nothing else.
+- The agent answers with the MCP tools `card_note`, `card_block` and `card_deliver`. Delivering commits on the card
+  branch and moves the card to Review.
+- In Review the dispatcher runs the card's auditor headless and read-only over `git diff base...branch`; it ends
+  with a `VERDICT: PASS|FAIL` line that becomes the auditor's check. Then it is your turn.
 
 ## Stack
 
@@ -53,7 +68,7 @@ Both themes render the exact same markup; a theme only decides the design.
 ```text
 packages/core      zod schemas and shared types
 packages/store     SQLite access, migrations and change watching
-packages/runner    dispatcher for Scheduled cards: queue, git branch, claude -p, retries, commit
+packages/runner    Scheduled dispatcher, Ready pickup and guard, auditor, CLI wiring
 packages/aspis     design system: --aspis-* tokens, io and nyx themes, React components
 apps/server        local HTTP and WebSocket server, compiled to the sidecar
 apps/ui            React views

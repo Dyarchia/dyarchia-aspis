@@ -1,4 +1,4 @@
-import { Button, Chip, Dialog, GroupHeader, Mark, Select, TextArea, TextField, Thread, type ThreadEntry, type Tone } from "@dyarchia/aspis";
+import { Button, Chip, CodeBlock, Dialog, GroupHeader, Mark, Select, TextArea, TextField, Thread, type ThreadEntry, type Tone } from "@dyarchia/aspis";
 import {
     type Actor,
     type Card,
@@ -14,6 +14,8 @@ import {
     efforts,
     harnesses,
     phaseLabels,
+    pickupCommands,
+    resumeCommands,
 } from "@dyarchia/core";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { ServerState } from "../../use-server.ts";
@@ -148,7 +150,18 @@ export function CardPanel({
     const edit = (change: CardEdit) => void board.edit(card.id, change);
     const ask = (title: string, label: string, action: string, submit: (text: string) => void) => onPrompt({ title, label, action, submit });
     const others = cards.filter((other) => other.id !== card.id && !card.dependsOn.includes(other.id));
-    const entries: ThreadEntry[] = detail.events.map((event) => ({ id: event.id, who: actorLabels[event.actor], when: time(event.at), kind: event.kind, text: describe(event) }));
+    const delivered = (event: CardEvent) => card.route === "ready" && event.actor === "human" && Boolean(event.text) && event.id <= detail.delivered;
+    const entries: ThreadEntry[] = detail.events.map((event) => ({
+        id: event.id,
+        who: actorLabels[event.actor],
+        when: `${time(event.at)}${delivered(event) ? " · delivered" : ""}`,
+        kind: event.kind,
+        text: describe(event),
+    }));
+    const harness = card.implementer.harness ?? "";
+    const pickup = pickupCommands[harness];
+    const resume = card.sessionId ? resumeCommands[harness]?.(card.sessionId) : undefined;
+    const withAgent = card.route === "ready" && (card.phase === "running" || card.phase === "blocked" || card.phase === "review");
 
     const simulate: { label: string; run: () => void }[] = [];
     if (card.phase === "ready") simulate.push({ label: "Agent picks it up", run: () => void board.act(card.id, "agent", { to: "running", sessionId: `dev-${Date.now()}` }) });
@@ -224,21 +237,6 @@ export function CardPanel({
                 {card.held && card.phase === "scheduled" && <span className="aspis-field__hint">Waiting: {card.held}</span>}
             </Block>
 
-            {(card.route === "scheduled" || card.phase === "scheduled") && (
-                <Block
-                    label="Runs"
-                    actions={
-                        card.phase === "running" && card.route === "scheduled" ? (
-                            <Button variant="secondary" icon="close" onClick={() => void board.stop(card.id)}>
-                                Stop
-                            </Button>
-                        ) : undefined
-                    }
-                >
-                    <RunHistory cardId={card.id} board={board} changes={server.changes} />
-                </Block>
-            )}
-
             {card.phase === "review" && (
                 <Block label="Checks">
                     <div className="flex flex-col gap-[var(--aspis-space-3)]">
@@ -261,6 +259,61 @@ export function CardPanel({
                             </div>
                         )}
                     </div>
+                </Block>
+            )}
+
+            {card.phase === "ready" && (
+                <Block label="Pick it up">
+                    {pickup ? (
+                        <>
+                            <span className="aspis-field__hint">
+                                Open {harness} in {card.folder ?? "the card folder"} and type the command. Its hook hands this card to that session, puts the
+                                repository on the card branch and moves the card to Running.
+                            </span>
+                            <CodeBlock title={card.folder ?? "folder"} lang={harness} lines={[{ text: pickup }]} />
+                        </>
+                    ) : (
+                        <span className="aspis-field__hint">{harness || "This harness"} has no Aspis hooks yet; wire claude-code or kimi-code in Settings.</span>
+                    )}
+                    {card.auditor.harness !== "claude-code" && (
+                        <span className="aspis-field__hint">
+                            The auditor ({card.auditor.harness ?? "not set"}) cannot run headless yet: in Review it records a failing verdict with the reason.
+                        </span>
+                    )}
+                </Block>
+            )}
+
+            {withAgent && (
+                <Block label="Session">
+                    <span className="aspis-field__hint">
+                        What you write in the thread reaches the agent at its next tool call or when its turn ends. A session that sits idle gets it once you
+                        resume it.
+                    </span>
+                    {resume && <CodeBlock title="Resume the session" lang={harness} lines={[{ text: `cd "${card.folder}"` }, { text: resume }]} />}
+                </Block>
+            )}
+
+            {(card.route || card.phase === "scheduled") && (
+                <Block
+                    label={card.route === "ready" ? "Activity" : "Runs"}
+                    actions={
+                        card.phase === "running" && card.route === "scheduled" ? (
+                            <Button variant="secondary" icon="close" onClick={() => void board.stop(card.id)}>
+                                Stop
+                            </Button>
+                        ) : undefined
+                    }
+                >
+                    <RunHistory
+                        cardId={card.id}
+                        board={board}
+                        changes={server.changes}
+                        empty={
+                            card.route === "ready"
+                                ? "The session's prompts, tool calls and answers show here once it picks the card up, and the audits after it."
+                                : "No runs yet. The dispatcher starts the card when its time comes."
+                        }
+                    />
                 </Block>
             )}
 

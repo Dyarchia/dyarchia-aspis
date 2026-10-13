@@ -3,10 +3,14 @@ import { z } from "zod";
 export const RunStatus = z.enum(["running", "done", "failed", "stopped", "blocked"]);
 export type RunStatus = z.infer<typeof RunStatus>;
 
+export const RunKind = z.enum(["headless", "interactive", "audit"]);
+export type RunKind = z.infer<typeof RunKind>;
+
 export const Run = z.object({
     id: z.number().int(),
     cardId: z.number().int(),
     attempt: z.number().int(),
+    kind: RunKind,
     status: RunStatus,
     branch: z.string(),
     startedAt: z.number(),
@@ -42,8 +46,8 @@ const resultText = (content: unknown): string => {
 };
 
 /*
- * Turns the JSON lines a run writes (claude stream-json plus the runner's own "aspis" lines) into what the LiveLog
- * shows. Text deltas build the answer letter by letter; once the complete assistant message arrives it replaces
+ * Turns the JSON lines a run writes (claude stream-json, the runner's own "aspis" lines, and the prompts, tool
+ * calls and answers a CLI session's hooks record) into what the LiveLog shows. Text deltas build the answer letter by letter; once the complete assistant message arrives it replaces
  * them, so nothing is printed twice. Lines that do not parse are skipped: the log may end mid-write.
  */
 export function runLines(jsonl: string): RunLine[] {
@@ -60,7 +64,8 @@ export function runLines(jsonl: string): RunLine[] {
         } catch {
             continue;
         }
-        if (event.type === "aspis") text(event.kind === "prompt" ? "prompt" : "dim", String(event.text ?? ""));
+        if (event.type === "aspis") text(event.kind === "prompt" ? "prompt" : event.kind === "answer" ? "answer" : "dim", String(event.text ?? ""));
+        if (event.type === "aspis-tool") lines.push({ kind: "tool", text: `${String(event.name ?? "").replace(/^mcp__aspis__/, "aspis ")} ${event.text ?? ""}`.trim() });
         if (event.type === "system" && event.subtype === "init") lines.push({ kind: "dim", text: `${event.model ?? "claude"} · ${event.cwd ?? ""}` });
         if (event.type === "stream_event" && event.event?.delta?.type === "text_delta") pending += event.event.delta.text ?? "";
         if (event.type === "assistant") {

@@ -26,29 +26,32 @@ export const branchFor = (id: number, title: string) => {
 
 const hasBranch = async (folder: string, name: string) => (await git(folder, "rev-parse", "--verify", "--quiet", `refs/heads/${name}`)).ok;
 
+/* The card's own base branch, else develop when it exists, else origin's default branch. */
+export async function resolveBase(folder: string, base: string | null): Promise<{ base: string } | { held: string }> {
+    const name = basename(folder);
+    if (base) return (await hasBranch(folder, base)) ? { base } : { held: `${name} has no branch ${base}` };
+    if (await hasBranch(folder, "develop")) return { base: "develop" };
+    const origin = await git(folder, "symbolic-ref", "--short", "refs/remotes/origin/HEAD");
+    if (origin.ok) return { base: origin.out.replace(/^origin\//, "") };
+    return { held: `${name} has no develop branch and no origin default; set a base branch on the card` };
+}
+
 /*
- * A repository is ready for a Scheduled run when it sits on the card's base branch with a clean tree. The base is
- * the card's own, else develop when it exists, else origin's default branch. Anything else holds the card, with
- * the reason, until the repository is ready again. A card resuming after a dead runner may also find the
- * repository still on its own branch, with the work it left, and carries on there.
+ * A repository is ready for a run when it sits on the card's base branch with a clean tree. Anything else holds
+ * the card, with the reason, until the repository is ready again. A card coming back to a repository may also
+ * find it still on its own branch, with the work it left, and carries on there.
  */
 export async function readiness(folder: string, base: string | null, own?: string): Promise<{ base: string } | { held: string }> {
     if (!existsSync(folder)) return { held: `The folder ${folder} does not exist` };
     const name = basename(folder);
     if (!(await git(folder, "rev-parse", "--show-toplevel")).ok) return { held: `${name} is not a git repository` };
-    let target = base;
-    if (target && !(await hasBranch(folder, target))) return { held: `${name} has no branch ${target}` };
-    if (!target && (await hasBranch(folder, "develop"))) target = "develop";
-    if (!target) {
-        const origin = await git(folder, "symbolic-ref", "--short", "refs/remotes/origin/HEAD");
-        if (origin.ok) target = origin.out.replace(/^origin\//, "");
-    }
-    if (!target) return { held: `${name} has no develop branch and no origin default; set a base branch on the card` };
+    const resolved = await resolveBase(folder, base);
+    if ("held" in resolved) return resolved;
     const current = (await git(folder, "branch", "--show-current")).out;
-    if (own && current === own) return { base: target };
-    if (current !== target) return { held: `${name} is on ${current || "a detached HEAD"}, not ${target}` };
+    if (own && current === own) return resolved;
+    if (current !== resolved.base) return { held: `${name} is on ${current || "a detached HEAD"}, not ${resolved.base}` };
     if ((await git(folder, "status", "--porcelain")).out) return { held: `${name} has uncommitted changes` };
-    return { base: target };
+    return resolved;
 }
 
 export async function checkout(folder: string, branch: string, base: string): Promise<GitResult> {

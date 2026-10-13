@@ -2,7 +2,8 @@
  * Stands in for `claude -p --output-format stream-json` in tests and e2e, where the real CLI and its login are not
  * available. Markers in the prompt or in the card title, which the system prompt carries into every attempt, pick
  * the behaviour: #fail-always, #fail-once (fails until resumed), #block (asks until the human answers), #slow
- * (works until killed). Anything else writes a note into the repository.
+ * (works until killed). As the auditor it passes, or fails with #audit-fail, or forgets the verdict with
+ * #audit-mute. Anything else writes a note into the repository.
  */
 import { writeFileSync } from "node:fs";
 
@@ -27,6 +28,11 @@ const finish = (result: string, isError = false) => {
 
 emit({ type: "system", subtype: "init", session_id: session, model: "fake-claude", cwd: process.cwd(), args });
 
+if (prompt.includes("You are the auditor")) {
+    say("Reading the branch.");
+    if (context.includes("#audit-mute")) finish("Looks fine to me.");
+    finish(context.includes("#audit-fail") ? "Checked.\nVERDICT: FAIL The tests are missing" : "Checked.\nVERDICT: PASS The branch does what the brief asks");
+}
 if (context.includes("#fail-always") || (context.includes("#fail-once") && !resumed)) finish("The API went away", true);
 if (context.includes("#block") && !prompt.startsWith("The human answered")) {
     say("I looked at the flows.");

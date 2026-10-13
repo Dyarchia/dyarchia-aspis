@@ -48,6 +48,7 @@ interface CardRow {
     human_verdict: string | null;
     blocked_reason: string | null;
     held: string | null;
+    delivered: number;
     created_at: number;
     updated_at: number;
 }
@@ -181,6 +182,30 @@ export class Kanban {
      */
     hold(id: number, reason: string | null): boolean {
         return this.db.query("UPDATE cards SET held = ?1 WHERE id = ?2 AND held IS NOT ?1").run(reason, id).changes > 0;
+    }
+
+    /* The card a CLI session took with dya-pickup, the most recent one when the session took several. */
+    bySession(sessionId: string): Card | undefined {
+        const row = this.db.query<CardRow, [string]>("SELECT * FROM cards WHERE session_id = ? AND route = 'ready' ORDER BY id DESC LIMIT 1").get(sessionId);
+        return row ? this.hydrate(row) : undefined;
+    }
+
+    /*
+     * What the human wrote on a card (notes, answers, rejection reasons) that its session has not received yet.
+     * The session's hooks hand these to the agent and then move the watermark past them.
+     */
+    pending(id: number): CardEvent[] {
+        const card = this.db.query<{ delivered: number }, [number]>("SELECT delivered FROM cards WHERE id = ?").get(id);
+        if (!card) throw new KanbanError(`Card ${id} does not exist`, 404);
+        return this.events(id).filter((event) => event.actor === "human" && event.text && event.id > card.delivered && (event.kind === "note" || event.kind === "moved"));
+    }
+
+    markDelivered(id: number, eventId: number): void {
+        this.db.query("UPDATE cards SET delivered = MAX(delivered, ?) WHERE id = ?").run(eventId, id);
+    }
+
+    delivered(id: number): number {
+        return this.db.query<{ delivered: number }, [number]>("SELECT delivered FROM cards WHERE id = ?").get(id)?.delivered ?? 0;
     }
 
     setSession(id: number, sessionId: string, now = Date.now()): void {
