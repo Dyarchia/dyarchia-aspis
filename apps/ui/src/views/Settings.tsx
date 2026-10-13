@@ -71,6 +71,15 @@ export function SettingsView({ server, updates, onTheme }: { server: ServerState
                     ]}
                 />
             </Section>
+            <Section label="Scheduled runs">
+                <MetaTree
+                    items={[
+                        { term: "Dispatcher", values: ["Windows Task Scheduler starts it every minute, even with the app closed"] },
+                        { term: "Last check", values: [server.health?.lastDispatch ? new Date(server.health.lastDispatch).toLocaleString() : "Not yet"] },
+                        { term: "Runs", values: ["claude -p on a feature/develop/card-<id> branch, committed there, never pushed"] },
+                    ]}
+                />
+            </Section>
             <Section label="About">
                 <MetaTree
                     items={[

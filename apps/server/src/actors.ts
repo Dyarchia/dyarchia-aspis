@@ -1,18 +1,29 @@
 import { Actor, MoveRequest } from "@dyarchia/core";
-import type { Kanban } from "@dyarchia/store";
+import { Dispatcher } from "@dyarchia/runner";
+import { Store } from "@dyarchia/store";
 import { Hono } from "hono";
+import type { ExtensionContext } from "./app.ts";
 import { Note, VerdictBody, id } from "./cards.ts";
 
 const ActorMove = MoveRequest.extend({ actor: Actor });
 const ActorNote = Note.extend({ actor: Actor });
 
 /*
- * Development only: lets the e2e suite and the dev UI act as the agent, the system or the auditor until the real
- * runners arrive in S3 and S4. It goes through exactly the same Kanban service and rules. Only dev.ts imports
- * this module; the sidecar is compiled from main.ts, so none of it reaches the shipped binary.
+ * Development only: lets the e2e suite and the dev UI act as the agent, the system or the auditor, and run the
+ * dispatcher on demand instead of waiting for Task Scheduler. Everything goes through the same Kanban service and
+ * rules. Only dev.ts imports this module; the sidecar is compiled from main.ts, so none of it reaches the shipped
+ * binary. The dispatcher gets its own connection so its writes reach clients like any other process's.
  */
-export function actorRoutes(kanban: Kanban, changed: () => void) {
+export function actorRoutes({ store, kanban, changed }: ExtensionContext) {
+    let dispatcher: Dispatcher | undefined;
     return new Hono()
+        .post("/dispatch", async (c) => {
+            dispatcher ??= new Dispatcher({ store: new Store(store.path) });
+            const claims = await dispatcher.claim();
+            void Promise.all(claims.map((claim) => dispatcher!.execute(claim)));
+            changed();
+            return c.json({ started: claims.map((claim) => claim.card.id) });
+        })
         .post("/cards/:id/move", async (c) => {
             const { actor, ...request } = ActorMove.parse(await c.req.json());
             const card = kanban.move(id(c.req.param("id")), request, actor);

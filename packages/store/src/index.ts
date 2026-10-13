@@ -54,6 +54,21 @@ const migrations = [
          text TEXT
      );
      CREATE INDEX card_events_card ON card_events (card_id, id);`,
+    `ALTER TABLE cards ADD COLUMN held TEXT;
+     CREATE TABLE runs (
+         id INTEGER PRIMARY KEY,
+         card_id INTEGER NOT NULL REFERENCES cards (id) ON DELETE CASCADE,
+         attempt INTEGER NOT NULL,
+         status TEXT NOT NULL,
+         branch TEXT NOT NULL,
+         pid INTEGER,
+         started_at INTEGER NOT NULL,
+         heartbeat_at INTEGER NOT NULL,
+         ended_at INTEGER,
+         error TEXT,
+         stop_requested INTEGER NOT NULL DEFAULT 0
+     );
+     CREATE INDEX runs_card ON runs (card_id, id);`,
 ];
 
 export const aspisHome = () => process.env.ASPIS_HOME ?? join(homedir(), ".dyarchia-aspis");
@@ -91,6 +106,14 @@ export class Store {
             .run(key, value, Date.now());
     }
 
+    getMeta(key: string): string | undefined {
+        return this.db.query<{ value: string }, [string]>("SELECT value FROM meta WHERE key = ?").get(key)?.value;
+    }
+
+    setMeta(key: string, value: string): void {
+        this.db.query("INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(key, value);
+    }
+
     watch(onChange: (dataVersion: number) => void, intervalMs = 500): () => void {
         let last = this.dataVersion;
         const timer = setInterval(() => {
@@ -117,3 +140,4 @@ export class Store {
     }
 }
 export * from "./kanban.ts";
+export * from "./runs.ts";

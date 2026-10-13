@@ -8,6 +8,7 @@ export const Health = z.object({
     pid: z.number().int(),
     startedAt: z.iso.datetime(),
     dev: z.boolean(),
+    lastDispatch: z.number().nullable(),
 });
 export type Health = z.infer<typeof Health>;
 
@@ -26,3 +27,4 @@ export const ServerEvent = z.discriminatedUnion("type", [
 ]);
 export type ServerEvent = z.infer<typeof ServerEvent>;
 export * from "./kanban.ts";
+export * from "./runs.ts";

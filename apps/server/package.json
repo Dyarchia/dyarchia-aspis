@@ -10,6 +10,7 @@
     },
     "dependencies": {
         "@dyarchia/core": "workspace:*",
+        "@dyarchia/runner": "workspace:*",
         "@dyarchia/store": "workspace:*",
         "citty": "0.2.2",
         "hono": "4.13.13",
