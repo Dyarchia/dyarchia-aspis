@@ -54,12 +54,9 @@ export function useServer(): ServerState {
                         if (event.type === "settings") return accept(event.settings);
                         setDataVersion(event.dataVersion);
                         setChanges((count) => count + 1);
-                        if (event.type === "hello") {
-                            accept(event.settings);
-                            void request(connection, "/health", Health).then(setHealth, fail);
-                        } else {
-                            void reread(connection).catch(fail);
-                        }
+                        void request(connection, "/health", Health).then(setHealth, fail);
+                        if (event.type === "hello") accept(event.settings);
+                        else void reread(connection).catch(fail);
                     },
                     setLive,
                 );

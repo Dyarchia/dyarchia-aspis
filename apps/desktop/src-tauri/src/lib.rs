@@ -1,3 +1,4 @@
+mod scheduler;
 mod update;
 
 use std::{sync::Mutex, time::Duration};
@@ -86,6 +87,9 @@ fn spawn_sidecar(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub fn run() {
+    if std::env::args().any(|arg| arg == "--dispatch") {
+        std::process::exit(scheduler::dispatch());
+    }
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             if let Some(window) = app.get_webview_window("main") {
@@ -96,7 +100,16 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(update::PendingUpdate::default())
-        .setup(spawn_sidecar)
+        .setup(|app| {
+            if !cfg!(debug_assertions) {
+                std::thread::spawn(|| {
+                    if let Err(error) = scheduler::register() {
+                        eprintln!("dispatcher task: {error}");
+                    }
+                });
+            }
+            spawn_sidecar(app)
+        })
         .invoke_handler(tauri::generate_handler![server_info, update::check_update, update::install_update])
         .build(tauri::generate_context!())
         .expect("failed to build the Aspis app")

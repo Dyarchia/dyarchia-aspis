@@ -14,7 +14,21 @@ The app updates itself: it looks for the newest release on GitHub (prereleases i
 Eight fixed phases: Triage, Scheduled, Ready, Running, Blocked, Review, Done and Archived. The rules (who may
 move a card, from where to where and under which condition) live in one pure function in `packages/core`, and
 the store only moves cards through it. Scheduled cards run headless and archive themselves; Ready cards are
-picked up interactively and end in Review, where an auditor and then you must both approve before Done.
+picked up interactively and end in Review, where an auditor and then you must both approve before Done. Ready
+pickup and the auditor arrive in the next sprint.
+
+## Scheduled runs
+
+- Windows Task Scheduler starts `dyarchia-aspis.exe --dispatch` every minute as the signed-in user, so cards run
+  with the app closed. The app registers the task on every start; the uninstaller removes it.
+- The dispatcher starts every due card with `claude -p` in its folder, one card per repository at a time. A
+  repository that is not on the base branch, or has uncommitted changes, holds the card and the board shows why.
+- Each card works on `feature/develop/card-<id>-<slug>`, branched from its base (the card's own, else
+  `develop`, else origin's default). When the run ends the runner commits there, never pushes, and returns the
+  repository to the base branch.
+- Failures retry in the same session up to the card's retries, then block it. A final `BLOCKED: <question>` line
+  blocks it for you to answer; moving it back to Running resumes the session with your answer. Stop ends a live
+  run. Logs live in `~/.dyarchia-aspis/runs/` and stream into the card panel.
 
 ## Stack
 
@@ -39,10 +53,12 @@ Both themes render the exact same markup; a theme only decides the design.
 ```text
 packages/core      zod schemas and shared types
 packages/store     SQLite access, migrations and change watching
+packages/runner    dispatcher for Scheduled cards: queue, git branch, claude -p, retries, commit
 packages/aspis     design system: --aspis-* tokens, io and nyx themes, React components
 apps/server        local HTTP and WebSocket server, compiled to the sidecar
 apps/ui            React views
 apps/desktop       Tauri shell and NSIS installer
+e2e                Playwright suites and their screenshot baselines
 scripts            developer tooling
 ```
 
@@ -55,9 +71,14 @@ bun install
 bun run dev
 ```
 
-- `bun run dev:web` serves the UI on `http://localhost:1420` against a server on port 4319 (token `dev`).
-- `bun run test`, `bun run typecheck` and `bun run e2e` are what CI runs. `bun run e2e -- --update-snapshots`
-  refreshes the screenshot baselines in `e2e/__screenshots__` after an intended visual change.
+- `bun run dev:web` serves the UI on `http://localhost:1420` against a server on port 4319 (token `dev`). The dev
+  server starts from `apps/server/src/dev.ts`, which adds `/dev` routes to act as agent, system or auditor
+  through the same rules and to run the dispatcher on demand; the sidecar is compiled from `main.ts` and never
+  contains them. Set `ASPIS_CLAUDE` to point runs at another executable; tests and e2e use
+  `packages/runner/src/fake-claude.ts`, so they need neither the CLI nor a login.
+- `bun run test`, `bun run typecheck` and `bun run e2e` are what CI runs. The e2e suite keeps its state in
+  `.e2e-state/`, wiped at the start of every run. `bun run e2e -- --update-snapshots=all` rewrites the baselines
+  in `e2e/__screenshots__` after an intended visual change.
 - `bun run release` builds the installer into `apps/desktop/src-tauri/target/release/bundle/nsis`. Updater
   artifacts are signed, so the build needs `TAURI_SIGNING_PRIVATE_KEY` (path or content of the private key)
   and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`; CI reads both from repository secrets. The public key lives in

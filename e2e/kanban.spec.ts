@@ -1,5 +1,7 @@
 import { type APIRequestContext, type Page, expect, test } from "@playwright/test";
 import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 const api = "http://127.0.0.1:4319";
 const headers = { authorization: "Bearer dev", "content-type": "application/json" };
@@ -25,6 +27,7 @@ const act = (request: APIRequestContext, id: number, actor: string, to: string, 
     call(request, `/dev/cards/${id}/move`, "POST", { actor, to, ...extra });
 
 const column = (page: Page, name: string) => page.locator(`section.aspis-column[aria-label="${name}"]`);
+const unfold = (page: Page, name: string) => page.getByRole("button", { name: `Show ${name}` }).click();
 
 async function openBoard(page: Page, theme: "io" | "nyx" = "io") {
     await page.request.put(`${api}/settings`, { headers, data: { theme } });
@@ -34,6 +37,19 @@ async function openBoard(page: Page, theme: "io" | "nyx" = "io") {
     await expect(page.getByText(/server live/i)).toBeVisible();
     await page.keyboard.press("k");
     await expect(column(page, "Triage")).toBeVisible();
+}
+
+function repository(name: string) {
+    const dir = join(process.env.ASPIS_E2E_HOME!, "repos", name);
+    mkdirSync(dir, { recursive: true });
+    const git = (...args: string[]) => execFileSync("git", args, { cwd: dir });
+    git("init", "-q", "-b", "develop");
+    git("config", "user.name", "Aspis e2e");
+    git("config", "user.email", "e2e@aspis.local");
+    writeFileSync(join(dir, "README.md"), "# e2e");
+    git("add", "-A");
+    git("commit", "-q", "-m", "init");
+    return dir;
 }
 
 async function confirm(page: Page, text: string) {
@@ -100,6 +116,7 @@ test("a ready card goes all the way to archived through the panel", async ({ pag
     await panel.getByRole("button", { name: "Done", exact: true }).click();
     await panel.getByRole("button", { name: "Archived", exact: true }).click();
     await page.keyboard.press("Escape");
+    await unfold(page, "Archived");
     await expect(column(page, "Archived").getByText("Ready route card")).toBeVisible();
 });
 
@@ -112,8 +129,27 @@ test("a recurring scheduled card archives itself and schedules its next run", as
     await panel.getByRole("button", { name: "System starts it" }).click();
     await panel.getByRole("button", { name: "System finishes" }).click();
     await page.keyboard.press("Escape");
+    await unfold(page, "Archived");
     await expect(column(page, "Archived").getByText("Recurring audit")).toBeVisible();
     await expect(column(page, "Scheduled").getByText("Recurring audit")).toBeVisible();
+});
+
+test("done and archived start folded and the board remembers what you open", async ({ page }) => {
+    await openBoard(page);
+    await expect(column(page, "Done").locator(".aspis-column__list")).toHaveCount(0);
+    await expect(column(page, "Archived")).toHaveAttribute("data-folded", "true");
+    await unfold(page, "Done");
+    await column(page, "Triage").getByRole("button", { name: "Fold Triage" }).click();
+    await expect(column(page, "Triage")).toHaveAttribute("data-folded", "true");
+    await page.keyboard.press("h");
+    await page.keyboard.press("k");
+    await expect(column(page, "Done").locator(".aspis-column__list")).toHaveCount(1);
+    await expect(column(page, "Triage")).toHaveAttribute("data-folded", "true");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const overflow = () => page.locator(".aspis-board").evaluate((board) => board.scrollWidth - board.clientWidth);
+    expect(await overflow()).toBe(0);
+    await page.setViewportSize({ width: 1024, height: 700 });
+    expect(await overflow()).toBeGreaterThan(0);
 });
 
 test("drag and drop only lands where the rules allow", async ({ page, request }) => {
@@ -148,4 +184,30 @@ test("a card written by another process shows up in under a second", async ({ pa
     await openBoard(page);
     execFileSync("bun", ["e2e/support/external-write.ts", "Written by another process"], { env: { ...process.env, ASPIS_HOME: process.env.ASPIS_E2E_HOME } });
     await expect(column(page, "Triage").getByText("Written by another process")).toBeVisible({ timeout: 1000 });
+});
+
+test("a due scheduled card runs headless, streams its log and lands in archived with its commit", async ({ page, request }) => {
+    const id = await card(request, "Nightly release note", { folder: repository("nightly"), scheduledAt: Date.now() - 60_000 });
+    await move(request, id, "scheduled");
+    await openBoard(page);
+    expect(await call<{ started: number[] }>(request, "/dev/dispatch", "POST")).toEqual({ started: [id] });
+    await unfold(page, "Archived");
+    await column(page, "Archived").getByText("Nightly release note").click({ timeout: 15_000 });
+    const panel = page.locator(".aspis-dialog__box");
+    await expect(panel.locator(".aspis-log")).toContainText("Writing the note.");
+    await expect(panel.getByText(/Committed [0-9a-f]+ on feature\/develop\/card-/)).toBeVisible();
+});
+
+test("stop ends a live run and blocks the card with the reason", async ({ page, request }) => {
+    const id = await card(request, "Long migration #slow", { folder: repository("long"), scheduledAt: Date.now() - 60_000 });
+    await move(request, id, "scheduled");
+    await openBoard(page);
+    await call(request, "/dev/dispatch", "POST");
+    await column(page, "Running").getByText("Long migration #slow").click();
+    const panel = page.locator(".aspis-dialog__box");
+    await expect(panel.locator(".aspis-log")).toContainText("Working on it");
+    await panel.getByRole("button", { name: "Stop", exact: true }).click();
+    await expect(panel.locator(".aspis-chip", { hasText: "Stopped by you." })).toBeVisible({ timeout: 10_000 });
+    await page.keyboard.press("Escape");
+    await expect(column(page, "Blocked").getByText("Long migration #slow")).toBeVisible();
 });

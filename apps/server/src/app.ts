@@ -1,14 +1,21 @@
 import { type Health, type ServerEvent, Settings, Theme, defaultSettings } from "@dyarchia/core";
-import { Kanban, KanbanError, type Store } from "@dyarchia/store";
+import { Kanban, KanbanError, Runs, type Store } from "@dyarchia/store";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { ZodError } from "zod";
 import pkg from "../../../package.json" with { type: "json" };
 import { cardRoutes } from "./cards.ts";
+import { runRoutes } from "./runs.ts";
 
 const allowedOrigins = ["http://tauri.localhost", "https://tauri.localhost", "tauri://localhost", "http://localhost:1420"];
 
-export type Extension = (kanban: Kanban, changed: () => void) => Hono;
+export interface ExtensionContext {
+    store: Store;
+    kanban: Kanban;
+    changed: () => void;
+}
+
+export type Extension = (context: ExtensionContext) => Hono;
 
 export interface ServerOptions {
     store: Store;
@@ -28,6 +35,7 @@ export function startServer({ store, token, hostname, port, actors }: ServerOpti
     });
     const changed = () => publish({ type: "changed", dataVersion: store.dataVersion });
     const kanban = new Kanban(store);
+    const runs = new Runs(store);
     const dev = Boolean(actors);
 
     const app = new Hono()
@@ -45,6 +53,7 @@ export function startServer({ store, token, hostname, port, actors }: ServerOpti
                 pid: process.pid,
                 startedAt,
                 dev,
+                lastDispatch: Number(store.getMeta("dispatch.last")) || null,
             }),
         )
         .get("/settings", (c) => c.json(readSettings()))
@@ -57,13 +66,14 @@ export function startServer({ store, token, hostname, port, actors }: ServerOpti
             return c.json(settings);
         })
         .route("/cards", cardRoutes(kanban, changed))
+        .route("/cards", runRoutes(kanban, runs, changed))
         .onError((error, c) => {
             if (error instanceof KanbanError) return c.json({ error: error.message }, error.status);
             if (error instanceof ZodError) return c.json({ error: error.issues.map((issue) => issue.message).join("; ") }, 400);
             return c.json({ error: String(error) }, 500);
         });
 
-    if (actors) app.route("/dev", actors(kanban, changed));
+    if (actors) app.route("/dev", actors({ store, kanban, changed }));
 
     const server = Bun.serve({
         hostname,

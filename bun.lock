@@ -20,6 +20,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@dyarchia/core": "workspace:*",
+        "@dyarchia/runner": "workspace:*",
         "@dyarchia/store": "workspace:*",
         "citty": "0.2.2",
         "hono": "4.13.13",
@@ -79,6 +80,18 @@
         "typescript": "7.0.2",
       },
     },
+    "packages/runner": {
+      "name": "@dyarchia/runner",
+      "version": "0.0.0",
+      "dependencies": {
+        "@dyarchia/core": "workspace:*",
+        "@dyarchia/store": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.3",
+        "typescript": "7.0.2",
+      },
+    },
     "packages/store": {
       "name": "@dyarchia/store",
       "version": "0.0.0",
@@ -97,6 +110,8 @@
     "@dyarchia/core": ["@dyarchia/core@workspace:packages/core"],
 
     "@dyarchia/desktop": ["@dyarchia/desktop@workspace:apps/desktop"],
+
+    "@dyarchia/runner": ["@dyarchia/runner@workspace:packages/runner"],
 
     "@dyarchia/server": ["@dyarchia/server@workspace:apps/server"],
 

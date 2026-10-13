@@ -1,9 +1,9 @@
 import { afterAll, expect, test } from "bun:test";
 import { Card } from "@dyarchia/core";
-import { Store } from "@dyarchia/store";
-import { mkdtempSync, rmSync } from "node:fs";
+import { Runs, Store } from "@dyarchia/store";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { actorRoutes } from "./actors.ts";
 import { startServer } from "./app.ts";
 
@@ -21,6 +21,7 @@ afterAll(() => {
     shipped.stop();
     dev.stop();
     store.close();
+    Bun.gc(true);
     rmSync(dir, { recursive: true, force: true });
 });
 
@@ -65,4 +66,22 @@ test("files go up as form data and come back as they were", async () => {
     const download = await call(shipped, `/cards/${card.id}/files/${file!.id}`);
     expect(await download.text()).toBe("# Spec");
     expect(download.headers.get("content-disposition")).toContain("spec.md");
+});
+
+test("a run's log is served whole lines at a time and only running scheduled cards stop", async () => {
+    const card = Card.parse(await (await call(shipped, "/cards", "POST", { title: "Logged" })).json());
+    const runs = new Runs(store);
+    const run = runs.start(card.id, "feature/develop/card-logged");
+    mkdirSync(dirname(runs.logPath(run)), { recursive: true });
+    writeFileSync(runs.logPath(run), '{"type":"aspis","text":"one"}\n{"type":"aspis","te');
+
+    expect((await read<{ id: number; live: boolean }[]>(await call(shipped, `/cards/${card.id}/runs`))).map((entry) => [entry.id, entry.live])).toEqual([[run.id, true]]);
+    const first = await read<{ text: string; next: number }>(await call(shipped, `/cards/${card.id}/runs/${run.id}/log`));
+    expect(first.text).toBe('{"type":"aspis","text":"one"}\n');
+    const rest = await read<{ text: string; next: number; live: boolean }>(await call(shipped, `/cards/${card.id}/runs/${run.id}/log?from=${first.next}`));
+    expect(rest).toEqual({ text: "", next: first.next, live: true });
+    expect((await call(shipped, `/cards/${card.id + 1000}/runs/${run.id}/log`)).status).toBe(404);
+
+    const stop = await call(shipped, `/cards/${card.id}/stop`, "POST");
+    expect(stop.status).toBe(409);
 });

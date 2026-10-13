@@ -51,6 +51,7 @@ export const Card = z.object({
     auditorVerdict: Verdict.nullable(),
     humanVerdict: Verdict.nullable(),
     blockedReason: z.string().nullable(),
+    held: z.string().nullable(),
     dependsOn: z.array(z.number().int()),
     files: z.array(CardFile),
     createdAt: z.number(),
@@ -217,7 +218,10 @@ export function move(card: Card, request: MoveRequest, context: MoveContext): Mo
     if (rule.note && !request.note) return { ok: false, reason: `${rule.note} is required` };
     const patch: Partial<Card> = { phase: request.to, ...rule.effect?.(card, request, context) };
     const repeat = rule.to === "archived" && rule.actor === "system" && card.recurrence && card.scheduledAt !== null;
-    return repeat ? { ok: true, patch, next: { phase: "scheduled", scheduledAt: nextOccurrence(card.scheduledAt!, card.recurrence!) } } : { ok: true, patch };
+    if (!repeat) return { ok: true, patch };
+    let at = nextOccurrence(card.scheduledAt!, card.recurrence!);
+    while (at <= context.now) at = nextOccurrence(at, card.recurrence!);
+    return { ok: true, patch, next: { phase: "scheduled", scheduledAt: at } };
 }
 
 export interface Target {

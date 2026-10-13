@@ -1,6 +1,7 @@
 import { Board, Button, Column, type DropState, Mark, Select, TextField, Tile, useHotkeys } from "@dyarchia/aspis";
 import { type Card, type Phase, type Target, phaseLabels, phases, targets } from "@dyarchia/core";
 import { useMemo, useState } from "react";
+import { readHint, writeHint } from "../../hints.ts";
 import type { ServerState } from "../../use-server.ts";
 import { CardPanel } from "./CardPanel.tsx";
 import { Prompt, type PromptRequest } from "./Prompt.tsx";
@@ -8,6 +9,11 @@ import { useBoard } from "./use-board.ts";
 
 const allRepos = "*";
 const folderName = (folder: string) => folder.split(/[\\/]/).filter(Boolean).at(-1) ?? folder;
+const foldedByDefault: Phase[] = ["done", "archived"];
+const readFolded = () => {
+    const hint = readHint("kanban.folded");
+    return new Set<Phase>(hint === undefined ? foldedByDefault : (hint.split(",").filter((phase) => phases.includes(phase as Phase)) as Phase[]));
+};
 const when = (at: number) => new Date(at).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export function Kanban({ server }: { server: ServerState }) {
@@ -19,6 +25,15 @@ export function Kanban({ server }: { server: ServerState }) {
     const [open, setOpen] = useState<number>();
     const [dragged, setDragged] = useState<Card>();
     const [prompt, setPrompt] = useState<PromptRequest>();
+    const [folded, setFolded] = useState(readFolded);
+
+    const fold = (phase: Phase) =>
+        setFolded((current) => {
+            const next = new Set(current);
+            if (!next.delete(phase)) next.add(phase);
+            writeHint("kanban.folded", [...next].join(","));
+            return next;
+        });
 
     const cards = board.cards ?? [];
     const phaseOf = useMemo(() => new Map(cards.map((card) => [card.id, card.phase])), [cards]);
@@ -92,6 +107,8 @@ export function Kanban({ server }: { server: ServerState }) {
                                 title={phaseLabels[phase]}
                                 count={column.length}
                                 drop={dropState(phase)}
+                                folded={folded.has(phase)}
+                                onFold={() => fold(phase)}
                                 onDragOver={(event) => {
                                     if (dropState(phase) === "allowed") event.preventDefault();
                                 }}
@@ -130,7 +147,7 @@ export function Kanban({ server }: { server: ServerState }) {
                                         key={card.id}
                                         reference={`#${card.id}`}
                                         title={card.title}
-                                        note={card.phase === "blocked" ? (card.blockedReason ?? undefined) : undefined}
+                                        note={card.phase === "blocked" ? (card.blockedReason ?? undefined) : card.phase === "scheduled" && card.held ? `Waiting: ${card.held}` : undefined}
                                         active={card.id === open}
                                         draggable={humanTargets(card).length > 0}
                                         onOpen={() => setOpen(card.id)}
