@@ -1,13 +1,13 @@
 import { type ReactNode, useState } from "react";
 import { Status, type Tone } from "./primitives.tsx";
 
-export interface Column {
+export interface TableColumn {
     key: string;
     label: string;
     numeric?: boolean;
 }
 
-export function DataTable({ title, columns, rows }: { title?: string; columns: readonly Column[]; rows: readonly Record<string, ReactNode>[] }) {
+export function DataTable({ title, columns, rows }: { title?: string; columns: readonly TableColumn[]; rows: readonly Record<string, ReactNode>[] }) {
     return (
         <div className="aspis-table">
             {title && <div className="aspis-table__title">{title}</div>}

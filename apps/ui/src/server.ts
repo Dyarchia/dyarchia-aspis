@@ -19,12 +19,16 @@ export async function connect(): Promise<Connection> {
 }
 
 export async function request<S extends z.ZodType>(conn: Connection, path: string, schema: S, init?: RequestInit): Promise<z.infer<S>> {
+    const json = typeof init?.body === "string";
     const res = await fetch(`${conn.base}${path}`, {
         ...init,
-        headers: { authorization: `Bearer ${conn.token}`, "content-type": "application/json", ...init?.headers },
+        headers: { authorization: `Bearer ${conn.token}`, ...(json ? { "content-type": "application/json" } : {}), ...init?.headers },
     });
-    if (!res.ok) throw new Error(`${init?.method ?? "GET"} ${path} failed with ${res.status}`);
-    return schema.parse(await res.json());
+    if (!res.ok) {
+        const body = (await res.json().catch(() => undefined)) as { error?: string } | undefined;
+        throw new Error(body?.error ?? `${init?.method ?? "GET"} ${path} failed with ${res.status}`);
+    }
+    return schema.parse(res.status === 204 ? null : await res.json());
 }
 
 export function subscribe(conn: Connection, onEvent: (event: ServerEvent) => void, onStatus: (live: boolean) => void): () => void {

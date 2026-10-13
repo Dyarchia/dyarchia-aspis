@@ -1,19 +1,24 @@
 import { type Health, type ServerEvent, Settings, Theme, defaultSettings } from "@dyarchia/core";
-import type { Store } from "@dyarchia/store";
+import { Kanban, KanbanError, type Store } from "@dyarchia/store";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { ZodError } from "zod";
 import pkg from "../../../package.json" with { type: "json" };
+import { cardRoutes } from "./cards.ts";
 
 const allowedOrigins = ["http://tauri.localhost", "https://tauri.localhost", "tauri://localhost", "http://localhost:1420"];
+
+export type Extension = (kanban: Kanban, changed: () => void) => Hono;
 
 export interface ServerOptions {
     store: Store;
     token: string;
     hostname: string;
     port: number;
+    actors?: Extension;
 }
 
-export function startServer({ store, token, hostname, port }: ServerOptions) {
+export function startServer({ store, token, hostname, port, actors }: ServerOptions) {
     const startedAt = new Date().toISOString();
     const authorized = (req: Request) =>
         req.headers.get("authorization") === `Bearer ${token}` || new URL(req.url).searchParams.get("token") === token;
@@ -21,9 +26,12 @@ export function startServer({ store, token, hostname, port }: ServerOptions) {
     const readSettings = (): Settings => ({
         theme: Theme.catch(defaultSettings.theme).parse(store.getSetting("theme")),
     });
+    const changed = () => publish({ type: "changed", dataVersion: store.dataVersion });
+    const kanban = new Kanban(store);
+    const dev = Boolean(actors);
 
     const app = new Hono()
-        .use("*", cors({ origin: allowedOrigins, allowHeaders: ["authorization", "content-type"], allowMethods: ["GET", "PUT"] }))
+        .use("*", cors({ origin: allowedOrigins, allowHeaders: ["authorization", "content-type"], allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"] }))
         .use("*", async (c, next) => {
             if (!authorized(c.req.raw)) return c.json({ error: "unauthorized" }, 401);
             await next();
@@ -36,6 +44,7 @@ export function startServer({ store, token, hostname, port }: ServerOptions) {
                 dbPath: store.path,
                 pid: process.pid,
                 startedAt,
+                dev,
             }),
         )
         .get("/settings", (c) => c.json(readSettings()))
@@ -46,7 +55,15 @@ export function startServer({ store, token, hostname, port }: ServerOptions) {
             const settings = readSettings();
             publish({ type: "settings", settings });
             return c.json(settings);
+        })
+        .route("/cards", cardRoutes(kanban, changed))
+        .onError((error, c) => {
+            if (error instanceof KanbanError) return c.json({ error: error.message }, error.status);
+            if (error instanceof ZodError) return c.json({ error: error.issues.map((issue) => issue.message).join("; ") }, 400);
+            return c.json({ error: String(error) }, 500);
         });
+
+    if (actors) app.route("/dev", actors(kanban, changed));
 
     const server = Bun.serve({
         hostname,

@@ -7,6 +7,53 @@ const migrations = [
     `CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
      CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL);
      INSERT INTO meta (key, value) VALUES ('created_at', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));`,
+    `CREATE TABLE cards (
+         id INTEGER PRIMARY KEY,
+         title TEXT NOT NULL,
+         brief TEXT NOT NULL DEFAULT '',
+         phase TEXT NOT NULL,
+         route TEXT,
+         priority INTEGER NOT NULL DEFAULT 0,
+         folder TEXT,
+         base_branch TEXT,
+         permission TEXT NOT NULL DEFAULT 'auto',
+         implementer TEXT NOT NULL,
+         auditor TEXT NOT NULL,
+         scheduled_at INTEGER,
+         recurrence TEXT,
+         time_limit_min INTEGER,
+         retries INTEGER NOT NULL DEFAULT 2,
+         session_id TEXT,
+         auditor_verdict TEXT,
+         human_verdict TEXT,
+         blocked_reason TEXT,
+         created_at INTEGER NOT NULL,
+         updated_at INTEGER NOT NULL
+     );
+     CREATE INDEX cards_phase ON cards (phase);
+     CREATE TABLE card_dependencies (
+         card_id INTEGER NOT NULL REFERENCES cards (id) ON DELETE CASCADE,
+         depends_on INTEGER NOT NULL REFERENCES cards (id) ON DELETE CASCADE,
+         PRIMARY KEY (card_id, depends_on)
+     );
+     CREATE TABLE card_files (
+         id INTEGER PRIMARY KEY,
+         card_id INTEGER NOT NULL REFERENCES cards (id) ON DELETE CASCADE,
+         name TEXT NOT NULL,
+         bytes INTEGER NOT NULL,
+         at INTEGER NOT NULL
+     );
+     CREATE TABLE card_events (
+         id INTEGER PRIMARY KEY,
+         card_id INTEGER NOT NULL REFERENCES cards (id) ON DELETE CASCADE,
+         at INTEGER NOT NULL,
+         actor TEXT NOT NULL,
+         kind TEXT NOT NULL,
+         from_phase TEXT,
+         to_phase TEXT,
+         text TEXT
+     );
+     CREATE INDEX card_events_card ON card_events (card_id, id);`,
 ];
 
 export const aspisHome = () => process.env.ASPIS_HOME ?? join(homedir(), ".dyarchia-aspis");
@@ -69,3 +116,4 @@ export class Store {
         }
     }
 }
+export * from "./kanban.ts";

@@ -18,11 +18,11 @@ afterEach(() => {
 test("creates the database in WAL mode and migrates once", () => {
     const path = tempDb();
     const store = new Store(path);
-    expect(store.schemaVersion).toBe(1);
+    expect(store.schemaVersion).toBe(2);
     expect(store.db.query<{ journal_mode: string }, []>("PRAGMA journal_mode").get()!.journal_mode).toBe("wal");
     store.close();
     const reopened = new Store(path);
-    expect(reopened.schemaVersion).toBe(1);
+    expect(reopened.schemaVersion).toBe(2);
     reopened.close();
 });
 

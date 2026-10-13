@@ -26,7 +26,9 @@ for (const theme of themes) {
             await open(page, theme);
             await page.keyboard.press(view.key);
             await page.mouse.move(0, 0);
-            await expect(page).toHaveScreenshot(`${view.name}-${theme}.png`, { fullPage: true });
+            const height = await page.locator(".aspis-shell__main").evaluate((main) => main.scrollHeight);
+            await page.setViewportSize({ width: 1440, height: Math.max(900, height + 120) });
+            await expect(page).toHaveScreenshot(`${view.name}-${theme}.png`);
         });
     }
 
