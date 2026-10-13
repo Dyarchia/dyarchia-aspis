@@ -16,6 +16,8 @@ export function Column({
     count,
     actions,
     drop,
+    folded,
+    onFold,
     onDragOver,
     onDrop,
     children,
@@ -24,18 +26,38 @@ export function Column({
     count: number;
     actions?: ReactNode;
     drop?: DropState;
+    folded?: boolean;
+    onFold?: () => void;
     onDragOver?: (event: DragEvent<HTMLElement>) => void;
     onDrop?: (event: DragEvent<HTMLElement>) => void;
     children?: ReactNode;
 }) {
     return (
-        <section className="aspis-column" data-drop={drop} aria-label={title} onDragOver={onDragOver} onDrop={onDrop}>
-            <header className="aspis-column__head">
-                <h2 className="aspis-column__title">{title}</h2>
-                <span className="aspis-column__count">{count}</span>
-                {actions && <div className="aspis-column__actions">{actions}</div>}
-            </header>
-            <ol className="aspis-column__list">{children}</ol>
+        <section className="aspis-column" data-drop={drop} data-folded={folded || undefined} aria-label={title} onDragOver={onDragOver} onDrop={onDrop}>
+            {folded ? (
+                <button type="button" className="aspis-column__strip" aria-expanded="false" aria-label={`Show ${title} (${count})`} onClick={onFold}>
+                    <span className="aspis-column__count">{count}</span>
+                    <span className="aspis-column__title">{title}</span>
+                </button>
+            ) : (
+                <>
+                    <header className="aspis-column__head">
+                        <h2 className="aspis-column__title">{title}</h2>
+                        <span className="aspis-column__count">{count}</span>
+                        {(actions || onFold) && (
+                            <div className="aspis-column__actions">
+                                {actions}
+                                {onFold && (
+                                    <button type="button" className="aspis-column__fold" aria-expanded="true" aria-label={`Fold ${title}`} title={`Fold ${title}`} onClick={onFold}>
+                                        <Icon name="chevron" size={14} />
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </header>
+                    <ol className="aspis-column__list">{children}</ol>
+                </>
+            )}
         </section>
     );
 }

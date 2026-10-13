@@ -25,6 +25,7 @@ const act = (request: APIRequestContext, id: number, actor: string, to: string, 
     call(request, `/dev/cards/${id}/move`, "POST", { actor, to, ...extra });
 
 const column = (page: Page, name: string) => page.locator(`section.aspis-column[aria-label="${name}"]`);
+const unfold = (page: Page, name: string) => page.getByRole("button", { name: `Show ${name}` }).click();
 
 async function openBoard(page: Page, theme: "io" | "nyx" = "io") {
     await page.request.put(`${api}/settings`, { headers, data: { theme } });
@@ -100,6 +101,7 @@ test("a ready card goes all the way to archived through the panel", async ({ pag
     await panel.getByRole("button", { name: "Done", exact: true }).click();
     await panel.getByRole("button", { name: "Archived", exact: true }).click();
     await page.keyboard.press("Escape");
+    await unfold(page, "Archived");
     await expect(column(page, "Archived").getByText("Ready route card")).toBeVisible();
 });
 
@@ -112,8 +114,27 @@ test("a recurring scheduled card archives itself and schedules its next run", as
     await panel.getByRole("button", { name: "System starts it" }).click();
     await panel.getByRole("button", { name: "System finishes" }).click();
     await page.keyboard.press("Escape");
+    await unfold(page, "Archived");
     await expect(column(page, "Archived").getByText("Recurring audit")).toBeVisible();
     await expect(column(page, "Scheduled").getByText("Recurring audit")).toBeVisible();
+});
+
+test("done and archived start folded and the board remembers what you open", async ({ page }) => {
+    await openBoard(page);
+    await expect(column(page, "Done").locator(".aspis-column__list")).toHaveCount(0);
+    await expect(column(page, "Archived")).toHaveAttribute("data-folded", "true");
+    await unfold(page, "Done");
+    await column(page, "Triage").getByRole("button", { name: "Fold Triage" }).click();
+    await expect(column(page, "Triage")).toHaveAttribute("data-folded", "true");
+    await page.keyboard.press("h");
+    await page.keyboard.press("k");
+    await expect(column(page, "Done").locator(".aspis-column__list")).toHaveCount(1);
+    await expect(column(page, "Triage")).toHaveAttribute("data-folded", "true");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const overflow = () => page.locator(".aspis-board").evaluate((board) => board.scrollWidth - board.clientWidth);
+    expect(await overflow()).toBe(0);
+    await page.setViewportSize({ width: 1024, height: 700 });
+    expect(await overflow()).toBeGreaterThan(0);
 });
 
 test("drag and drop only lands where the rules allow", async ({ page, request }) => {

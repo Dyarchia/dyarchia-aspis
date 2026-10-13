@@ -69,6 +69,7 @@ export function Gallery({ theme, onTheme }: { theme: Theme; onTheme: (theme: The
     const [palette, setPalette] = useState(false);
     const [shown, setShown] = useState(3);
     const [drawer, setDrawer] = useState(false);
+    const [archived, setArchived] = useState(true);
 
     useEffect(() => {
         const timer = setInterval(() => setShown((count) => (count >= script.length ? 3 : count + 1)), 1400);
@@ -249,6 +250,9 @@ export function Gallery({ theme, onTheme }: { theme: Theme; onTheme: (theme: The
                                 }
                                 onOpen={() => setDrawer(true)}
                             />
+                        </Column>
+                        <Column title="Archived" count={12} folded={archived} onFold={() => setArchived(!archived)}>
+                            <Tile reference="#2" title="Rename the Quote line fields" meta={["claude-code"]} onOpen={() => setDrawer(true)} />
                         </Column>
                     </Board>
                 </div>

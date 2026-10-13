@@ -1130,10 +1130,12 @@ select {
     line-height: 1.55;
 }
 
+/*
+ * Columns share the width of the board and only scroll sideways once each would drop below its minimum. A folded
+ * column keeps a narrow strip with its name and count, and stays a drop target while a card is dragged.
+ */
 .aspis-board {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(236px, 1fr);
+    display: flex;
     height: 100%;
     min-height: 0;
     overflow-x: auto;
@@ -1142,8 +1144,9 @@ select {
 .aspis-column {
     position: relative;
     display: flex;
+    flex: 1 1 0;
     flex-direction: column;
-    min-width: 0;
+    min-width: 176px;
     min-height: 0;
     transition:
         opacity var(--aspis-dur-base) ease,
@@ -1176,8 +1179,61 @@ select {
 
 .aspis-column__actions {
     display: flex;
+    align-items: center;
     gap: var(--aspis-space-1);
     margin-left: auto;
+}
+
+.aspis-column__fold {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--aspis-radius-control);
+    background: none;
+    color: var(--aspis-ink-4);
+    cursor: pointer;
+    transition: color var(--aspis-dur-fast) ease;
+}
+
+.aspis-column__fold .aspis-icon {
+    transform: rotate(90deg);
+}
+
+.aspis-column__fold:hover,
+.aspis-column__fold:focus-visible {
+    color: var(--aspis-ink-1);
+}
+
+.aspis-column[data-folded] {
+    flex: 0 0 40px;
+    min-width: 40px;
+}
+
+.aspis-column__strip {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--aspis-space-3);
+    padding: var(--aspis-space-4) 0;
+    border: 0;
+    border-radius: inherit;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    transition: background-color var(--aspis-dur-fast) ease;
+}
+
+.aspis-column__strip:hover,
+.aspis-column__strip:focus-visible {
+    background: var(--aspis-hover);
+}
+
+.aspis-column__strip .aspis-column__title {
+    writing-mode: vertical-rl;
 }
 
 .aspis-column__list {
