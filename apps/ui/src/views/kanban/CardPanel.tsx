@@ -18,6 +18,7 @@ import {
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { ServerState } from "../../use-server.ts";
 import type { PromptRequest } from "./Prompt.tsx";
+import { RunHistory } from "./Runs.tsx";
 import type { BoardApi } from "./use-board.ts";
 
 const actorLabels: Record<Actor, string> = { human: "You", agent: "Agent", system: "System", auditor: "Auditor" };
@@ -151,7 +152,10 @@ export function CardPanel({
 
     const simulate: { label: string; run: () => void }[] = [];
     if (card.phase === "ready") simulate.push({ label: "Agent picks it up", run: () => void board.act(card.id, "agent", { to: "running", sessionId: `dev-${Date.now()}` }) });
-    if (card.phase === "scheduled") simulate.push({ label: "System starts it", run: () => void board.act(card.id, "system", { to: "running" }) });
+    if (card.phase === "scheduled") {
+        simulate.push({ label: "Dispatch now", run: () => void board.dispatch() });
+        simulate.push({ label: "System starts it", run: () => void board.act(card.id, "system", { to: "running" }) });
+    }
     if (card.phase === "running") {
         simulate.push({ label: "Agent blocks", run: () => ask(`#${card.id} blocked by the agent`, "Reason", "Block", (text) => void board.act(card.id, "agent", { to: "blocked", note: text })) });
         simulate.push({ label: "System blocks", run: () => ask(`#${card.id} blocked by the system`, "Technical reason", "Block", (text) => void board.act(card.id, "system", { to: "blocked", note: text })) });
@@ -217,7 +221,23 @@ export function CardPanel({
                     </ul>
                 )}
                 {card.blockedReason && <Chip tone="warn">{card.blockedReason}</Chip>}
+                {card.held && card.phase === "scheduled" && <span className="aspis-field__hint">Waiting: {card.held}</span>}
             </Block>
+
+            {(card.route === "scheduled" || card.phase === "scheduled") && (
+                <Block
+                    label="Runs"
+                    actions={
+                        card.phase === "running" && card.route === "scheduled" ? (
+                            <Button variant="secondary" icon="close" onClick={() => void board.stop(card.id)}>
+                                Stop
+                            </Button>
+                        ) : undefined
+                    }
+                >
+                    <RunHistory cardId={card.id} board={board} changes={server.changes} />
+                </Block>
+            )}
 
             {card.phase === "review" && (
                 <Block label="Checks">

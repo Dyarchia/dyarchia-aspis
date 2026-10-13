@@ -1,5 +1,7 @@
 import { type APIRequestContext, type Page, expect, test } from "@playwright/test";
 import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 const api = "http://127.0.0.1:4319";
 const headers = { authorization: "Bearer dev", "content-type": "application/json" };
@@ -35,6 +37,18 @@ async function openBoard(page: Page, theme: "io" | "nyx" = "io") {
     await expect(page.getByText(/server live/i)).toBeVisible();
     await page.keyboard.press("k");
     await expect(column(page, "Triage")).toBeVisible();
+}
+
+function repository(name: string) {
+    const dir = join(process.env.ASPIS_E2E_HOME!, "repos", name);
+    mkdirSync(dir, { recursive: true });
+    const env = { ...process.env, GIT_AUTHOR_NAME: "Aspis e2e", GIT_AUTHOR_EMAIL: "e2e@aspis.local", GIT_COMMITTER_NAME: "Aspis e2e", GIT_COMMITTER_EMAIL: "e2e@aspis.local" };
+    const git = (...args: string[]) => execFileSync("git", args, { cwd: dir, env });
+    git("init", "-q", "-b", "develop");
+    writeFileSync(join(dir, "README.md"), "# e2e");
+    git("add", "-A");
+    git("commit", "-q", "-m", "init");
+    return dir;
 }
 
 async function confirm(page: Page, text: string) {
@@ -169,4 +183,30 @@ test("a card written by another process shows up in under a second", async ({ pa
     await openBoard(page);
     execFileSync("bun", ["e2e/support/external-write.ts", "Written by another process"], { env: { ...process.env, ASPIS_HOME: process.env.ASPIS_E2E_HOME } });
     await expect(column(page, "Triage").getByText("Written by another process")).toBeVisible({ timeout: 1000 });
+});
+
+test("a due scheduled card runs headless, streams its log and lands in archived with its commit", async ({ page, request }) => {
+    const id = await card(request, "Nightly release note", { folder: repository("nightly"), scheduledAt: Date.now() - 60_000 });
+    await move(request, id, "scheduled");
+    await openBoard(page);
+    expect(await call<{ started: number[] }>(request, "/dev/dispatch", "POST")).toEqual({ started: [id] });
+    await unfold(page, "Archived");
+    await column(page, "Archived").getByText("Nightly release note").click({ timeout: 15_000 });
+    const panel = page.locator(".aspis-dialog__box");
+    await expect(panel.locator(".aspis-log")).toContainText("Writing the note.");
+    await expect(panel.getByText(/Committed [0-9a-f]+ on feature\/develop\/card-/)).toBeVisible();
+});
+
+test("stop ends a live run and blocks the card with the reason", async ({ page, request }) => {
+    const id = await card(request, "Long migration #slow", { folder: repository("long"), scheduledAt: Date.now() - 60_000 });
+    await move(request, id, "scheduled");
+    await openBoard(page);
+    await call(request, "/dev/dispatch", "POST");
+    await column(page, "Running").getByText("Long migration #slow").click();
+    const panel = page.locator(".aspis-dialog__box");
+    await expect(panel.locator(".aspis-log")).toContainText("Working on it");
+    await panel.getByRole("button", { name: "Stop", exact: true }).click();
+    await expect(panel.locator(".aspis-chip", { hasText: "Stopped by you." })).toBeVisible({ timeout: 10_000 });
+    await page.keyboard.press("Escape");
+    await expect(column(page, "Blocked").getByText("Long migration #slow")).toBeVisible();
 });

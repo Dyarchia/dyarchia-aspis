@@ -47,6 +47,7 @@ interface CardRow {
     auditor_verdict: string | null;
     human_verdict: string | null;
     blocked_reason: string | null;
+    held: string | null;
     created_at: number;
     updated_at: number;
 }
@@ -70,6 +71,7 @@ const columns: Record<string, string> = {
     auditorVerdict: "auditor_verdict",
     humanVerdict: "human_verdict",
     blockedReason: "blocked_reason",
+    held: "held",
 };
 
 const json = new Set(["implementer", "auditor", "auditorVerdict", "humanVerdict"]);
@@ -166,11 +168,24 @@ export class Kanban {
         const result = move(card, request, { actor, now, dependencies: this.dependencyPhases(card) });
         if (!result.ok) throw new KanbanError(result.reason, 409);
         this.db.transaction(() => {
-            this.write(id, result.patch, now);
+            this.write(id, { ...result.patch, held: null }, now);
             this.record(id, actor, "moved", card.phase, request.to, request.note ?? null, now);
             if (result.next) this.repeat(card, result.next, now);
         })();
         return this.get(id);
+    }
+
+    /*
+     * Why a due Scheduled card has not started yet (repository busy, uncommitted changes...). The dispatcher writes
+     * it every minute, so it only touches the row when the reason changes and never bumps updated_at.
+     */
+    hold(id: number, reason: string | null): boolean {
+        return this.db.query("UPDATE cards SET held = ?1 WHERE id = ?2 AND held IS NOT ?1").run(reason, id).changes > 0;
+    }
+
+    setSession(id: number, sessionId: string, now = Date.now()): void {
+        if (this.get(id).phase !== "running") throw new KanbanError("Only a running card takes a session", 409);
+        this.write(id, { sessionId }, now);
     }
 
     note(id: number, text: string, actor: Actor, now = Date.now()): CardEvent {
@@ -236,6 +251,7 @@ export class Kanban {
         if (card.phase !== "triage") throw new KanbanError("Only cards in Triage can be deleted", 409);
         this.db.query("DELETE FROM cards WHERE id = ?").run(id);
         rmSync(join(this.filesDir, String(id)), { recursive: true, force: true });
+        rmSync(join(dirname(this.store.path), "runs", String(id)), { recursive: true, force: true });
     }
 
     private filePath(id: number, fileId: number, name: string) {
@@ -323,6 +339,7 @@ export class Kanban {
             auditorVerdict: verdictOf(row.auditor_verdict),
             humanVerdict: verdictOf(row.human_verdict),
             blockedReason: row.blocked_reason,
+            held: row.held,
             dependsOn: this.db
                 .query<{ depends_on: number }, [number]>("SELECT depends_on FROM card_dependencies WHERE card_id = ? ORDER BY depends_on")
                 .all(row.id)

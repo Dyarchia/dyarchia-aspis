@@ -24,6 +24,7 @@ const card = (overrides: Partial<Card> = {}): Card => ({
     auditorVerdict: null,
     humanVerdict: null,
     blockedReason: null,
+    held: null,
     dependsOn: [],
     files: [],
     createdAt: now,
@@ -92,6 +93,12 @@ describe("transitions from docs/kanban.md", () => {
     test("a recurring scheduled card is archived and a new one is scheduled for the next date", () => {
         const result = attempt({ phase: "running", route: "scheduled", recurrence: "daily", scheduledAt: now }, "archived", "system");
         expect(result).toMatchObject({ ok: true, next: { phase: "scheduled", scheduledAt: nextOccurrence(now, "daily") } });
+    });
+
+    test("a recurring card that missed its dates while the machine was off schedules the next one ahead", () => {
+        const threeDaysAgo = now - 3 * 86_400_000 + 60_000;
+        const result = attempt({ phase: "running", route: "scheduled", recurrence: "daily", scheduledAt: threeDaysAgo }, "archived", "system");
+        expect(result).toMatchObject({ ok: true, next: { scheduledAt: now + 60_000 } });
     });
 
     test("done needs the auditor's check and yours, both approving", () => {

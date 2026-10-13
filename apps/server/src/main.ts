@@ -1,3 +1,4 @@
+import { Dispatcher } from "@dyarchia/runner";
 import { Store } from "@dyarchia/store";
 import { defineCommand, runMain } from "citty";
 import pkg from "../../../package.json" with { type: "json" };
@@ -33,10 +34,22 @@ const serve = (actors?: Extension) =>
         },
     });
 
+const dispatch = defineCommand({
+    meta: { name: "dispatch", description: "Start the Scheduled cards that are due, run them to the end and exit" },
+    async run() {
+        const store = new Store();
+        try {
+            await new Dispatcher({ store }).dispatch();
+        } finally {
+            store.close();
+        }
+    },
+});
+
 export const cli = (actors?: Extension) =>
     defineCommand({
         meta: { name: "aspis-server", version: pkg.version, description: "Dyarchia Aspis local server" },
-        subCommands: { serve: serve(actors) },
+        subCommands: { serve: serve(actors), dispatch },
     });
 
 if (import.meta.main) void runMain(cli());

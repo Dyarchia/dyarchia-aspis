@@ -1,5 +1,5 @@
 import { useToast } from "@dyarchia/aspis";
-import { type Actor, Card, CardDetail, type CardEdit, CardEvent, type MoveRequest } from "@dyarchia/core";
+import { type Actor, Card, CardDetail, type CardEdit, CardEvent, type MoveRequest, Run, RunLog } from "@dyarchia/core";
 import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 import { request } from "../../server.ts";
@@ -58,6 +58,10 @@ export function useBoard(server: ServerState) {
         },
         removeFile: (id: number, file: number) => run(() => api(`/cards/${id}/files/${file}`, Card, { method: "DELETE" })),
         fileUrl: (id: number, file: number) => (conn ? `${conn.base}/cards/${id}/files/${file}?token=${encodeURIComponent(conn.token)}` : undefined),
+        runs: (id: number) => api(`/cards/${id}/runs`, z.array(Run)),
+        log: (id: number, run: number, from: number) => api(`/cards/${id}/runs/${run}/log?from=${from}`, RunLog),
+        stop: (id: number) => run(() => api(`/cards/${id}/stop`, z.null(), { method: "POST" })),
+        dispatch: () => run(() => api("/dev/dispatch", z.object({ started: z.array(z.number()) }), { method: "POST" })),
         act: (id: number, actor: Actor, move: MoveRequest) => run(() => api(`/dev/cards/${id}/move`, Card, json("POST", { ...move, actor }))),
         audit: (id: number, ok: boolean, reason: string) => run(() => api(`/dev/cards/${id}/verdict`, Card, json("POST", { ok, reason }))),
     };

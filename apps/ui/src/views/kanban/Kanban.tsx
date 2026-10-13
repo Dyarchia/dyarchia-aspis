@@ -147,7 +147,7 @@ export function Kanban({ server }: { server: ServerState }) {
                                         key={card.id}
                                         reference={`#${card.id}`}
                                         title={card.title}
-                                        note={card.phase === "blocked" ? (card.blockedReason ?? undefined) : undefined}
+                                        note={card.phase === "blocked" ? (card.blockedReason ?? undefined) : card.phase === "scheduled" && card.held ? `Waiting: ${card.held}` : undefined}
                                         active={card.id === open}
                                         draggable={humanTargets(card).length > 0}
                                         onOpen={() => setOpen(card.id)}
