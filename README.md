@@ -14,7 +14,8 @@ The app updates itself: it looks for the newest release on GitHub (prereleases i
 Eight fixed phases: Triage, Scheduled, Ready, Running, Blocked, Review, Done and Archived. The rules (who may
 move a card, from where to where and under which condition) live in one pure function in `packages/core`, and
 the store only moves cards through it. Scheduled cards run headless and archive themselves; Ready cards are
-picked up interactively and end in Review, where an auditor and then you must both approve before Done.
+picked up interactively and end in Review, where an auditor and then you must both approve before Done. The
+agent, system and auditor runners arrive in the next sprints; until then the board covers every human move.
 
 ## Stack
 
@@ -43,6 +44,7 @@ packages/aspis     design system: --aspis-* tokens, io and nyx themes, React com
 apps/server        local HTTP and WebSocket server, compiled to the sidecar
 apps/ui            React views
 apps/desktop       Tauri shell and NSIS installer
+e2e                Playwright suites and their screenshot baselines
 scripts            developer tooling
 ```
 
@@ -55,9 +57,12 @@ bun install
 bun run dev
 ```
 
-- `bun run dev:web` serves the UI on `http://localhost:1420` against a server on port 4319 (token `dev`).
-- `bun run test`, `bun run typecheck` and `bun run e2e` are what CI runs. `bun run e2e -- --update-snapshots`
-  refreshes the screenshot baselines in `e2e/__screenshots__` after an intended visual change.
+- `bun run dev:web` serves the UI on `http://localhost:1420` against a server on port 4319 (token `dev`). The dev
+  server starts from `apps/server/src/dev.ts`, which adds `/dev` routes to act as agent, system or auditor
+  through the same rules; the sidecar is compiled from `main.ts` and never contains them.
+- `bun run test`, `bun run typecheck` and `bun run e2e` are what CI runs. The e2e suite keeps its state in
+  `.e2e-state/`, wiped at the start of every run. `bun run e2e -- --update-snapshots=all` rewrites the baselines
+  in `e2e/__screenshots__` after an intended visual change.
 - `bun run release` builds the installer into `apps/desktop/src-tauri/target/release/bundle/nsis`. Updater
   artifacts are signed, so the build needs `TAURI_SIGNING_PRIVATE_KEY` (path or content of the private key)
   and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`; CI reads both from repository secrets. The public key lives in
