@@ -25,6 +25,7 @@ const card = (overrides: Partial<Card> = {}): Card => ({
     humanVerdict: null,
     blockedReason: null,
     held: null,
+    wakeAt: null,
     dependsOn: [],
     files: [],
     createdAt: now,
@@ -115,7 +116,8 @@ describe("transitions from docs/kanban.md", () => {
             ok: true,
             patch: { phase: "running", auditorVerdict: null, humanVerdict: null },
         });
-        expect(attempt({ phase: "review" }, "running", "human", { note: "Add tests" })).toMatchObject(refused("verdict"));
+        expect(attempt({ phase: "review" }, "running", "human", { note: "Add tests" })).toMatchObject(refused("A rejection"));
+        expect(attempt({ phase: "review", auditorVerdict: { ok: true, reason: "Fine", at: now } }, "running", "human", { note: "x" })).toMatchObject(refused("A rejection"));
         expect(attempt({ phase: "review", auditorVerdict: no }, "running", "human")).toMatchObject(refused("rejection"));
     });
 
@@ -157,6 +159,12 @@ describe("verdicts", () => {
         expect(verdict(audited, "human")).toBeUndefined();
         expect(verdict(card({ phase: "running" }), "auditor")).toContain("Review");
         expect(verdict(card({ phase: "review" }), "agent")).toBeDefined();
+    });
+
+    test("when the audit could not run you may reject, never approve", () => {
+        const stuck = card({ phase: "review", held: "Could not audit: codex cannot audit headless yet" });
+        expect(verdict(stuck, "human", false)).toBeUndefined();
+        expect(verdict(stuck, "human", true)).toContain("Approving needs the auditor");
     });
 });
 

@@ -8,7 +8,7 @@ use std::{
 
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
-fn home() -> Option<PathBuf> {
+pub fn home() -> Option<PathBuf> {
     env::var_os("ASPIS_HOME")
         .map(PathBuf::from)
         .or_else(|| env::var_os("USERPROFILE").map(|profile| PathBuf::from(profile).join(".dyarchia-aspis")))

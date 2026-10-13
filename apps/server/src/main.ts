@@ -1,4 +1,4 @@
-import { Agents, Dispatcher, Ready, hookHarnesses } from "@dyarchia/runner";
+import { Agents, Desktop, Dispatcher, Ready, hookHarnesses } from "@dyarchia/runner";
 import { Store } from "@dyarchia/store";
 import { defineCommand, runMain } from "citty";
 import pkg from "../../../package.json" with { type: "json" };
@@ -96,10 +96,27 @@ const agents = defineCommand({
     },
 });
 
+const tasks = defineCommand({
+    meta: { name: "tasks", description: "Manage the Task Scheduler entries of the Scheduled cards" },
+    subCommands: {
+        clear: defineCommand({
+            meta: { name: "clear", description: "Remove every Task Scheduler entry this app created" },
+            async run() {
+                const store = new Store();
+                try {
+                    await new Desktop({ store }).clear();
+                } finally {
+                    store.close();
+                }
+            },
+        }),
+    },
+});
+
 export const cli = (actors?: Extension) =>
     defineCommand({
         meta: { name: "aspis-server", version: pkg.version, description: "Dyarchia Aspis local server" },
-        subCommands: { serve: serve(actors), dispatch, hook, mcp, agents },
+        subCommands: { serve: serve(actors), dispatch, hook, mcp, agents, tasks },
     });
 
 if (import.meta.main) void runMain(cli());

@@ -2,6 +2,7 @@ import { type Card, type CardEvent, phaseLabels } from "@dyarchia/core";
 import { Kanban, KanbanError, Runs, type Store } from "@dyarchia/store";
 import { appendFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
+import { Desktop } from "./desktop.ts";
 import { branchFor, checkout, commit, git, readiness } from "./git.ts";
 
 export const hookHarnesses = ["claude-code", "kimi-code"] as const;
@@ -27,6 +28,31 @@ export interface HookReply {
 const allow: HookReply = { exit: 0 };
 const pickupCommand = /(^|\s)\/?(skill:)?dya-pickup\b/i;
 const aspisTool = /aspis.*card_(get|note|block|deliver)$/;
+
+/*
+ * Talking is not touching: while the card waits on the human (Blocked, Review) the agent may still read and answer
+ * questions, so these tools pass. Anything that can change the repository or run commands stays stopped.
+ */
+const readOnly = new Set([
+    "Read",
+    "Grep",
+    "Glob",
+    "LS",
+    "ReadMediaFile",
+    "NotebookRead",
+    "WebSearch",
+    "WebFetch",
+    "FetchURL",
+    "ToolSearch",
+    "TodoWrite",
+    "TodoList",
+    "TaskList",
+    "TaskGet",
+    "TaskOutput",
+    "AskUserQuestion",
+    "ListMcpResourcesTool",
+    "ReadMcpResourceTool",
+]);
 const comparable = (path: string) => resolve(path).replace(/[\\/]+$/, "").toLowerCase();
 const clip = (text: string, length = 140) => (text.length > length ? `${text.slice(0, length - 1)}…` : text);
 
@@ -54,11 +80,13 @@ export class Ready {
     readonly kanban: Kanban;
     readonly runs: Runs;
     readonly sessions: string;
+    readonly desktop: Desktop;
 
-    constructor(store: Store) {
+    constructor(store: Store, desktop?: Desktop) {
         this.kanban = new Kanban(store);
         this.runs = new Runs(store);
         this.sessions = join(dirname(store.path), "sessions");
+        this.desktop = desktop ?? new Desktop({ store });
     }
 
     private marker(session: string) {
@@ -120,7 +148,7 @@ export class Ready {
             const taken = this.kanban.get(card.id);
             mkdirSync(this.sessions, { recursive: true });
             writeFileSync(this.marker(sessionId), String(card.id));
-            const run = this.runs.start(card.id, branch, now, "interactive");
+            const run = this.runs.start(card.id, branch, now, "interactive", sessionId);
             this.record(taken, { type: "aspis", text: `Picked up by ${harness} session ${sessionId} on ${branch}` }, run.id);
             const history = this.kanban.events(card.id).filter((event) => event.actor === "human" && event.text && event.kind === "note");
             this.kanban.markDelivered(card.id, Math.max(0, ...this.kanban.events(card.id).map((event) => event.id)));
@@ -172,7 +200,7 @@ export class Ready {
         if (!card) return own ? this.deny("[Aspis] This session holds no card. Ask the human to run dya-pickup in this folder.") : allow;
         const target = Number(event.tool_input?.card);
         if (own && target !== card.id) return this.deny(`[Aspis] This session holds card #${card.id}; it cannot act on card #${event.tool_input?.card}.`);
-        const noting = own && /card_(note|get)$/.test(tool);
+        const noting = (own && /card_(note|get)$/.test(tool)) || readOnly.has(tool);
         if (card.phase === "blocked" && !noting) return this.deny(`[Aspis] Card #${card.id} is Blocked: ${card.blockedReason ?? "waiting for the human"}. Stop and wait; the human answers in the thread and resumes this session.`);
         if (card.phase === "review" && !noting) return this.deny(`[Aspis] Card #${card.id} is in Review. Do not change anything until the human sends it back.`);
         if (card.phase !== "running") return allow;
@@ -189,7 +217,7 @@ export class Ready {
     }
 
     private record(card: Card, line: Record<string, unknown>, runId?: number) {
-        const run = runId ? this.runs.get(runId) : (this.runs.session(card.id) ?? this.runs.start(card.id, branchFor(card.id, card.title), Date.now(), "interactive"));
+        const run = runId ? this.runs.get(runId) : (this.runs.session(card.id) ?? this.runs.start(card.id, branchFor(card.id, card.title), Date.now(), "interactive", card.sessionId));
         const path = this.runs.logPath(run);
         mkdirSync(dirname(path), { recursive: true });
         appendFileSync(path, `${JSON.stringify(line)}\n`);
@@ -223,6 +251,7 @@ export class Ready {
         const committed = saved.sha ? `Committed ${saved.sha} on ${branch}.` : "Nothing new to commit.";
         this.kanban.move(id, { to: "review", note: `${summary.trim()}\n\n${committed}` }, "agent");
         this.finish(id, "done");
+        this.desktop.kick();
         return `Card #${id} is in Review. ${committed} The auditor checks it next, then the human. Stop working on it unless the human sends it back.`;
     }
 

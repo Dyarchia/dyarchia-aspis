@@ -165,6 +165,7 @@ export function Kanban({ server }: { server: ServerState }) {
                                             card.recurrence,
                                             card.dependsOn.length > 0 && `${card.dependsOn.length} dep`,
                                             card.files.length > 0 && `${card.files.length} file${card.files.length > 1 ? "s" : ""}`,
+                                            card.sessionId && `session ${card.sessionId.slice(0, 8)}`,
                                         ].filter(Boolean)}
                                         marks={
                                             card.phase === "review" ? (

@@ -1,4 +1,5 @@
 import { type Health, type ServerEvent, Settings, Theme, defaultSettings } from "@dyarchia/core";
+import { Desktop } from "@dyarchia/runner";
 import { Kanban, KanbanError, Runs, type Store } from "@dyarchia/store";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -34,7 +35,20 @@ export function startServer({ store, token, hostname, port, actors }: ServerOpti
     const readSettings = (): Settings => ({
         theme: Theme.catch(defaultSettings.theme).parse(store.getSetting("theme")),
     });
-    const changed = () => publish({ type: "changed", dataVersion: store.dataVersion });
+    /*
+     * Every change to the board, made here or by any other process, may move a Scheduled card's time or leave work
+     * due now, so Task Scheduler is brought in line with the board shortly after things settle.
+     */
+    const desktop = new Desktop({ store });
+    let settle: ReturnType<typeof setTimeout> | undefined;
+    const reschedule = () => {
+        clearTimeout(settle);
+        settle = setTimeout(() => void desktop.sync().catch(() => undefined), 800);
+    };
+    const changed = () => {
+        publish({ type: "changed", dataVersion: store.dataVersion });
+        reschedule();
+    };
     const kanban = new Kanban(store);
     const runs = new Runs(store);
     const dev = Boolean(actors);
@@ -96,12 +110,20 @@ export function startServer({ store, token, hostname, port, actors }: ServerOpti
         },
     });
 
-    const stopWatching = store.watch((dataVersion) => publish({ type: "changed", dataVersion }));
+    const stopWatching = store.watch((dataVersion) => {
+        publish({ type: "changed", dataVersion });
+        reschedule();
+    });
+    void desktop
+        .retire()
+        .then(() => desktop.sync())
+        .catch(() => undefined);
 
     return {
         server,
         stop() {
             stopWatching();
+            clearTimeout(settle);
             server.stop(true);
         },
     };

@@ -76,8 +76,8 @@ export function SettingsView({ server, updates, onTheme }: { server: ServerState
             <Section label="Scheduled runs">
                 <MetaTree
                     items={[
-                        { term: "Dispatcher", values: ["Windows Task Scheduler starts it every minute, even with the app closed"] },
-                        { term: "Last check", values: [server.health?.lastDispatch ? new Date(server.health.lastDispatch).toLocaleString() : "Not yet"] },
+                        { term: "Dispatcher", values: ["Each Scheduled card has its own Task Scheduler entry at its time; nothing polls, and it runs with the app closed"] },
+                        { term: "Last dispatch", values: [server.health?.lastDispatch ? new Date(server.health.lastDispatch).toLocaleString() : "Not yet"] },
                         { term: "Runs", values: ["claude -p on a feature/develop/card-<id> branch, committed there, never pushed"] },
                     ]}
                 />
