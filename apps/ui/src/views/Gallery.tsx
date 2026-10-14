@@ -74,20 +74,20 @@ export function Gallery({ theme, onTheme }: { theme: Theme; onTheme: (theme: The
     const [archived, setArchived] = useState(true);
 
     useEffect(() => {
-        const timer = setInterval(() => setShown((count) => (count >= script.length ? 3 : count + 1)), 1400);
-        return () => clearInterval(timer);
-    }, []);
+        if (shown >= script.length) return;
+        const timer = setTimeout(() => setShown(shown + 1), 1400);
+        return () => clearTimeout(timer);
+    }, [shown]);
 
     return (
         <Page
             head={
                 <PageHeader
                     title="Aspis"
-                    explanation="One vocabulary, two themes."
-                    lead="Every component of the app on the same markup. The theme only decides its design."
                     actions={
                         <Tabs
                             label="Theme"
+                            kind="radio"
                             tabs={(Object.keys(themeCatalog) as Theme[]).map((id) => ({ id, label: themeCatalog[id].label }))}
                             value={theme}
                             onChange={onTheme}
@@ -188,7 +188,7 @@ export function Gallery({ theme, onTheme }: { theme: Theme; onTheme: (theme: The
                     ]}
                 />
                 <Divider />
-                <EmptyState icon="inbox" title="Nothing in Review" text="Cards land here when an agent finishes its work." action={<Button variant="secondary">New card</Button>} />
+                <EmptyState title="Nothing in Review" action={<Button variant="secondary">New card</Button>} />
             </Section>
 
             <Section label="Data">
@@ -225,7 +225,7 @@ export function Gallery({ theme, onTheme }: { theme: Theme; onTheme: (theme: The
             <Section label="Terminal">
                 <CodeBlock title="card.ts" lang="typescript" lines={code} />
                 <div className="h-[360px]">
-                    <LiveLog title="card 42 · claude-opus-5-5" status="Running" tone="info" lines={script.slice(0, shown)} streaming />
+                    <LiveLog title="card 42 · claude-opus-5-5" status={shown < script.length ? "Running" : "Done"} tone={shown < script.length ? "info" : "ok"} lines={script.slice(0, shown)} streaming={shown < script.length} />
                 </div>
             </Section>
 
@@ -249,7 +249,7 @@ export function Gallery({ theme, onTheme }: { theme: Theme; onTheme: (theme: The
                 <div className="h-[300px]">
                     <Board label="Sample board">
                         <Column title="Ready" count={1}>
-                            <Tile reference="#4" title="Cover the callout retry path" meta={["P1", "claude-code", "ivirma-crm"]} onOpen={() => setDrawer(true)} />
+                            <Tile reference="#4" title="Cover the callout retry path" meta={["P1", "claude-code", "acme-crm"]} onOpen={() => setDrawer(true)} />
                         </Column>
                         <Column title="Blocked" count={1} drop="refused">
                             <Tile reference="#6" title="Fix the flow fault path" note="Which org has the failing flow?" meta={["claude-code"]} onOpen={() => setDrawer(true)} />

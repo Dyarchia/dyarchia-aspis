@@ -48,6 +48,7 @@ function LiveField({
     type = "text",
     multiline,
     placeholder,
+    hideLabel,
 }: {
     label: string;
     value: string;
@@ -56,6 +57,7 @@ function LiveField({
     type?: string;
     multiline?: boolean;
     placeholder?: string;
+    hideLabel?: boolean;
 }) {
     const [local, setLocal] = useState(value);
     const editing = useRef(false);
@@ -64,6 +66,7 @@ function LiveField({
     }, [value]);
     const shared = {
         label,
+        hideLabel,
         value: local,
         disabled,
         placeholder,
@@ -90,9 +93,9 @@ function RunnerFields({ label, runner, disabled, onCommit }: { label: string; ru
                 onChange={(event) => onCommit({ ...runner, harness: event.target.value || null })}
                 options={[{ value: "", label: "Not set" }, ...harnesses.map((harness) => ({ value: harness, label: harness }))]}
             />
-            <LiveField label="Model" value={runner.model ?? ""} disabled={disabled} placeholder="claude-opus-5-5" onCommit={(model) => onCommit({ ...runner, model: model.trim() || null })} />
+            <LiveField label={`${label} model`} value={runner.model ?? ""} disabled={disabled} onCommit={(model) => onCommit({ ...runner, model: model.trim() || null })} />
             <Select
-                label="Effort"
+                label={`${label} effort`}
                 value={runner.effort ?? ""}
                 disabled={disabled}
                 onChange={(event) => onCommit({ ...runner, effort: event.target.value || null })}
@@ -144,7 +147,12 @@ export function CardPanel({
     }, [id, server.changes]);
 
     const card = detail?.card.id === id ? detail?.card : undefined;
-    if (!card || !detail) return <Dialog open={id !== undefined} onClose={onClose} title="Loading">{null}</Dialog>;
+    if (!card || !detail)
+        return (
+            <Dialog open={id !== undefined} onClose={onClose} title="Loading">
+                {null}
+            </Dialog>
+        );
 
     const editable = canEdit(card, "human");
     const edit = (change: CardEdit) => void board.edit(card.id, change);
@@ -184,6 +192,7 @@ export function CardPanel({
         <Dialog
             open
             onClose={onClose}
+            label={`#${card.id} ${card.title}`}
             title={
                 <div className="flex min-w-0 flex-col gap-[var(--aspis-space-2)]">
                     <div className="flex items-center gap-[var(--aspis-space-3)]">
@@ -191,14 +200,14 @@ export function CardPanel({
                         <Chip tone={phaseTone[card.phase]}>{phaseLabels[card.phase]}</Chip>
                         {card.route && <Chip>via {card.route}</Chip>}
                     </div>
-                    <LiveField label="Title" value={card.title} disabled={!editable} onCommit={(title) => title.trim() && edit({ title })} />
+                    <LiveField label="Title" hideLabel value={card.title} disabled={!editable} onCommit={(title) => title.trim() && edit({ title })} />
                 </div>
             }
             footer={
                 card.phase === "triage" ? (
                     confirmDelete ? (
                         <>
-                            <Button variant="quiet" onClick={() => setConfirmDelete(false)}>
+                            <Button variant="quiet" autoFocus onClick={() => setConfirmDelete(false)}>
                                 Keep it
                             </Button>
                             <Button variant="primary" onClick={() => void board.remove(card.id).then(onClose)}>
@@ -216,11 +225,11 @@ export function CardPanel({
             <Block label="Move">
                 <div className="flex flex-wrap gap-[var(--aspis-space-3)]">
                     {detail.targets.map((target) => (
-                        <Button key={target.to} variant="secondary" disabled={Boolean(target.reason)} title={target.reason} onClick={() => onMove(card, target)}>
+                        <Button key={target.to} variant="secondary" disabled={Boolean(target.reason)} onClick={() => onMove(card, target)}>
                             {phaseLabels[target.to]}
                         </Button>
                     ))}
-                    {detail.targets.length === 0 && <span className="aspis-field__hint">{card.phase === "archived" ? "Archived cards stay here." : "A model owns this card now; you can still write in the thread."}</span>}
+                    {detail.targets.length === 0 && card.phase !== "archived" && <span className="aspis-field__hint">Agent owns this card</span>}
                 </div>
                 {detail.targets.some((target) => target.reason) && (
                     <ul className="m-0 flex list-none flex-col gap-[var(--aspis-space-1)] p-0">
@@ -242,11 +251,11 @@ export function CardPanel({
                     <div className="flex flex-col gap-[var(--aspis-space-3)]">
                         <div className="flex flex-wrap items-center gap-[var(--aspis-space-3)]">
                             <Mark ok={card.auditorVerdict?.ok ?? null} label="Auditor" />
-                            <span className="aspis-field__hint">{card.auditorVerdict?.reason ?? card.held ?? "The auditor is reading the branch"}</span>
+                            <span className="aspis-field__hint">{card.auditorVerdict?.reason ?? card.held ?? "Auditing…"}</span>
                         </div>
                         <div className="flex flex-wrap items-center gap-[var(--aspis-space-3)]">
                             <Mark ok={card.humanVerdict?.ok ?? null} label="You" />
-                            <span className="aspis-field__hint">{card.humanVerdict?.reason ?? (card.auditorVerdict ? "Your check" : "After the auditor")}</span>
+                            {card.humanVerdict?.reason && <span className="aspis-field__hint">{card.humanVerdict.reason}</span>}
                         </div>
                         {!card.auditorVerdict && card.held && (
                             <div className="flex gap-[var(--aspis-space-3)]">
@@ -275,33 +284,20 @@ export function CardPanel({
             {card.phase === "ready" && (
                 <Block label="Pick it up">
                     {pickup ? (
-                        <>
-                            <span className="aspis-field__hint">
-                                Open {harness} in {card.folder ?? "the card folder"} and type the command. Its hook hands this card to that session, puts the
-                                repository on the card branch and moves the card to Running.
-                            </span>
-                            <CodeBlock title={card.folder ?? "folder"} lang={harness} lines={[{ text: pickup }]} />
-                        </>
+                        <CodeBlock title={card.folder ?? "folder"} lang={harness} lines={[{ text: pickup }]} />
                     ) : (
-                        <span className="aspis-field__hint">{harness || "This harness"} has no Aspis hooks yet; wire claude-code or kimi-code in Settings.</span>
+                        <span className="aspis-field__hint">{harness || "This harness"} has no Aspis hooks. Wire claude-code or kimi-code in Settings.</span>
                     )}
                     {card.auditor.harness !== "claude-code" && (
-                        <span className="aspis-field__hint">
-                            The auditor ({card.auditor.harness ?? "not set"}) cannot run headless yet: in Review you will be able to retry the audit or reject the card.
-                        </span>
+                        <span className="aspis-field__hint">The auditor ({card.auditor.harness ?? "not set"}) cannot run headless: retry or reject in Review.</span>
                     )}
                 </Block>
             )}
 
             {card.sessionId && (
                 <Block label="Session">
-                    <span className="aspis-field__hint">
-                        {withAgent
-                            ? "What you write in the thread reaches the agent at its next tool call or when its turn ends. A session that sits idle gets it once you resume it."
-                            : card.phase === "running"
-                              ? "The implementer's session. Resume it to talk to it once this run ends; resuming while it runs would split the conversation."
-                              : "The implementer's session. Resume it in its folder to ask it about the work."}
-                    </span>
+                    {withAgent && <span className="aspis-field__hint">Thread notes reach the agent at its next tool call or when its turn ends.</span>}
+                    {card.phase === "running" && card.route === "scheduled" && <span className="aspis-field__hint">Resume it once this run ends.</span>}
                     {resume ? (
                         <CodeBlock title={`Session ${card.sessionId}`} lang={harness} lines={[{ text: `cd "${card.folder}"` }, { text: resume }]} />
                     ) : (
@@ -325,19 +321,15 @@ export function CardPanel({
                         card={card}
                         board={board}
                         changes={server.changes}
-                        empty={
-                            card.route === "ready"
-                                ? "The session's prompts, tool calls and answers show here once it picks the card up, and the audits after it."
-                                : "No runs yet. The dispatcher starts the card when its time comes."
-                        }
+                        empty={card.route === "ready" ? "No activity yet" : "No runs yet"}
                     />
                 </Block>
             )}
 
             <Block label="Card">
-                <LiveField label="Brief" multiline value={card.brief} disabled={!editable} placeholder="What the agent has to do" onCommit={(brief) => edit({ brief })} />
+                <LiveField label="Brief" multiline value={card.brief} disabled={!editable} onCommit={(brief) => edit({ brief })} />
                 <div className="grid grid-cols-2 gap-[var(--aspis-space-4)]">
-                    <LiveField label="Folder" value={card.folder ?? ""} disabled={!editable} placeholder="C:\\path\\to\\repo" onCommit={(folder) => edit({ folder: folder.trim() || null })} />
+                    <LiveField label="Folder" value={card.folder ?? ""} disabled={!editable} placeholder={"C:\\repos\\name"} onCommit={(folder) => edit({ folder: folder.trim() || null })} />
                     <LiveField label="Base branch" value={card.baseBranch ?? ""} disabled={!editable} placeholder="develop" onCommit={(branch) => edit({ baseBranch: branch.trim() || null })} />
                     <LiveField label="Priority" type="number" value={String(card.priority)} disabled={!editable} onCommit={(priority) => edit({ priority: Number(priority) || 0 })} />
                     <Select
@@ -389,9 +381,7 @@ export function CardPanel({
                         const other = cards.find((candidate) => candidate.id === dependency);
                         return (
                             <span key={dependency} className="inline-flex items-center gap-[var(--aspis-space-2)]">
-                                <Chip tone={other?.phase === "done" || other?.phase === "archived" ? "ok" : "warn"}>
-                                    #{dependency} {other?.title ?? ""}
-                                </Chip>
+                                <Mark ok={other?.phase === "done" || other?.phase === "archived" ? true : null} label={`#${dependency} ${other?.title ?? ""}`} />
                                 {editable && (
                                     <Button variant="quiet" aria-label={`Remove dependency ${dependency}`} onClick={() => edit({ dependsOn: card.dependsOn.filter((value) => value !== dependency) })}>
                                         Remove
@@ -400,7 +390,6 @@ export function CardPanel({
                             </span>
                         );
                     })}
-                    {card.dependsOn.length === 0 && <span className="aspis-field__hint">No dependencies</span>}
                 </div>
                 {editable && others.length > 0 && (
                     <Select
@@ -432,7 +421,6 @@ export function CardPanel({
                         event.target.value = "";
                     }}
                 />
-                {card.files.length === 0 && <span className="aspis-field__hint">No files</span>}
                 {card.files.map((file) => (
                     <div key={file.id} className="flex items-center gap-[var(--aspis-space-3)]">
                         <a className="aspis-field__hint" href={board.fileUrl(card.id, file.id)} download={file.name}>
@@ -440,7 +428,7 @@ export function CardPanel({
                         </a>
                         <span className="aspis-field__hint">{bytes(file.bytes)}</span>
                         {editable && (
-                            <Button variant="quiet" onClick={() => void board.removeFile(card.id, file.id)}>
+                            <Button variant="quiet" aria-label={`Remove ${file.name}`} onClick={() => void board.removeFile(card.id, file.id)}>
                                 Remove
                             </Button>
                         )}
@@ -466,7 +454,7 @@ export function CardPanel({
                     composer={
                         <>
                             <div className="flex-1">
-                                <TextArea label="Note" rows={2} value={note} placeholder="Notes, answers, context for the agent" onChange={(event) => setNote(event.target.value)} />
+                                <TextArea label="Note" hideLabel rows={2} value={note} placeholder="Note for the agent" onChange={(event) => setNote(event.target.value)} />
                             </div>
                             <Button
                                 variant="secondary"

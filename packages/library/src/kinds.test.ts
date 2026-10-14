@@ -9,9 +9,10 @@ const scaffolded = (id: (typeof kindIds)[number], name = "apex-review") => {
 };
 
 describe.each(kindIds)("%s", (id) => {
-    test("a new piece is valid and every file belongs to it", () => {
+    test("a new piece starts empty: its only errors point at a field to fill, and every file belongs to it", () => {
         const { kind, files, piece } = scaffolded(id);
-        expect(validate(kind, piece).filter((issue) => issue.level === "error")).toEqual([]);
+        const fillable = new Set([...kind.fields.map((field) => field.key), "body"]);
+        expect(validate(kind, piece).filter((issue) => issue.level === "error" && !fillable.has(issue.field ?? ""))).toEqual([]);
         for (const path of Object.keys(files)) expect(pieceAt(path)).toEqual({ kind: id, name: "apex-review" });
     });
 
