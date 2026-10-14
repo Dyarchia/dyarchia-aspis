@@ -12,7 +12,7 @@ const tempDb = () => {
 };
 
 afterEach(() => {
-    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 });
 });
 
 test("creates the database in WAL mode and migrates once", () => {

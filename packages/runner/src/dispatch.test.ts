@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Dispatcher } from "./dispatch.ts";
 import { git } from "./git.ts";
-import { fakeClaude, makeRepo } from "./testing.ts";
+import { fakeClaude, makeRepo, removeDir } from "./testing.ts";
 
 const runner = { harness: "claude-code", model: "claude-opus-5-5", effort: "high" };
 
@@ -23,10 +23,9 @@ beforeEach(async () => {
     dispatcher = new Dispatcher({ store, claude: [process.execPath, fakeClaude], pollMs: 20 });
 });
 
-afterEach(() => {
+afterEach(async () => {
     store.close();
-    Bun.gc(true);
-    rmSync(dir, { recursive: true, force: true });
+    await removeDir(dir);
 });
 
 const kanban = () => dispatcher.kanban;

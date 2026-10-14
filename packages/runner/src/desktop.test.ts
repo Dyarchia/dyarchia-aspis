@@ -1,9 +1,10 @@
 import { Kanban, Store } from "@dyarchia/store";
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Desktop, retryAfterMs } from "./desktop.ts";
+import { removeDir } from "./testing.ts";
 
 const runner = { harness: "claude-code", model: "claude-opus-5-5", effort: "high" };
 const now = new Date(2026, 9, 14, 9, 0).getTime();
@@ -30,10 +31,9 @@ beforeEach(() => {
     });
 });
 
-afterEach(() => {
+afterEach(async () => {
     store.close();
-    Bun.gc(true);
-    rmSync(dir, { recursive: true, force: true });
+    await removeDir(dir);
 });
 
 function scheduled(at: number) {
