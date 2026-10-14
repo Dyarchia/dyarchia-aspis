@@ -28,6 +28,7 @@ for (const view of views) {
     test(`${view.name} is one layout in both themes`, async ({ page }) => {
         await open(page, "io");
         await page.keyboard.press(view.key);
+        await page.clock.pauseAt(Date.now() + 60_000);
         await fit(page);
         await sameLayout(page, async () => {});
     });
