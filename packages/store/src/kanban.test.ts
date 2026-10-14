@@ -19,7 +19,7 @@ beforeEach(() => {
 
 afterEach(() => {
     store.close();
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 });
 });
 
 const prepared = (title = "Refactor the trigger handler") => {

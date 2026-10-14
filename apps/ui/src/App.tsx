@@ -6,14 +6,14 @@ import { type ServerState, useServer } from "./use-server.ts";
 import { useUpdates } from "./use-updates.ts";
 import { Gallery } from "./views/Gallery.tsx";
 import { Home } from "./views/Home.tsx";
-import { Pending } from "./views/Pending.tsx";
+import { Build } from "./views/build/Build.tsx";
 import { Kanban } from "./views/kanban/Kanban.tsx";
 import { SettingsView } from "./views/Settings.tsx";
 
 const nav = [
     { id: "home", label: "Home", icon: "home", hotkey: "H" },
     { id: "kanban", label: "Kanban", icon: "board", hotkey: "K" },
-    { id: "build", label: "Build", icon: "layers", hotkey: "B", badge: "S5" },
+    { id: "build", label: "Build", icon: "layers", hotkey: "B" },
     { id: "aspis", label: "Aspis", icon: "shield", hotkey: "A" },
     { id: "settings", label: "Settings", icon: "settings", hotkey: "S" },
 ] as const satisfies readonly NavEntry<string>[];
@@ -76,14 +76,7 @@ function Workspace() {
             <AppShell brand="Dyarchia Aspis" nav={nav} active={view} onNavigate={go} status={<ServerStatus server={server} />}>
                 {view === "home" && <Home server={server} onNavigate={go} />}
                 {view === "kanban" && <Kanban server={server} />}
-                {view === "build" && (
-                    <Pending
-                        title="Build"
-                        explanation="What the agents read."
-                        sprint="S5"
-                        text="Agents, skills, prompts, commands, rules, hooks, plugins and mods written to the mantinea library and published from there."
-                    />
-                )}
+                {view === "build" && <Build server={server} onSettings={() => go("settings")} />}
                 {view === "aspis" && <Gallery theme={server.settings.theme} onTheme={chooseTheme} />}
                 {view === "settings" && <SettingsView server={server} updates={updates} onTheme={chooseTheme} />}
             </AppShell>

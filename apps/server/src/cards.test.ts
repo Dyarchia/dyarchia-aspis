@@ -22,7 +22,7 @@ afterAll(() => {
     dev.stop();
     store.close();
     Bun.gc(true);
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 });
 });
 
 test("cards are created, edited and moved only where the rules allow", async () => {

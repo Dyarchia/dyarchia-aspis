@@ -17,6 +17,7 @@ import {
     ListRow,
     LiveLog,
     Mark,
+    Menu,
     type LogLine,
     MetaTree,
     Page,
@@ -69,6 +70,7 @@ export function Gallery({ theme, onTheme }: { theme: Theme; onTheme: (theme: The
     const [palette, setPalette] = useState(false);
     const [shown, setShown] = useState(3);
     const [drawer, setDrawer] = useState(false);
+    const [menu, setMenu] = useState("skills");
     const [archived, setArchived] = useState(true);
 
     useEffect(() => {
@@ -224,6 +226,22 @@ export function Gallery({ theme, onTheme }: { theme: Theme; onTheme: (theme: The
                 <CodeBlock title="card.ts" lang="typescript" lines={code} />
                 <div className="h-[360px]">
                     <LiveLog title="card 42 · claude-opus-5-5" status="Running" tone="info" lines={script.slice(0, shown)} streaming />
+                </div>
+            </Section>
+
+            <Section label="Menu">
+                <div className="w-[260px]">
+                    <Menu
+                        label="Sample library"
+                        value={menu}
+                        onSelect={setMenu}
+                        items={[
+                            { id: "skills", label: "Skills", count: 12 },
+                            { id: "agents", label: "Agents", count: 4 },
+                            { id: "hooks", label: "Hooks", count: 2, mark: <Chip tone="warn">changed</Chip> },
+                            { id: "mods", label: "Mods", count: 0 },
+                        ]}
+                    />
                 </div>
             </Section>
 

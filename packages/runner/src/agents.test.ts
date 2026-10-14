@@ -16,7 +16,7 @@ beforeEach(() => {
     agents = new Agents({ exe, launcher, home, which: (name) => `C:\\bin\\${name}.exe`, exec: async (command) => (calls.push(command), true) });
 });
 
-afterEach(() => rmSync(home, { recursive: true, force: true }));
+afterEach(() => rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }));
 
 test("claude code gets its hooks, skill and MCP server next to what was there, and loses only those", async () => {
     const settings = join(home, ".claude", "settings.json");

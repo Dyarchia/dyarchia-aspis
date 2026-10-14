@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { git } from "./git.ts";
 
@@ -13,4 +13,21 @@ export async function makeRepo(path: string) {
     writeFileSync(join(path, "README.md"), "# repo\n");
     await git(path, "add", "-A");
     await git(path, "commit", "-q", "-m", "init");
+}
+
+/*
+ * bun:sqlite finalizes statements on garbage collection, so a closed database can keep its file open for a moment
+ * on Windows. Collect and retry until the folder goes.
+ */
+export async function removeDir(path: string) {
+    for (let attempt = 0; ; attempt++) {
+        Bun.gc(true);
+        try {
+            rmSync(path, { recursive: true, force: true });
+            return;
+        } catch (error) {
+            if (attempt >= 40) throw error;
+            await Bun.sleep(50);
+        }
+    }
 }

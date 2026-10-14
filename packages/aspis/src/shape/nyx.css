@@ -853,3 +853,46 @@
 [data-theme="nyx"] .aspis-thread__entry[data-kind="file"] .aspis-thread__text {
     color: var(--aspis-ink-3);
 }
+
+[data-theme="nyx"] .aspis-menu {
+    padding: var(--aspis-space-2);
+}
+
+[data-theme="nyx"] .aspis-menu__list {
+    gap: 2px;
+}
+
+[data-theme="nyx"] .aspis-menu__item {
+    height: 32px;
+    padding: 0 10px;
+    border-radius: var(--aspis-radius-item);
+}
+
+[data-theme="nyx"] .aspis-menu__item:hover,
+[data-theme="nyx"] .aspis-menu__item[aria-current] {
+    background: var(--aspis-hover);
+}
+
+[data-theme="nyx"] .aspis-menu__item[aria-current]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: var(--aspis-edge);
+    mask:
+        linear-gradient(black 0 0) content-box,
+        linear-gradient(black 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+[data-theme="nyx"] .aspis-menu__count {
+    display: inline-flex;
+    align-items: center;
+    height: 16px;
+    padding: 0 6px;
+    border: 1px solid var(--aspis-line-strong);
+    border-radius: var(--aspis-radius-control);
+    font-size: 9px;
+}

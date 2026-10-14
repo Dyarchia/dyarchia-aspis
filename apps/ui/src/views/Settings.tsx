@@ -1,6 +1,8 @@
-import { Button, Chip, MetaTree, Page, PageHeader, Panel, Section, themeCatalog } from "@dyarchia/aspis";
+import { Button, Chip, MetaTree, Page, PageHeader, Panel, Section, TextField, themeCatalog } from "@dyarchia/aspis";
 import type { Theme } from "@dyarchia/core";
+import { useState } from "react";
 import { useAgents } from "../use-agents.ts";
+import { useLibrary } from "../use-library.ts";
 import type { ServerState } from "../use-server.ts";
 import type { UpdateState, Updates } from "../use-updates.ts";
 
@@ -26,6 +28,8 @@ const updateStatus = (state: UpdateState) => {
 export function SettingsView({ server, updates, onTheme }: { server: ServerState; updates: Updates; onTheme: (theme: Theme) => void }) {
     const current = server.settings.theme;
     const agents = useAgents(server);
+    const library = useLibrary(server);
+    const [repo, setRepo] = useState("");
     return (
         <Page head={<PageHeader title="Settings" explanation="Shared by every client." lead="The theme is stored in state.db, so every open client follows the change." />}>
             <Section label="Theme" count={Object.keys(themeCatalog).length}>
@@ -102,6 +106,32 @@ export function SettingsView({ server, updates, onTheme }: { server: ServerState
                         </div>
                     ))}
                     {agents.installable === false && <span className="aspis-field__hint">CLIs are wired from the installed desktop app.</span>}
+                </div>
+            </Section>
+            <Section label="Library">
+                <div className="flex flex-col gap-[var(--aspis-space-4)]">
+                    <p className="aspis-field__hint m-0">
+                        The GitHub repository where Build keeps your pieces. If it does not exist yet, Build creates it as a private repository with a develop
+                        branch. Every change reaches it as a pull request to develop that you merge.
+                    </p>
+                    {library.repo && library.status ? (
+                        <MetaTree
+                            items={[
+                                { term: "Repository", values: [library.repo] },
+                                { term: "Folder", values: [library.status.path] },
+                                { term: "Branch", values: [library.status.pr ? `${library.status.branch} · pull request ${library.status.pr.state.toLowerCase()}` : library.status.branch] },
+                            ]}
+                        />
+                    ) : (
+                        <div className="flex flex-wrap items-end gap-[var(--aspis-space-4)]">
+                            <div className="min-w-[260px] flex-1">
+                                <TextField label="Repository" placeholder="owner/mantinea" value={repo} onChange={(event) => setRepo(event.target.value)} />
+                            </div>
+                            <Button variant="primary" icon="layers" disabled={!repo.trim() || library.busy} onClick={() => void library.connect(repo.trim())}>
+                                Connect
+                            </Button>
+                        </div>
+                    )}
                 </div>
             </Section>
             <Section label="About">
