@@ -38,10 +38,12 @@ test("a skill made in the form is the file in code, and the code drives the form
     await field(page, "Description").fill("Use this skill when the user asks to review Apex classes.");
     await field(page, "Description").blur();
     await page.getByRole("tab", { name: "Code" }).click();
-    const code = page.locator("textarea").first();
-    await expect(code).toHaveValue(/description: Use this skill when the user asks to review Apex classes\./);
+    const code = page.locator(".cm-content");
+    await expect(code).toContainText("description: Use this skill when the user asks to review Apex classes.");
 
-    await code.fill((await code.inputValue()).replace("name: apex-review", "name: apex-reviewer"));
+    await code.click();
+    await page.keyboard.press("Control+a");
+    await page.keyboard.insertText("---\nname: apex-reviewer\ndescription: Use this skill when the user asks to review Apex classes.\n---\n\nSteps Claude follows when this skill applies.\n");
     await page.getByRole("tab", { name: "Declarative" }).click();
     await expect(field(page, "Name")).toHaveValue("apex-reviewer");
     await expect(page.getByText("The command will be /apex-reviewer, not /apex-review")).toBeVisible();
@@ -74,5 +76,8 @@ for (const theme of ["io", "nyx"] as const) {
         await expect(page.getByRole("heading", { name: "apex-review" })).toBeVisible();
         await page.mouse.move(0, 0);
         await expect(page).toHaveScreenshot(`build-${theme}.png`);
+        await page.getByRole("tab", { name: "Code" }).click();
+        await expect(page.locator(".cm-content")).toContainText("name: apex-reviewer");
+        await expect(page).toHaveScreenshot(`build-code-${theme}.png`);
     });
 }

@@ -2,6 +2,7 @@ import { Button, Chip, GroupHeader, Tabs, TextArea, useHotkeys, useToast } from 
 import { type Kind, read, validate, write } from "@dyarchia/library";
 import { useEffect, useMemo, useState } from "react";
 import type { Library } from "../../use-library.ts";
+import { CodeEditor } from "./CodeEditor.tsx";
 import { FieldControl } from "./FieldControl.tsx";
 
 type Mode = "tutorial" | "declarative" | "code";
@@ -145,13 +146,11 @@ export function Editor({ kind, name, library, onDeleted }: { kind: Kind; name: s
             {mode === "code" && (
                 <div className="flex flex-col gap-[var(--aspis-space-4)]">
                     {files.length > 1 && <Tabs label="Files" value={path} onChange={setPath} tabs={files.map((file) => ({ id: file, label: file.split("/").slice(2).join("/") || file }))} />}
-                    <TextArea
-                        label={path}
-                        rows={26}
-                        spellCheck={false}
-                        className="font-[family-name:var(--aspis-font-mono)]"
+                    <CodeEditor
+                        path={path}
                         value={texts[path] ?? ""}
-                        onChange={(event) => setTexts((all) => ({ ...all, [path]: event.target.value }))}
+                        onChange={(text) => setTexts((all) => ({ ...all, [path]: text }))}
+                        onSave={() => dirty.length > 0 && void save()}
                     />
                 </div>
             )}

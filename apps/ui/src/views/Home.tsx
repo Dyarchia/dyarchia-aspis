@@ -7,10 +7,10 @@ const sprints: { id: string; title: string; detail: string; state: string; tone:
     { id: "S2", title: "Kanban", detail: "Board with its rules, panel, thread, sync under a second", state: "Shipped", tone: "ok" },
     { id: "S3", title: "Scheduled cards", detail: "Headless runs, Task Scheduler, queue per repo, live log", state: "Shipped", tone: "ok" },
     { id: "S4", title: "Ready cards", detail: "Pickup from any CLI, guard hook, MCP, auditor", state: "Shipped", tone: "ok" },
-    { id: "S5", title: "Build", detail: "mantinea library and publishing", state: "Next", tone: "info" },
+    { id: "S5", title: "Build", detail: "Library of agent pieces: tutorial, declarative and code", state: "Shipped", tone: "ok" },
 ];
 
-export function Home({ server, onNavigate }: { server: ServerState; onNavigate: (view: "kanban" | "aspis" | "settings") => void }) {
+export function Home({ server, onNavigate }: { server: ServerState; onNavigate: (view: "kanban" | "build" | "aspis" | "settings") => void }) {
     const { health } = server;
     return (
         <Page
@@ -59,7 +59,7 @@ export function Home({ server, onNavigate }: { server: ServerState; onNavigate: 
                             meta={[sprint.detail]}
                             active={sprint.state === "Next"}
                             trail={<Chip tone={sprint.tone}>{sprint.state}</Chip>}
-                            onSelect={["S2", "S3", "S4"].includes(sprint.id) ? () => onNavigate("kanban") : undefined}
+                            onSelect={["S2", "S3", "S4"].includes(sprint.id) ? () => onNavigate("kanban") : sprint.id === "S5" ? () => onNavigate("build") : undefined}
                         />
                     ))}
                 </List>
