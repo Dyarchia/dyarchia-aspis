@@ -1,14 +1,14 @@
 import { runLines } from "@dyarchia/core";
 import { Store } from "@dyarchia/store";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Desktop } from "./desktop.ts";
 import { Dispatcher } from "./dispatch.ts";
 import { git } from "./git.ts";
 import { Ready } from "./ready.ts";
-import { fakeClaude, makeRepo } from "./testing.ts";
+import { fakeClaude, makeRepo, removeDir } from "./testing.ts";
 
 const claude = { harness: "claude-code", model: "claude-opus-5-5", effort: "high" };
 
@@ -27,10 +27,9 @@ beforeEach(async () => {
     ready = new Ready(store, new Desktop({ store, launcher: undefined, kick: () => kicks++ }));
 });
 
-afterEach(() => {
+afterEach(async () => {
     store.close();
-    Bun.gc(true);
-    rmSync(dir, { recursive: true, force: true });
+    await removeDir(dir);
 });
 
 const kanban = () => ready.kanban;

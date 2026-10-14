@@ -7,6 +7,7 @@ import { ZodError } from "zod";
 import pkg from "../../../package.json" with { type: "json" };
 import { agentRoutes } from "./agents.ts";
 import { cardRoutes } from "./cards.ts";
+import { libraryRoutes } from "./library.ts";
 import { runRoutes } from "./runs.ts";
 
 const allowedOrigins = ["http://tauri.localhost", "https://tauri.localhost", "tauri://localhost", "http://localhost:1420"];
@@ -83,6 +84,7 @@ export function startServer({ store, token, hostname, port, actors }: ServerOpti
         .route("/cards", cardRoutes(kanban, changed))
         .route("/cards", runRoutes(kanban, runs, changed))
         .route("/agents", agentRoutes())
+        .route("/library", libraryRoutes(store, changed))
         .onError((error, c) => {
             if (error instanceof KanbanError) return c.json({ error: error.message }, error.status);
             if (error instanceof ZodError) return c.json({ error: error.issues.map((issue) => issue.message).join("; ") }, 400);

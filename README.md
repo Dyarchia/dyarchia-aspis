@@ -52,6 +52,19 @@ picked up interactively and end in Review, where an auditor and then you must bo
 - While the card waits on you (Blocked, Review) the agent may still read and answer; anything that changes the
   repository or runs commands is stopped.
 
+## Build
+
+- A builder and library for the pieces agents work with: skills, agents, commands, prompts, rules, hooks, plugins
+  and mods, in Claude Code's formats. The pieces live in a GitHub repository of the user's (chosen in Settings,
+  created private with a develop branch when it does not exist yet), cloned under `~/.dyarchia-aspis/library/`.
+- Every piece has three modes over the same file: Tutorial walks the official steps for its kind and highlights the
+  fields of each step, Declarative is a form, Code is the file itself. A form change rewrites only its own key, so
+  comments, order and fields the form does not know survive.
+- Each kind is validated as Claude Code reads it: errors (what Claude Code would refuse or skip) block publishing,
+  warnings do not.
+- Publishing moves the changes to a `feature/` branch and opens a pull request to develop for the user to merge;
+  later publishes join that pull request, and once it is merged Build returns to develop.
+
 ## Stack
 
 - Tauri 2 shell with a Bun-compiled Hono sidecar (`aspis-server`)
@@ -76,6 +89,7 @@ Both themes render the exact same markup; a theme only decides the design.
 packages/core      zod schemas and shared types
 packages/store     SQLite access, migrations and change watching
 packages/runner    Scheduled dispatcher, Ready pickup and guard, auditor, CLI wiring
+packages/library   Build: kinds, formats, lossless codec, validation and the library repository
 packages/aspis     design system: --aspis-* tokens, io and nyx themes, React components
 apps/server        local HTTP and WebSocket server, compiled to the sidecar
 apps/ui            React views
@@ -97,7 +111,8 @@ bun run dev
   server starts from `apps/server/src/dev.ts`, which adds `/dev` routes to act as agent, system or auditor
   through the same rules and to run the dispatcher on demand; the sidecar is compiled from `main.ts` and never
   contains them. Set `ASPIS_CLAUDE` to point runs at another executable; tests and e2e use
-  `packages/runner/src/fake-claude.ts`, so they need neither the CLI nor a login.
+  `packages/runner/src/fake-claude.ts`, so they need neither the CLI nor a login. `ASPIS_LIBRARY` and `ASPIS_GH`
+  do the same for Build: e2e uses a local folder and `packages/library/src/fake-gh.ts` over bare repositories.
 - `bun run test`, `bun run typecheck` and `bun run e2e` are what CI runs. The e2e suite keeps its state in
   `.e2e-state/`, wiped at the start of every run. `bun run e2e -- --update-snapshots=all` rewrites the baselines
   in `e2e/__screenshots__` after an intended visual change.

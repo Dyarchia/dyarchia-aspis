@@ -14,7 +14,7 @@ const base = `http://127.0.0.1:${server.port}`;
 afterAll(() => {
     stop();
     store.close();
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 });
 });
 
 test("rejects requests without the token", async () => {
