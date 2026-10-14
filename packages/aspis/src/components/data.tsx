@@ -10,13 +10,13 @@ export interface TableColumn {
 export function DataTable({ title, columns, rows }: { title?: string; columns: readonly TableColumn[]; rows: readonly Record<string, ReactNode>[] }) {
     return (
         <div className="aspis-table">
-            {title && <div className="aspis-table__title">{title}</div>}
             <div className="aspis-table__scroll">
                 <table>
+                    {title && <caption className="aspis-table__title">{title}</caption>}
                     <thead>
                         <tr>
                             {columns.map((column) => (
-                                <th key={column.key} className="aspis-table__head" data-numeric={column.numeric || undefined}>
+                                <th key={column.key} scope="col" className="aspis-table__head" data-numeric={column.numeric || undefined}>
                                     {column.label}
                                 </th>
                             ))}
@@ -62,22 +62,33 @@ export function ListRow({
     active?: boolean;
     onSelect?: () => void;
 }) {
+    const content = (
+        <>
+            <span className="aspis-row__lead">{lead}</span>
+            <span className="aspis-row__main">
+                <span className="aspis-row__title">{title}</span>
+                {meta && meta.length > 0 && (
+                    <span className="aspis-row__meta">
+                        {meta.map((item, index) => (
+                            <span key={index}>{item}</span>
+                        ))}
+                    </span>
+                )}
+            </span>
+            <span className="aspis-row__trail">{trail}</span>
+        </>
+    );
     return (
         <li className="aspis-list__item">
-            <button type="button" className="aspis-row" aria-current={active || undefined} onClick={onSelect}>
-                <span className="aspis-row__lead">{lead}</span>
-                <span className="aspis-row__main">
-                    <span className="aspis-row__title">{title}</span>
-                    {meta && meta.length > 0 && (
-                        <span className="aspis-row__meta">
-                            {meta.map((item, index) => (
-                                <span key={index}>{item}</span>
-                            ))}
-                        </span>
-                    )}
-                </span>
-                <span className="aspis-row__trail">{trail}</span>
-            </button>
+            {onSelect ? (
+                <button type="button" className="aspis-row" aria-current={active || undefined} onClick={onSelect}>
+                    {content}
+                </button>
+            ) : (
+                <div className="aspis-row" aria-current={active || undefined}>
+                    {content}
+                </div>
+            )}
         </li>
     );
 }
@@ -153,15 +164,10 @@ export function LiveLog({
     return (
         <section className="aspis-log">
             <header className="aspis-log__bar">
-                <span className="aspis-log__lights" aria-hidden="true">
-                    <i />
-                    <i />
-                    <i />
-                </span>
                 <span className="aspis-log__title">{title}</span>
                 {status && <Status tone={tone}>{status}</Status>}
             </header>
-            <div className="aspis-log__screen" role="log" aria-live="polite">
+            <div className="aspis-log__screen" role="log" aria-live={streaming ? "off" : "polite"} aria-label={title} tabIndex={0}>
                 <div className="aspis-log__lines">
                     {lines.map((line, index) => (
                         <div key={index} className="aspis-log__line" data-kind={line.kind}>

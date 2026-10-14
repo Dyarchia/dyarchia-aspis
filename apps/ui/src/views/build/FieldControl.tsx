@@ -16,9 +16,8 @@ export function FieldControl({ field, value, highlight, onCommit }: { field: Fie
     const [invalid, setInvalid] = useState<string>();
     useEffect(() => setLocal(shown), [shown]);
 
-    const hint = invalid ?? field.help;
-    const frame = highlight ? "rounded-[var(--aspis-radius-control)] outline outline-2 outline-offset-4 outline-[var(--aspis-accent)]" : "";
-    const label = `${field.label}${field.required ? " *" : ""}`;
+    const frame = highlight ? "rounded-[var(--aspis-radius-item)] outline outline-2 outline-offset-4 outline-[var(--aspis-accent)]" : "";
+    const shared = { label: field.label, hint: field.help, error: invalid, required: field.required };
 
     const commitText = () => {
         if (local === shown) return;
@@ -43,12 +42,11 @@ export function FieldControl({ field, value, highlight, onCommit }: { field: Fie
     };
 
     let control;
-    if (field.control === "toggle") control = <Switch label={label} checked={value === true} onChange={(checked) => onCommit(checked || undefined)} />;
+    if (field.control === "toggle") control = <Switch label={field.label} hint={field.help} checked={value === true} onChange={(checked) => onCommit(checked || undefined)} />;
     else if (field.control === "select")
         control = (
             <Select
-                label={label}
-                hint={hint}
+                {...shared}
                 value={value === undefined ? "" : String(value)}
                 onChange={(event) => onCommit(event.target.value || undefined)}
                 options={[{ value: "", label: "Not set" }, ...(field.options ?? []).map((option) => ({ value: option, label: option }))]}
@@ -57,8 +55,7 @@ export function FieldControl({ field, value, highlight, onCommit }: { field: Fie
     else if (field.control === "textarea" || field.control === "json")
         control = (
             <TextArea
-                label={label}
-                hint={hint}
+                {...shared}
                 rows={field.control === "json" ? 6 : 3}
                 placeholder={field.placeholder}
                 value={local}
@@ -69,8 +66,7 @@ export function FieldControl({ field, value, highlight, onCommit }: { field: Fie
     else
         control = (
             <TextField
-                label={label}
-                hint={hint}
+                {...shared}
                 type={field.control === "number" ? "number" : "text"}
                 placeholder={field.placeholder ?? (field.control === "tags" ? "Comma separated" : undefined)}
                 value={local}
@@ -80,9 +76,8 @@ export function FieldControl({ field, value, highlight, onCommit }: { field: Fie
             />
         );
     return (
-        <div className={`flex flex-col gap-[var(--aspis-space-2)] ${frame}`} data-field={field.key}>
+        <div className={frame} data-field={field.key}>
             {control}
-            {field.control === "toggle" && <span className="aspis-field__hint">{field.help}</span>}
         </div>
     );
 }

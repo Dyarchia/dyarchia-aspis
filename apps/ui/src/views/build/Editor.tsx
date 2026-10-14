@@ -1,26 +1,26 @@
-import { Button, Chip, GroupHeader, Tabs, TextArea, useHotkeys, useToast } from "@dyarchia/aspis";
+import { Button, Chip, GroupHeader, Icon, TabPanel, Tabs, TextArea, VisuallyHidden, useHotkeys, useToast } from "@dyarchia/aspis";
 import { type Kind, read, validate, write } from "@dyarchia/library";
 import { useEffect, useMemo, useState } from "react";
 import type { Library } from "../../use-library.ts";
 import { CodeEditor } from "./CodeEditor.tsx";
 import { FieldControl } from "./FieldControl.tsx";
 
-type Mode = "tutorial" | "declarative" | "code";
+type Mode = "tutorial" | "form" | "code";
 
 const modes = [
     { id: "tutorial", label: "Tutorial" },
-    { id: "declarative", label: "Declarative" },
+    { id: "form", label: "Form" },
     { id: "code", label: "Code" },
 ] as const;
 
 /*
- * One piece, three ways in. The file text is the only state: the declarative form reads it and writes changes back
+ * One piece, three ways in. The file text is the only state: the form reads it and writes changes back
  * into it key by key, the code view edits it directly, and the tutorial is the same form walked one step at a time.
  * Saving writes the files to the library working tree; publishing is done from the header.
  */
 export function Editor({ kind, name, library, onDeleted }: { kind: Kind; name: string; library: Library; onDeleted: () => void }) {
     const toast = useToast();
-    const [mode, setMode] = useState<Mode>("declarative");
+    const [mode, setMode] = useState<Mode>("form");
     const [step, setStep] = useState(0);
     const [path, setPath] = useState(kind.main(name));
     const [texts, setTexts] = useState<Record<string, string>>({});
@@ -63,7 +63,7 @@ export function Editor({ kind, name, library, onDeleted }: { kind: Kind; name: s
         setSaved((before) => ({ ...before, ...Object.fromEntries(dirty.map((file) => [file, texts[file]!])) }));
     };
 
-    useHotkeys({ "Ctrl+s": () => dirty.length > 0 && void save() });
+    useHotkeys({ "mod+s": () => dirty.length > 0 && void save() });
 
     const form = (keys?: readonly string[]) => (
         <div className="flex flex-col gap-[var(--aspis-space-5)]">
@@ -87,14 +87,13 @@ export function Editor({ kind, name, library, onDeleted }: { kind: Kind; name: s
     return (
         <div className="flex flex-col gap-[var(--aspis-space-5)] p-[var(--aspis-gutter)]">
             <div className="flex flex-wrap items-center gap-[var(--aspis-space-3)]">
-                <h2 className="m-0">{name}</h2>
-                <Chip>{kind.singular}</Chip>
-                {errors.length > 0 ? <Chip tone="danger">{errors.length} to fix</Chip> : <Chip tone="ok">valid</Chip>}
+                <h2 className="[font:var(--aspis-type-title)]">{name}</h2>
+                {errors.length > 0 && <Chip tone="danger">{errors.length} to fix</Chip>}
                 {dirty.length > 0 && <Chip tone="warn">unsaved</Chip>}
                 <div className="ml-auto flex gap-[var(--aspis-space-3)]">
                     {confirm ? (
                         <>
-                            <Button variant="quiet" onClick={() => setConfirm(false)}>
+                            <Button variant="quiet" autoFocus onClick={() => setConfirm(false)}>
                                 Keep it
                             </Button>
                             <Button
@@ -117,43 +116,46 @@ export function Editor({ kind, name, library, onDeleted }: { kind: Kind; name: s
                     </Button>
                 </div>
             </div>
-            <Tabs label="Mode" value={mode} onChange={setMode} tabs={modes} />
-
-            {mode === "tutorial" && current && (
-                <div className="grid grid-cols-[minmax(240px,320px)_minmax(0,1fr)] gap-[var(--aspis-space-6)]">
-                    <div className="flex flex-col gap-[var(--aspis-space-4)]">
-                        <GroupHeader label={`Step ${Math.min(step, kind.steps.length - 1) + 1} of ${kind.steps.length}`} />
-                        <h3 className="m-0">{current.title}</h3>
-                        <p className="m-0">{current.text}</p>
-                        <a className="aspis-field__hint" href={current.source} target="_blank" rel="noreferrer">
-                            Source: {current.source.replace(/^https:\/\//, "")}
-                        </a>
-                        <div className="flex gap-[var(--aspis-space-3)]">
-                            <Button variant="secondary" disabled={step === 0} onClick={() => setStep(step - 1)}>
-                                Back
-                            </Button>
-                            <Button variant="primary" disabled={step >= kind.steps.length - 1} onClick={() => setStep(step + 1)}>
-                                Next
-                            </Button>
+            <Tabs label="Mode" id="editor-mode" value={mode} onChange={setMode} tabs={modes} />
+            <TabPanel id="editor-mode" value={mode} className="flex flex-col gap-[var(--aspis-space-5)]">
+                {mode === "tutorial" && current && (
+                    <div className="grid grid-cols-[minmax(240px,320px)_minmax(0,1fr)] gap-[var(--aspis-space-6)]">
+                        <div className="flex flex-col gap-[var(--aspis-space-4)]">
+                            <GroupHeader label={`Step ${Math.min(step, kind.steps.length - 1) + 1} of ${kind.steps.length}`} />
+                            <h3 className="m-0">{current.title}</h3>
+                            <p className="m-0">{current.text}</p>
+                            <a className="aspis-field__hint inline-flex w-fit items-center gap-[var(--aspis-space-1)]" href={current.source} target="_blank" rel="noreferrer">
+                                Docs
+                                <Icon name="external" size={12} />
+                                <VisuallyHidden>, opens code.claude.com</VisuallyHidden>
+                            </a>
+                            <div className="flex gap-[var(--aspis-space-3)]">
+                                <Button variant="secondary" disabled={step === 0} onClick={() => setStep(step - 1)}>
+                                    Back
+                                </Button>
+                                <Button variant="primary" disabled={step >= kind.steps.length - 1} onClick={() => setStep(step + 1)}>
+                                    Next
+                                </Button>
+                            </div>
                         </div>
+                        {form(current.fields)}
                     </div>
-                    {form(current.fields)}
-                </div>
-            )}
+                )}
 
-            {mode === "declarative" && form()}
+                {mode === "form" && form()}
 
-            {mode === "code" && (
-                <div className="flex flex-col gap-[var(--aspis-space-4)]">
-                    {files.length > 1 && <Tabs label="Files" value={path} onChange={setPath} tabs={files.map((file) => ({ id: file, label: file.split("/").slice(2).join("/") || file }))} />}
-                    <CodeEditor
-                        path={path}
-                        value={texts[path] ?? ""}
-                        onChange={(text) => setTexts((all) => ({ ...all, [path]: text }))}
-                        onSave={() => dirty.length > 0 && void save()}
-                    />
-                </div>
-            )}
+                {mode === "code" && (
+                    <div className="flex flex-col gap-[var(--aspis-space-4)]">
+                        {files.length > 1 && <Tabs label="Files" value={path} onChange={setPath} tabs={files.map((file) => ({ id: file, label: file.split("/").slice(2).join("/") || file }))} />}
+                        <CodeEditor
+                            path={path}
+                            value={texts[path] ?? ""}
+                            onChange={(text) => setTexts((all) => ({ ...all, [path]: text }))}
+                            onSave={() => dirty.length > 0 && void save()}
+                        />
+                    </div>
+                )}
+            </TabPanel>
 
             {issues.length > 0 && (
                 <ul className="m-0 flex list-none flex-col gap-[var(--aspis-space-2)] p-0">

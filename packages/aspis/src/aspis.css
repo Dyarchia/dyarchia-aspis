@@ -1,5 +1,6 @@
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
+@import "./tokens/geometry.css";
 @import "./tokens/io.css";
 @import "./tokens/nyx.css";
 @import "./base.css";

@@ -17,7 +17,7 @@ export default defineConfig({
     workers: 1,
     reporter: process.env.CI ? "github" : "list",
     snapshotPathTemplate: "{testDir}/__screenshots__/{arg}-{platform}{ext}",
-    expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.02, animations: "disabled", caret: "hide" } },
+    expect: { toHaveScreenshot: { maxDiffPixels: 100, animations: "disabled", caret: "hide" } },
     use: { baseURL: "http://localhost:1420", viewport: { width: 1440, height: 900 }, colorScheme: "dark" },
     webServer: {
         command: "bun run dev:web",

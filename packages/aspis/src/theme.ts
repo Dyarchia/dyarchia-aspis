@@ -1,6 +1,6 @@
 export const themeCatalog = {
-    io: { label: "io", description: "Editorial terminal. Warm charcoal, mono structure, zero radius, focus that dims the rest." },
-    nyx: { label: "nyx", description: "Near-monochrome dark premium. Pure black, hairlines, bezels and grain, colour only on data." },
+    io: { label: "io" },
+    nyx: { label: "nyx" },
 } as const;
 
 export type ThemeName = keyof typeof themeCatalog;

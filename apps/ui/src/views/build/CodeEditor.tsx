@@ -7,7 +7,8 @@ import { HighlightStyle, bracketMatching, indentOnInput, syntaxHighlighting } fr
 import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
-import { useEffect, useRef } from "react";
+import { VisuallyHidden } from "@dyarchia/aspis";
+import { useEffect, useId, useRef } from "react";
 
 const language = (path: string): Extension => {
     if (path.endsWith(".json")) return json();
@@ -19,12 +20,12 @@ const language = (path: string): Extension => {
 /* Colors come from the active theme's tokens, so the editor follows io and nyx like the rest of the app. */
 const look = EditorView.theme({
     "&": { height: "100%", color: "var(--aspis-term-ink)", backgroundColor: "var(--aspis-term-bg)", font: "var(--aspis-type-code)" },
-    "&.cm-focused": { outline: "none" },
+    "&.cm-focused": { outline: "var(--aspis-focus-w) solid var(--aspis-focus)", outlineOffset: "calc(-1 * var(--aspis-focus-w))" },
     ".cm-scroller": { fontFamily: "var(--aspis-font-mono)", lineHeight: "1.7" },
     ".cm-content": { padding: "var(--aspis-space-3) 0", caretColor: "var(--aspis-accent)" },
-    ".cm-gutters": { backgroundColor: "var(--aspis-term-bg)", color: "var(--aspis-term-rule)", border: "none", paddingRight: "var(--aspis-space-2)" },
+    ".cm-gutters": { backgroundColor: "var(--aspis-term-bg)", color: "var(--aspis-term-dim)", border: "none", paddingRight: "var(--aspis-space-2)" },
     ".cm-activeLine": { backgroundColor: "var(--aspis-term-highlight)" },
-    ".cm-activeLineGutter": { backgroundColor: "transparent", color: "var(--aspis-term-dim)" },
+    ".cm-activeLineGutter": { backgroundColor: "transparent", color: "var(--aspis-term-ink)" },
     ".cm-cursor": { borderLeftColor: "var(--aspis-accent)" },
     "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "var(--aspis-term-highlight) !important" },
     ".cm-matchingBracket": { backgroundColor: "var(--aspis-term-highlight)", outline: "1px solid var(--aspis-term-rule)" },
@@ -48,6 +49,7 @@ const highlight = HighlightStyle.define([
  */
 export function CodeEditor({ path, value, onChange, onSave }: { path: string; value: string; onChange: (text: string) => void; onSave: () => void }) {
     const host = useRef<HTMLDivElement>(null);
+    const hint = useId();
     const view = useRef<EditorView>(undefined);
     const latest = useRef({ onChange, onSave });
     latest.current = { onChange, onSave };
@@ -71,7 +73,7 @@ export function CodeEditor({ path, value, onChange, onSave }: { path: string; va
                     syntaxHighlighting(highlight),
                     look,
                     EditorView.lineWrapping,
-                    EditorView.contentAttributes.of({ "aria-label": path, spellcheck: "false" }),
+                    EditorView.contentAttributes.of({ "aria-label": path, "aria-describedby": hint, spellcheck: "false" }),
                     EditorView.updateListener.of((update) => update.docChanged && latest.current.onChange(update.state.doc.toString())),
                 ],
             }),
@@ -87,5 +89,10 @@ export function CodeEditor({ path, value, onChange, onSave }: { path: string; va
         editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: value }, selection: { anchor: head } });
     }, [value]);
 
-    return <div ref={host} className="h-[560px] overflow-hidden rounded-[var(--aspis-radius-inset)] border border-[var(--aspis-line)]" />;
+    return (
+        <>
+            <div ref={host} className="h-[560px] overflow-hidden rounded-[var(--aspis-radius-inset)] border border-[var(--aspis-line)]" />
+            <VisuallyHidden id={hint}>Tab indents. Press Escape, then Tab, to leave the editor.</VisuallyHidden>
+        </>
+    );
 }

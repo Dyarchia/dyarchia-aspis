@@ -1,5 +1,6 @@
-import { type KeyboardEvent, type ReactNode, createContext, useCallback, useContext, useEffect, useId, useState } from "react";
-import { Icon, Kbd, type Tone } from "./primitives.tsx";
+import { type KeyboardEvent, type ReactNode, createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Icon, Kbd, type Tone, VisuallyHidden } from "./primitives.tsx";
 
 export interface Command {
     id: string;
@@ -9,16 +10,29 @@ export interface Command {
     run: () => void;
 }
 
+/*
+ * A combobox over the commands, in a native modal dialog so it stacks over any open panel and Escape closes only
+ * the palette. The number of matches is announced as the query changes; focus returns to where it was.
+ */
 export function CommandPalette({ open, onClose, commands }: { open: boolean; onClose: () => void; commands: readonly Command[] }) {
     const [query, setQuery] = useState("");
     const [index, setIndex] = useState(0);
+    const dialog = useRef<HTMLDialogElement>(null);
+    const input = useRef<HTMLInputElement>(null);
     const listId = useId();
 
     useEffect(() => {
-        if (open) {
-            setQuery("");
-            setIndex(0);
-        }
+        const element = dialog.current;
+        if (!open || !element) return;
+        const from = document.activeElement;
+        setQuery("");
+        setIndex(0);
+        element.showModal();
+        input.current?.focus();
+        return () => {
+            if (element.open) element.close();
+            if (from instanceof HTMLElement && from.isConnected) from.focus();
+        };
     }, [open]);
 
     if (!open) return null;
@@ -39,24 +53,29 @@ export function CommandPalette({ open, onClose, commands }: { open: boolean; onC
         } else if (event.key === "Enter") {
             event.preventDefault();
             run(matches[active]);
-        } else if (event.key === "Escape") {
-            event.preventDefault();
-            onClose();
         }
     };
 
     return (
-        <div className="aspis-palette" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-            <div className="aspis-palette__box" role="dialog" aria-modal="true" aria-label="Command palette">
+        <dialog
+            ref={dialog}
+            className="aspis-palette"
+            aria-label="Commands"
+            onCancel={(event) => {
+                event.preventDefault();
+                onClose();
+            }}
+            onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+        >
+            <div className="aspis-palette__box">
                 <div className="aspis-palette__prompt">
-                    <span className="aspis-palette__sigil" aria-hidden="true">
-                        aspis &gt;
-                    </span>
                     <Icon name="search" className="aspis-palette__icon" />
                     <input
-                        autoFocus
+                        ref={input}
                         className="aspis-palette__input"
                         role="combobox"
+                        aria-label="Command"
+                        aria-autocomplete="list"
                         aria-expanded="true"
                         aria-controls={listId}
                         aria-activedescendant={matches[active] ? `${listId}-${matches[active].id}` : undefined}
@@ -69,7 +88,7 @@ export function CommandPalette({ open, onClose, commands }: { open: boolean; onC
                         onKeyDown={navigate}
                     />
                 </div>
-                <ul className="aspis-palette__list" id={listId} role="listbox">
+                <ul className="aspis-palette__list" id={listId} role="listbox" aria-label="Commands">
                     {matches.map((command, at) => (
                         <li
                             key={command.id}
@@ -82,24 +101,14 @@ export function CommandPalette({ open, onClose, commands }: { open: boolean; onC
                         >
                             <span className="aspis-palette__label">{command.label}</span>
                             <span className="aspis-palette__hint">{command.hint}</span>
-                            {command.hotkey && <Kbd>{command.hotkey}</Kbd>}
+                            {command.hotkey && <Kbd aria-hidden="true">{command.hotkey}</Kbd>}
                         </li>
                     ))}
-                    {matches.length === 0 && <li className="aspis-palette__none">No command matches</li>}
                 </ul>
-                <footer className="aspis-palette__foot">
-                    <span>
-                        <Kbd>↑↓</Kbd> move
-                    </span>
-                    <span>
-                        <Kbd>Enter</Kbd> run
-                    </span>
-                    <span>
-                        <Kbd>Esc</Kbd> close
-                    </span>
-                </footer>
+                {matches.length === 0 && <p className="aspis-palette__none">No command matches</p>}
+                <VisuallyHidden role="status">{needle ? `${matches.length} commands` : ""}</VisuallyHidden>
             </div>
-        </div>
+        </dialog>
     );
 }
 
@@ -111,31 +120,50 @@ interface ToastInput {
 const ToastContext = createContext<(toast: ToastInput) => void>(() => {});
 
 let toastSeq = 0;
+const toastLife = 3200;
 
+/*
+ * Toasts leave after a few seconds unless the pointer or focus rests on them. Errors go to an assertive region,
+ * everything else to a polite one. While a modal dialog is open the rest of the page is inert, so the toasts are
+ * rendered inside the dialog on top to stay visible and announced.
+ */
 export function Toaster({ children }: { children: ReactNode }) {
-    const [toasts, setToasts] = useState<(ToastInput & { id: number })[]>([]);
-    const push = useCallback((toast: ToastInput) => {
-        const id = ++toastSeq;
-        setToasts((current) => [...current, { ...toast, id }]);
-        setTimeout(() => setToasts((current) => current.filter((item) => item.id !== id)), 3200);
-    }, []);
-    return (
-        <ToastContext value={push}>
-            {children}
-            <div className="aspis-toaster" role="status" aria-live="polite">
-                {toasts.map((toast) => (
+    const [toasts, setToasts] = useState<(ToastInput & { id: number; left: number })[]>([]);
+    const [held, setHeld] = useState(false);
+    const push = useCallback((toast: ToastInput) => setToasts((current) => [...current, { ...toast, id: ++toastSeq, left: toastLife }]), []);
+
+    useEffect(() => {
+        if (held || toasts.length === 0) return;
+        const tick = 200;
+        const timer = setInterval(() => setToasts((current) => current.map((toast) => ({ ...toast, left: toast.left - tick })).filter((toast) => toast.left > 0)), tick);
+        return () => clearInterval(timer);
+    }, [held, toasts.length]);
+
+    const region = (danger: boolean) => (
+        <div role={danger ? "alert" : "status"} className="aspis-toaster__region">
+            {toasts
+                .filter((toast) => (toast.tone === "danger") === danger)
+                .map((toast) => (
                     <div key={toast.id} className="aspis-toast" data-tone={toast.tone ?? "ok"}>
                         <i className="aspis-toast__dot" aria-hidden="true" />
                         <span className="aspis-toast__text">{toast.text}</span>
                     </div>
                 ))}
-            </div>
+        </div>
+    );
+
+    return (
+        <ToastContext value={push}>
+            {children}
+            {createPortal(
+                <div className="aspis-toaster" onMouseEnter={() => setHeld(true)} onMouseLeave={() => setHeld(false)} onFocus={() => setHeld(true)} onBlur={() => setHeld(false)}>
+                    {region(false)}
+                    {region(true)}
+                </div>,
+                [...document.querySelectorAll("dialog[open]")].at(-1) ?? document.body,
+            )}
         </ToastContext>
     );
 }
 
 export const useToast = () => useContext(ToastContext);
-
-export function KbdHint({ children }: { children: ReactNode }) {
-    return <div className="aspis-hint">{children}</div>;
-}

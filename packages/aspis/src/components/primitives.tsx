@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
 
 export const cx = (...parts: (string | false | null | undefined)[]) => parts.filter(Boolean).join(" ");
 
@@ -40,9 +40,23 @@ export function Icon({ name, size = 16, className }: { name: IconName; size?: nu
     );
 }
 
-export function Kbd({ children }: { children: ReactNode }) {
-    return <kbd className="aspis-kbd">{children}</kbd>;
+export function Kbd({ children, ...rest }: { children: ReactNode } & HTMLAttributes<HTMLElement>) {
+    return (
+        <kbd className="aspis-kbd" {...rest}>
+            {children}
+        </kbd>
+    );
 }
+
+export function VisuallyHidden({ children, ...rest }: { children: ReactNode } & HTMLAttributes<HTMLSpanElement>) {
+    return (
+        <span className="aspis-sr" {...rest}>
+            {children}
+        </span>
+    );
+}
+
+const keyshortcut = (hotkey: string) => hotkey.split(" ").map((part) => (part === "Ctrl" ? "Control" : part)).join("+");
 
 export type Tone = "ok" | "warn" | "danger" | "info" | "idle";
 
@@ -72,12 +86,12 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export function Button({ variant = "secondary", icon, hotkey, className, children, type = "button", ...rest }: ButtonProps) {
     return (
-        <button type={type} className={cx("aspis-button", className)} data-variant={variant} {...rest}>
+        <button type={type} className={cx("aspis-button", className)} data-variant={variant} aria-keyshortcuts={hotkey && keyshortcut(hotkey)} {...rest}>
             <span className="aspis-button__glint" aria-hidden="true" />
             <span className="aspis-button__label">
                 {icon && <Icon name={icon} />}
                 {children}
-                {hotkey && <Kbd>{hotkey}</Kbd>}
+                {hotkey && <Kbd aria-hidden="true">{hotkey}</Kbd>}
             </span>
         </button>
     );

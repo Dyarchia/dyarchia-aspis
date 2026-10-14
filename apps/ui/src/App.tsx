@@ -1,6 +1,6 @@
-import { AppShell, type Command, CommandPalette, Kbd, KbdHint, type NavEntry, Status, Toaster, themeCatalog, useHotkeys, useToast } from "@dyarchia/aspis";
+import { AppShell, type Command, CommandPalette, type NavEntry, Status, Toaster, setSingleKeyHotkeys, themeCatalog, useHotkeys, useToast } from "@dyarchia/aspis";
 import type { Theme } from "@dyarchia/core";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { readHint, writeHint } from "./hints.ts";
 import { type ServerState, useServer } from "./use-server.ts";
 import { useUpdates } from "./use-updates.ts";
@@ -30,65 +30,80 @@ export function App() {
     );
 }
 
+/*
+ * Moving to another view titles the window after it and, when the move came from the user, puts focus on the new
+ * view's heading so the keyboard and the screen reader start from the top of what changed.
+ */
 function Workspace() {
     const server = useServer();
     const toast = useToast();
     const stored = readHint("view");
     const [view, setView] = useState<View>(isView(stored) ? stored : "home");
     const [palette, setPalette] = useState(false);
+    const [singleKeys, setSingleKeys] = useState(readHint("keys.single") !== "off");
+    const moved = useRef(false);
     const updates = useUpdates((info) => toast({ text: `Version ${info.version} is available. Install it from Settings`, tone: "info" }));
 
+    useEffect(() => setSingleKeyHotkeys(singleKeys), [singleKeys]);
+
+    useEffect(() => {
+        document.title = `${nav.find((entry) => entry.id === view)!.label} · Dyarchia Aspis`;
+        if (!moved.current) return;
+        moved.current = false;
+        document.querySelector<HTMLElement>(".aspis-shell__main h1")?.focus();
+    }, [view]);
+
     const go = (next: View) => {
+        moved.current = next !== view;
         setView(next);
         writeHint("view", next);
     };
-    const chooseTheme = async (theme: Theme) => {
-        await server.setTheme(theme);
-        toast({ text: `Theme set to ${themeCatalog[theme].label}`, tone: "info" });
+    const chooseTheme = (theme: Theme) => void server.setTheme(theme);
+    const chooseKeys = (enabled: boolean) => {
+        setSingleKeys(enabled);
+        writeHint("keys.single", enabled ? "on" : "off");
     };
     const otherTheme: Theme = server.settings.theme === "io" ? "nyx" : "io";
 
     const commands: Command[] = [
-        ...nav.map((entry) => ({ id: `go-${entry.id}`, label: `Go to ${entry.label}`, hint: "Navigate", hotkey: entry.hotkey, run: () => go(entry.id) })),
-        ...(Object.keys(themeCatalog) as Theme[]).map((theme) => ({
-            id: `theme-${theme}`,
-            label: `Use the ${themeCatalog[theme].label} theme`,
-            hint: themeCatalog[theme].description,
-            run: () => void chooseTheme(theme),
-        })),
-        ...(updates.state.kind === "unsupported"
-            ? []
-            : [{ id: "update-check", label: "Check for updates", hint: "Looks for a newer release on GitHub", run: () => void updates.check() }]),
+        ...nav.map((entry) => ({ id: `go-${entry.id}`, label: `Go to ${entry.label}`, hotkey: entry.hotkey, run: () => go(entry.id) })),
+        ...(Object.keys(themeCatalog) as Theme[]).map((theme) => ({ id: `theme-${theme}`, label: `Use the ${themeCatalog[theme].label} theme`, run: () => chooseTheme(theme) })),
+        ...(updates.state.kind === "unsupported" ? [] : [{ id: "update-check", label: "Check for updates", run: () => void updates.check() }]),
         ...(updates.state.kind === "available"
-            ? [{ id: "update-install", label: `Install ${updates.state.info.version}`, hint: "Downloads, installs and restarts", run: () => void updates.install() }]
+            ? [{ id: "update-install", label: `Install ${updates.state.info.version}`, hint: "Restarts the app", run: () => void updates.install() }]
             : []),
     ];
 
     useHotkeys({
         ...Object.fromEntries(nav.map((entry) => [entry.hotkey.toLowerCase(), () => go(entry.id)])),
-        t: () => void chooseTheme(otherTheme),
+        t: () => chooseTheme(otherTheme),
         "/": () => setPalette(true),
         "mod+k": () => setPalette((open) => !open),
     });
 
     return (
         <>
-            <AppShell brand="Dyarchia Aspis" nav={nav} active={view} onNavigate={go} status={<ServerStatus server={server} />}>
-                {view === "home" && <Home server={server} onNavigate={go} />}
+            <AppShell
+                brand="Dyarchia Aspis"
+                nav={nav}
+                active={view}
+                onNavigate={go}
+                state={server.error ? "error" : server.live ? "live" : "connecting"}
+                status={<ServerStatus server={server} />}
+            >
+                {view === "home" && <Home />}
                 {view === "kanban" && <Kanban server={server} />}
-                {view === "build" && <Build server={server} onSettings={() => go("settings")} />}
+                {view === "build" && <Build server={server} />}
                 {view === "aspis" && <Gallery theme={server.settings.theme} onTheme={chooseTheme} />}
-                {view === "settings" && <SettingsView server={server} updates={updates} onTheme={chooseTheme} />}
+                {view === "settings" && <SettingsView server={server} updates={updates} onTheme={chooseTheme} singleKeys={singleKeys} onSingleKeys={chooseKeys} />}
             </AppShell>
             <CommandPalette open={palette} onClose={() => setPalette(false)} commands={commands} />
-            <KbdHint>
-                <Kbd>Ctrl K</Kbd> commands · <Kbd>T</Kbd> theme
-            </KbdHint>
         </>
     );
 }
 
 function ServerStatus({ server }: { server: ServerState }) {
     if (server.error) return <Status tone="danger">Server error</Status>;
-    return <Status tone={server.live ? "ok" : "warn"}>{server.live ? "Server live" : "Connecting"}</Status>;
+    if (!server.live) return <Status tone="warn">Connecting</Status>;
+    return null;
 }

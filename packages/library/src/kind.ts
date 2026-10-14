@@ -9,7 +9,7 @@ export interface Field {
     key: string;
     label: string;
     control: Control;
-    help: string;
+    help?: string;
     required?: boolean;
     options?: readonly string[];
     placeholder?: string;
@@ -49,7 +49,7 @@ export interface Kind {
     owns: (path: string) => string | undefined;
     scaffold: (name: string) => Record<string, string>;
     fields: readonly Field[];
-    body?: { label: string; help: string };
+    body?: { label: string; help?: string };
     steps: readonly Step[];
     check?: (piece: Piece, values: Record<string, unknown>, body: string) => Issue[];
     adapter?: Adapter;

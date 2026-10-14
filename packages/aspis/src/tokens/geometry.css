@@ -1,0 +1,34 @@
+/*
+ * Geometry shared by every theme: spacing, sizes and the type scale. A theme paints these boxes and picks the
+ * typeface, weight, case and tracking that fill them; it never resizes or moves them, so io and nyx lay out the
+ * same page to the pixel. Sizes are font-size/line-height pairs read by the --aspis-type-* tokens of each theme.
+ */
+:root {
+    --aspis-space-1: 4px;
+    --aspis-space-2: 8px;
+    --aspis-space-3: 12px;
+    --aspis-space-4: 16px;
+    --aspis-space-5: 24px;
+    --aspis-space-6: 40px;
+    --aspis-space-7: 64px;
+    --aspis-gutter: 32px;
+    --aspis-control-h: 36px;
+    --aspis-row-h: 32px;
+    --aspis-bar-h: 40px;
+    --aspis-pill-h: 20px;
+    --aspis-target: 24px;
+    --aspis-nav-w: 232px;
+    --aspis-rail-w: 56px;
+    --aspis-content-max: 1200px;
+    --aspis-border-w: 1px;
+    --aspis-focus-w: 2px;
+
+    --aspis-text-display: 32px/40px;
+    --aspis-text-title: 20px/28px;
+    --aspis-text-body: 15px/24px;
+    --aspis-text-item: 14px/20px;
+    --aspis-text-ui: 13px/20px;
+    --aspis-text-data: 12px/18px;
+    --aspis-text-label: 11px/16px;
+    --aspis-text-code: 13px/20px;
+}

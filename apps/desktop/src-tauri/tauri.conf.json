@@ -20,6 +20,7 @@
                 "minWidth": 1024,
                 "minHeight": 640,
                 "center": true,
+                "zoomHotkeysEnabled": true,
                 "backgroundColor": "#141413"
             }
         ],

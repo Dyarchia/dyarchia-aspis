@@ -12,11 +12,12 @@
     --aspis-surface-deep: #09090c;
     --aspis-ink-1: #ecebe7;
     --aspis-ink-2: rgb(255 255 255 / 0.7);
-    --aspis-ink-3: #757168;
+    --aspis-ink-3: #85817a;
     --aspis-ink-4: rgb(255 255 255 / 0.24);
     --aspis-line-strong: rgb(255 255 255 / 0.12);
     --aspis-line: rgb(255 255 255 / 0.08);
     --aspis-line-faint: rgb(255 255 255 / 0.06);
+    --aspis-line-control: rgb(255 255 255 / 0.36);
     --aspis-hover: rgb(255 255 255 / 0.05);
     --aspis-fill: rgb(255 255 255 / 0.06);
     --aspis-invert-bg: #ffffff;
@@ -24,13 +25,12 @@
     --aspis-accent: #ecebe7;
     --aspis-accent-ink: #000101;
     --aspis-scrim: rgb(0 1 1 / 0.8);
+    --aspis-focus: rgb(236 235 231 / 0.75);
 
     --aspis-signal-ok: #00bb7f;
     --aspis-signal-warn: #fcbb00;
     --aspis-signal-danger: #ff2357;
     --aspis-signal-info: #00d2ef;
-    --aspis-signal-violet: #a685ff;
-    --aspis-signal-indigo: #7d87ff;
     --aspis-signal-idle: #71717b;
     --aspis-signal-glow: 6px;
 
@@ -38,7 +38,7 @@
     --aspis-syntax-function: #7d87ff;
     --aspis-syntax-literal: #00bb7f;
     --aspis-syntax-argument: #00d2ef;
-    --aspis-syntax-comment: #757168;
+    --aspis-syntax-comment: #85817a;
     --aspis-diff-add: #00bb7f;
     --aspis-diff-del: #ff2357;
     --aspis-diff-add-bg: rgb(0 187 127 / 0.08);
@@ -47,7 +47,7 @@
     --aspis-term-bg: #09090c;
     --aspis-term-bar: #101112;
     --aspis-term-ink: #ecebe7;
-    --aspis-term-dim: #757168;
+    --aspis-term-dim: #85817a;
     --aspis-term-rule: rgb(255 255 255 / 0.08);
     --aspis-term-highlight: rgb(255 255 255 / 0.06);
 
@@ -56,50 +56,31 @@
     --aspis-font-display: "Google Sans", "Google Sans Text", "Geist Variable", system-ui, sans-serif;
     --aspis-font-mono: SFMono-Regular, Consolas, "Liberation Mono", monospace;
 
-    --aspis-type-display: 400 37px/0.95 var(--aspis-font-display);
+    --aspis-type-display: 400 var(--aspis-text-display) var(--aspis-font-display);
     --aspis-tracking-display: -0.025em;
-    --aspis-type-title: 500 30px/36px var(--aspis-font-display);
-    --aspis-tracking-title: -0.025em;
-    --aspis-type-lead: 400 18px/1.625 var(--aspis-font-read);
-    --aspis-type-body: 400 16px/24px var(--aspis-font-read);
-    --aspis-type-item: 500 14px/20px var(--aspis-font-read);
-    --aspis-type-ui: 400 14px/20px var(--aspis-font-ui);
+    --aspis-type-title: 500 var(--aspis-text-title) var(--aspis-font-display);
+    --aspis-type-body: 400 var(--aspis-text-body) var(--aspis-font-read);
+    --aspis-type-item: 500 var(--aspis-text-item) var(--aspis-font-read);
+    --aspis-type-ui: 400 var(--aspis-text-ui) var(--aspis-font-ui);
     --aspis-case-ui: none;
     --aspis-tracking-ui: 0;
-    --aspis-type-label: 500 10px/14px var(--aspis-font-mono);
+    --aspis-type-label: 500 var(--aspis-text-label) var(--aspis-font-mono);
     --aspis-case-label: uppercase;
     --aspis-tracking-label: 0.1em;
-    --aspis-type-control: 500 14px/20px var(--aspis-font-read);
+    --aspis-type-control: 500 var(--aspis-text-item) var(--aspis-font-read);
     --aspis-case-control: none;
     --aspis-tracking-control: 0;
-    --aspis-type-data: 400 12px/18px var(--aspis-font-mono);
-    --aspis-type-value: 400 20px/24px var(--aspis-font-read);
-    --aspis-type-code: 400 12px/1.7 var(--aspis-font-mono);
-    --aspis-type-term: 400 12px/1.6 var(--aspis-font-mono);
-    --aspis-type-field: 400 14px/20px var(--aspis-font-read);
+    --aspis-type-data: 400 var(--aspis-text-data) var(--aspis-font-read);
+    --aspis-type-value: 400 var(--aspis-text-title) var(--aspis-font-read);
+    --aspis-type-code: 400 var(--aspis-text-code) var(--aspis-font-mono);
+    --aspis-type-field: 400 var(--aspis-text-item) var(--aspis-font-read);
 
     --aspis-radius-control: 9999px;
     --aspis-radius-surface: 14px;
     --aspis-radius-inset: 12px;
-    --aspis-radius-item: 5px;
+    --aspis-radius-item: 6px;
     --aspis-radius-hint: 4px;
     --aspis-radius-dot: 50%;
-
-    --aspis-space-1: 4px;
-    --aspis-space-2: 8px;
-    --aspis-space-3: 12px;
-    --aspis-space-4: 16px;
-    --aspis-space-5: 24px;
-    --aspis-space-6: 40px;
-    --aspis-space-7: 96px;
-    --aspis-gutter: 40px;
-    --aspis-control-h: 40px;
-    --aspis-row-h: 28px;
-    --aspis-nav-w: 232px;
-    --aspis-bar-h: 40px;
-    --aspis-prose-max: 640px;
-    --aspis-content-max: 1344px;
-    --aspis-border-w: 1px;
 
     --aspis-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
     --aspis-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -107,13 +88,10 @@
     --aspis-dur-base: 0.4s;
     --aspis-dur-theme: 0.45s;
     --aspis-dim: 1;
-    --aspis-lift: -4px;
 
     --aspis-shadow-pop: 0 10px 30px rgb(0 0 0 / 0.6);
     --aspis-shadow-ring: 0 0 0 3px rgb(236 235 231 / 0.5);
     --aspis-shadow-surface: inset 0 1px 0 rgb(255 255 255 / 0.08), inset 0 -1px 0 rgb(0 0 0 / 0.7);
-    --aspis-focus-outline: none;
-    --aspis-focus-shadow: 0 0 0 3px rgb(236 235 231 / 0.5);
     --aspis-blur: 12px;
     --aspis-glow: radial-gradient(circle at 50% 0%, rgb(94 73 86 / 0.24), transparent 68%);
     --aspis-edge: linear-gradient(135deg, #ffffff29, #ffffff09 38%, #b5c1d21c 68%, #ffffff14);
