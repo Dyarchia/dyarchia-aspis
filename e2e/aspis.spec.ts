@@ -10,7 +10,15 @@ const views = [
     { key: "b", name: "build" },
 ] as const;
 
+/*
+ * Settings shows facts about the machine it runs on: whether each agent CLI is installed and where state.db lives.
+ * Both differ between this PC and the CI runner, so the CLIs are answered with one fixed status and the path is
+ * masked in the screenshot.
+ */
+const agents = { installable: false, agents: ["claude-code", "kimi-code"].map((harness) => ({ harness, cli: true, installed: false })) };
+
 async function open(page: Page, theme: ThemeName) {
+    await page.route(`${api}/agents`, (route) => route.fulfill({ json: agents }));
     await page.request.put(`${api}/settings`, { headers, data: { theme } });
     await page.clock.install();
     await page.addInitScript(() => localStorage.clear());
@@ -40,7 +48,7 @@ for (const view of views) {
             await page.clock.pauseAt(Date.now() + 60_000);
             await page.mouse.move(0, 0);
             await fit(page);
-            await expect(page).toHaveScreenshot(`${view.name}-${theme}.png`, { timeout: 20_000 });
+            await expect(page).toHaveScreenshot(`${view.name}-${theme}.png`, { timeout: 20_000, mask: [page.locator(".aspis-meta__item", { hasText: "State" }).locator(".aspis-meta__value")] });
             await page.clock.resume();
             await accessible(page, view.name === "aspis" ? ['[data-drop="refused"]'] : []);
         });
