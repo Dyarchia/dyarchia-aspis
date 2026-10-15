@@ -74,14 +74,22 @@ picked up interactively and end in Review, where an auditor and then you must bo
 
 ## Aspis
 
-Both themes render the exact same markup; a theme only decides the design.
+One layout, two paints: io and nyx are the same page, with every box in the same place, and differ only in
+colour, type face, borders and motion.
 
-- `tokens/<theme>.css` defines the whole `--aspis-*` vocabulary for that theme.
-- `base.css` is the structure every theme shares and reads tokens only.
-- `shape/<theme>.css` holds what a token cannot express (focus dimming, bezels, rails, grain).
-- `aspis.test.ts` fails when the two themes drift apart: different token sets, a component without a shape in
-  either theme, literal colours in structure, or styled classes that no component renders.
+- `tokens/geometry.css` holds spacing, sizes, the type scale and border widths, once for both themes.
+- `tokens/<theme>.css` holds the paint: colours, families, weights, case, radii, shadows and timing.
+- `base.css` lays out every component and reads tokens only.
+- `shape/<theme>.css` may only paint. `aspis.test.ts` parses it against a property whitelist, and also checks
+  that both themes share one token vocabulary, that no theme hides what the other shows, and that text reaches
+  4.5:1 and control boundaries and focus 3:1 on every surface.
+- `e2e/support/audit.ts` measures every aspis element in both themes and fails on a 1px drift, and runs axe
+  (WCAG 2.2 AA) on every view; serious and critical findings fail CI.
 - The theme lives in `state.db` and is pushed to every open client. `T` toggles it, `Ctrl K` opens commands.
+  Single-key shortcuts can be switched off in Settings and never fire while typing or with a dialog open.
+
+Copy policy: a string stays only if it gives a fact, an action, or the reason something is blocked or invalid.
+No prose explaining how the system works, no messages for the healthy state, and empty states are one line.
 
 ## Layout
 

@@ -1,4 +1,4 @@
-import { CodeBlock, LiveLog, Tabs, type Tone } from "@dyarchia/aspis";
+import { CodeBlock, LiveLog, TabPanel, Tabs, type Tone } from "@dyarchia/aspis";
 import { type Card, type Run, type RunStatus, resumeCommands, runLines } from "@dyarchia/core";
 import { useEffect, useMemo, useState } from "react";
 import type { BoardApi } from "./use-board.ts";
@@ -70,14 +70,15 @@ export function RunHistory({ card, board, changes, empty }: { card: Card; board:
             {runs.length > 1 && (
                 <Tabs
                     label="Attempts"
+                    id={`attempts-${card.id}`}
                     value={String(run.id)}
                     onChange={setSelected}
                     tabs={[...runs].reverse().map((candidate) => ({ id: String(candidate.id), label: `${kindLabels[candidate.kind]} ${candidate.attempt} · ${clock(candidate.startedAt)}` }))}
                 />
             )}
-            <div className="h-[340px]">
+            <TabPanel id={`attempts-${card.id}`} value={String(run.id)} className="h-[340px]">
                 <LiveLog title={run.branch} status={label} tone={tone} lines={lines} streaming={live} />
-            </div>
+            </TabPanel>
             {run.error && <span className="aspis-field__hint">{run.error}</span>}
             {run.sessionId && run.kind !== "interactive" && (
                 <CodeBlock

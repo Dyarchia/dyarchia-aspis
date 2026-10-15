@@ -2,6 +2,7 @@ import { type APIRequestContext, type Page, expect, test } from "@playwright/tes
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { accessible, live, sameLayout } from "./support/audit.ts";
 
 const api = "http://127.0.0.1:4319";
 const headers = { authorization: "Bearer dev", "content-type": "application/json" };
@@ -34,7 +35,7 @@ async function openBoard(page: Page, theme: "io" | "nyx" = "io") {
     await page.addInitScript(() => localStorage.clear());
     await page.setViewportSize({ width: 1600, height: 900 });
     await page.goto("/");
-    await expect(page.getByText(/server live/i)).toBeVisible();
+    await live(page);
     await page.keyboard.press("k");
     await expect(column(page, "Triage")).toBeVisible();
 }
@@ -85,15 +86,44 @@ test("the board in both themes", async ({ page, request }) => {
         await expect(column(page, "Review").getByText("Archive stale Quote fields")).toBeVisible();
         await page.mouse.move(0, 0);
         await expect(page).toHaveScreenshot(`board-${theme}.png`);
+        await accessible(page);
         await column(page, "Review").getByText("Archive stale Quote fields").click();
         await expect(page.locator(".aspis-dialog__box")).toBeVisible();
         await expect(page).toHaveScreenshot(`card-${theme}.png`, { mask: [page.locator(".aspis-thread__when")] });
+        await accessible(page);
     }
+});
+
+test("the board and the card panel are one layout in both themes", async ({ page }) => {
+    await openBoard(page);
+    await sameLayout(page, async () => {});
+    await column(page, "Review").getByText("Archive stale Quote fields").click();
+    await expect(page.locator(".aspis-dialog__box")).toBeVisible();
+    await sameLayout(page, async () => {});
+});
+
+test("the card panel keeps focus while the board changes, and gives it back on close", async ({ page }) => {
+    await openBoard(page);
+    const tile = column(page, "Triage").getByRole("button", { name: "Map the Quote record types" });
+    await tile.focus();
+    await page.keyboard.press("Enter");
+    const brief = page.locator(".aspis-dialog__box").getByLabel("Brief");
+    await brief.click();
+    await page.keyboard.type(" and their layouts");
+    execFileSync("bun", ["e2e/support/external-write.ts", "Written while the panel is open"], { env: { ...process.env, ASPIS_HOME: process.env.ASPIS_E2E_HOME } });
+    await expect(column(page, "Triage").getByText("Written while the panel is open")).toBeAttached();
+    await expect(brief).toBeFocused();
+    await page.locator(".aspis-dialog__box").focus();
+    await page.keyboard.press("h");
+    await expect(page.locator(".aspis-dialog__box")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".aspis-dialog__box")).toHaveCount(0);
+    await expect(tile).toBeFocused();
 });
 
 test("a ready card goes all the way to archived through the panel", async ({ page }) => {
     await openBoard(page);
-    await column(page, "Triage").getByRole("button", { name: "+ New" }).click();
+    await page.getByRole("button", { name: "New card" }).click();
     await page.keyboard.type("Ready route card");
     await page.keyboard.press("Enter");
     await column(page, "Triage").getByText("Ready route card").click();
@@ -174,6 +204,10 @@ test("a blocked card needs your answer to go back to running", async ({ page, re
     await act(request, id, "agent", "blocked", { note: "Which sandbox?" });
     await openBoard(page);
     await column(page, "Blocked").getByText("Blocked on a question").click();
+    await page.locator(".aspis-dialog__box").getByRole("button", { name: "Running", exact: true }).click();
+    await page.keyboard.press("Escape");
+    await expect(page.locator('.aspis-dialog[data-placement="center"]')).toHaveCount(0);
+    await expect(page.locator(".aspis-dialog__box")).toBeVisible();
     await page.locator(".aspis-dialog__box").getByRole("button", { name: "Running", exact: true }).click();
     await confirm(page, "Use the UAT sandbox");
     await page.keyboard.press("Escape");

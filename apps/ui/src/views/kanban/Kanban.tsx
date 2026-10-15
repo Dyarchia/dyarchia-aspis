@@ -81,19 +81,23 @@ export function Kanban({ server }: { server: ServerState }) {
 
     return (
         <div className="flex h-full min-h-0 flex-col">
-            <div className="flex flex-wrap items-end gap-[var(--aspis-space-5)] px-[var(--aspis-gutter)] pt-[var(--aspis-space-5)] pb-[var(--aspis-space-4)]">
+            <h1 className="aspis-sr" tabIndex={-1}>
+                Kanban
+            </h1>
+            <div className="flex flex-wrap items-end gap-[var(--aspis-space-4)] p-[var(--aspis-space-4)]">
                 <div className="min-w-[200px] flex-1">
-                    <TextField label="Search" placeholder="Title, brief or #id" value={query} onChange={(event) => setQuery(event.target.value)} />
+                    <TextField label="Search cards" hideLabel type="search" placeholder="Search title, brief or #id" value={query} onChange={(event) => setQuery(event.target.value)} />
                 </div>
                 <div className="w-[260px]">
                     <Select
                         label="Repository"
+                        hideLabel
                         value={repo}
                         onChange={(event) => setRepo(event.target.value)}
                         options={[{ value: allRepos, label: "All repositories" }, ...repos.map((folder) => ({ value: folder, label: folderName(folder) }))]}
                     />
                 </div>
-                <Button variant="primary" icon="plus" hotkey="N" onClick={() => setCreating(true)}>
+                <Button variant="primary" icon="plus" hotkey="N" data-new-card onClick={() => setCreating(true)}>
                     New card
                 </Button>
             </div>
@@ -116,20 +120,14 @@ export function Kanban({ server }: { server: ServerState }) {
                                     event.preventDefault();
                                     drop(phase);
                                 }}
-                                actions={
-                                    phase === "triage" ? (
-                                        <Button variant="quiet" onClick={() => setCreating(true)}>
-                                            + New
-                                        </Button>
-                                    ) : undefined
-                                }
                             >
                                 {phase === "triage" && creating && (
                                     <li className="aspis-column__item">
                                         <TextField
-                                            label="New card"
+                                            label="New card title"
+                                            hideLabel
                                             autoFocus
-                                            placeholder="Title, Enter to add, Esc to close"
+                                            placeholder="Title"
                                             value={draft}
                                             onChange={(event) => setDraft(event.target.value)}
                                             onKeyDown={(event) => {
@@ -137,6 +135,7 @@ export function Kanban({ server }: { server: ServerState }) {
                                                 if (event.key === "Escape") {
                                                     setDraft("");
                                                     setCreating(false);
+                                                    document.querySelector<HTMLElement>("[data-new-card]")?.focus();
                                                 }
                                             }}
                                         />
@@ -165,7 +164,6 @@ export function Kanban({ server }: { server: ServerState }) {
                                             card.recurrence,
                                             card.dependsOn.length > 0 && `${card.dependsOn.length} dep`,
                                             card.files.length > 0 && `${card.files.length} file${card.files.length > 1 ? "s" : ""}`,
-                                            card.sessionId && `session ${card.sessionId.slice(0, 8)}`,
                                         ].filter(Boolean)}
                                         marks={
                                             card.phase === "review" ? (
