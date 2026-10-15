@@ -51,14 +51,14 @@ export function Column({
         <section className="aspis-column" data-drop={drop} data-folded={folded || undefined} aria-label={title} onDragOver={onDragOver} onDrop={onDrop}>
             {folded ? (
                 <button ref={toggle} type="button" className="aspis-column__strip" aria-expanded="false" aria-label={`Show ${title} (${count})`} onClick={fold}>
-                    <span className="aspis-column__count">{count}</span>
+                    {count > 0 && <span className="aspis-column__count">{count}</span>}
                     <span className="aspis-column__title">{title}</span>
                 </button>
             ) : (
                 <>
                     <header className="aspis-column__head">
                         <h2 className="aspis-column__title">{title}</h2>
-                        <span className="aspis-column__count">{count}</span>
+                        {count > 0 && <span className="aspis-column__count">{count}</span>}
                         {(actions || onFold) && (
                             <div className="aspis-column__actions">
                                 {actions}

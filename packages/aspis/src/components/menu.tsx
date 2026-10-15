@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
+import { VisuallyHidden } from "./primitives.tsx";
 
 export interface MenuItem<T extends string> {
     id: T;
     label: ReactNode;
     count?: number;
-    mark?: ReactNode;
+    changed?: boolean;
 }
 
 export function Menu<T extends string>({ label, items, value, onSelect }: { label: string; items: readonly MenuItem<T>[]; value?: T; onSelect: (id: T) => void }) {
@@ -15,7 +16,11 @@ export function Menu<T extends string>({ label, items, value, onSelect }: { labe
                     <li key={item.id}>
                         <button type="button" className="aspis-menu__item" aria-current={item.id === value || undefined} onClick={() => onSelect(item.id)}>
                             <span className="aspis-menu__label">{item.label}</span>
-                            {item.mark}
+                            {item.changed && (
+                                <span className="aspis-menu__dot" title="Unpublished changes">
+                                    <VisuallyHidden>, unpublished changes</VisuallyHidden>
+                                </span>
+                            )}
                             {item.count !== undefined && <span className="aspis-menu__count">{item.count}</span>}
                         </button>
                     </li>

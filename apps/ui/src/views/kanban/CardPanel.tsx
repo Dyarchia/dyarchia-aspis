@@ -105,10 +105,10 @@ function RunnerFields({ label, runner, disabled, onCommit }: { label: string; ru
     );
 }
 
-function Block({ label, actions, children }: { label: string; actions?: ReactNode; children: ReactNode }) {
+function Block({ label, actions, children }: { label?: string; actions?: ReactNode; children: ReactNode }) {
     return (
         <div className="flex flex-col gap-[var(--aspis-space-4)]">
-            <GroupHeader label={label} actions={actions} />
+            {label && <GroupHeader label={label} actions={actions} />}
             {children}
         </div>
     );
@@ -169,7 +169,6 @@ export function CardPanel({
     const harness = card.implementer.harness ?? "";
     const pickup = pickupCommands[harness];
     const resume = card.sessionId ? resumeCommands[harness]?.(card.sessionId) : undefined;
-    const withAgent = card.route === "ready" && (card.phase === "running" || card.phase === "blocked" || card.phase === "review");
 
     const simulate: { label: string; run: () => void }[] = [];
     if (card.phase === "ready") simulate.push({ label: "Agent picks it up", run: () => void board.act(card.id, "agent", { to: "running", sessionId: `dev-${Date.now()}` }) });
@@ -198,7 +197,6 @@ export function CardPanel({
                     <div className="flex items-center gap-[var(--aspis-space-3)]">
                         <span className="aspis-tile__ref">#{card.id}</span>
                         <Chip tone={phaseTone[card.phase]}>{phaseLabels[card.phase]}</Chip>
-                        {card.route && <Chip>via {card.route}</Chip>}
                     </div>
                     <LiveField label="Title" hideLabel value={card.title} disabled={!editable} onCommit={(title) => title.trim() && edit({ title })} />
                 </div>
@@ -295,8 +293,7 @@ export function CardPanel({
             )}
 
             {card.sessionId && (
-                <Block label="Session">
-                    {withAgent && <span className="aspis-field__hint">Thread notes reach the agent at its next tool call or when its turn ends.</span>}
+                <Block>
                     {card.phase === "running" && card.route === "scheduled" && <span className="aspis-field__hint">Resume it once this run ends.</span>}
                     {resume ? (
                         <CodeBlock title={`Session ${card.sessionId}`} lang={harness} lines={[{ text: `cd "${card.folder}"` }, { text: resume }]} />
@@ -307,7 +304,10 @@ export function CardPanel({
             )}
 
             {(card.route || card.phase === "scheduled") && (
-                <Block
+                <RunHistory
+                    card={card}
+                    board={board}
+                    changes={server.changes}
                     label={card.route === "ready" ? "Activity" : "Runs"}
                     actions={
                         card.phase === "running" && card.route === "scheduled" ? (
@@ -316,17 +316,10 @@ export function CardPanel({
                             </Button>
                         ) : undefined
                     }
-                >
-                    <RunHistory
-                        card={card}
-                        board={board}
-                        changes={server.changes}
-                        empty={card.route === "ready" ? "No activity yet" : "No runs yet"}
-                    />
-                </Block>
+                />
             )}
 
-            <Block label="Card">
+            <Block>
                 <LiveField label="Brief" multiline value={card.brief} disabled={!editable} onCommit={(brief) => edit({ brief })} />
                 <div className="grid grid-cols-2 gap-[var(--aspis-space-4)]">
                     <LiveField label="Folder" value={card.folder ?? ""} disabled={!editable} placeholder={"C:\\repos\\name"} onCommit={(folder) => edit({ folder: folder.trim() || null })} />

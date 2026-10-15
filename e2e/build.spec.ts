@@ -1,5 +1,5 @@
 import { type Page, expect, test } from "@playwright/test";
-import { accessible, live } from "./support/audit.ts";
+import { accessible, live, saysEverythingOnce, startOnOneLine } from "./support/audit.ts";
 
 const api = "http://127.0.0.1:4319";
 const headers = { authorization: "Bearer dev", "content-type": "application/json" };
@@ -15,11 +15,14 @@ async function openBuild(page: Page, theme: "io" | "nyx" = "io") {
     await page.keyboard.press("b");
 }
 
+const piece = (page: Page, name: string) => page.getByRole("list", { name: "Skills" }).getByRole("button", { name: new RegExp(name) });
+const panes = [".aspis-menu__item", "section[aria-label='Skills'] .aspis-field__input", "[role='tablist'][aria-label='Mode']"];
+
 const field = (page: Page, label: string) => page.locator(".aspis-field").filter({ has: page.getByText(label, { exact: true }) }).locator("input, textarea, select").first();
 
 test("Build connects its library in place", async ({ page }) => {
     await openBuild(page);
-    await page.getByRole("textbox", { name: "Repository" }).fill("owner/mantinea");
+    await page.getByRole("textbox", { name: "Library repository" }).fill("owner/mantinea");
     await page.getByRole("button", { name: "Connect" }).click();
     await expect(page.getByText("Library owner/mantinea is ready")).toBeVisible();
     await expect(page.getByRole("list", { name: "Kinds" })).toBeVisible();
@@ -35,7 +38,7 @@ test("a skill made in the form is the file in code, and the code drives the form
     await expect(prompt.getByRole("textbox")).toHaveAttribute("aria-invalid", "true");
     await prompt.getByRole("textbox").fill("apex-review");
     await prompt.locator(".aspis-dialog__foot button").last().click();
-    await expect(page.getByRole("heading", { name: "apex-review" })).toBeVisible();
+    await expect(piece(page, "apex-review")).toHaveAttribute("aria-current", "true");
 
     await field(page, "Description").fill("Use this skill when the user asks to review Apex classes.");
     await field(page, "Description").blur();
@@ -56,26 +59,27 @@ test("a skill made in the form is the file in code, and the code drives the form
     await expect(page.locator('[data-field="description"]')).toHaveClass(/outline/);
 
     await page.keyboard.press("Control+s");
-    await expect(page.getByText("1 unpublished change")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Publish 1 change" })).toBeVisible();
 });
 
 test("publishing opens a pull request to develop and later publishes join it", async ({ page }) => {
     await openBuild(page);
-    await page.getByRole("button", { name: "Publish" }).click();
+    await page.getByRole("button", { name: /^Publish/ }).click();
     const prompt = page.locator('.aspis-dialog[data-placement="center"]');
     await prompt.getByRole("textbox").fill("Add the apex review skill");
     await prompt.locator(".aspis-dialog__foot button").last().click();
     await expect(page.getByText(/Pull request ready for your merge/)).toBeVisible();
-    await expect(page.getByText("pull request open")).toBeVisible();
-    await expect(page.getByText("feature/build-add-the-apex-review-skill")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Update pull request" })).toBeDisabled();
+    await expect(page.getByRole("link", { name: /Pull request open/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Publish|Update pull request/ })).toHaveCount(0);
+    await page.keyboard.press("s");
+    await expect(page.getByRole("dialog", { name: "Settings" }).getByText("owner/mantinea · feature/build-add-the-apex-review-skill · pull request open")).toBeVisible();
 });
 
 for (const theme of ["io", "nyx"] as const) {
     test(`Build in ${theme}`, async ({ page }) => {
         await openBuild(page, theme);
-        await page.getByRole("button", { name: /apex-review/ }).click();
-        await expect(page.getByRole("heading", { name: "apex-review" })).toBeVisible();
+        await piece(page, "apex-review").click();
+        await expect(piece(page, "apex-review")).toHaveAttribute("aria-current", "true");
         await page.mouse.move(0, 0);
         await expect(page).toHaveScreenshot(`build-form-${theme}.png`);
         await accessible(page);
@@ -87,7 +91,7 @@ for (const theme of ["io", "nyx"] as const) {
 
 test("the form leads with what a skill needs, and More options opens on its own once one of them is set", async ({ page }) => {
     await openBuild(page);
-    await page.getByRole("button", { name: /apex-review/ }).click();
+    await piece(page, "apex-review").click();
     const more = page.getByRole("button", { name: "More options" });
     await expect(more).toHaveAttribute("aria-expanded", "false");
     await expect(field(page, "Description")).toBeVisible();
@@ -97,22 +101,34 @@ test("the form leads with what a skill needs, and More options opens on its own 
     await page.keyboard.press("Control+s");
     await page.getByRole("button", { name: "Agents" }).click();
     await page.getByRole("button", { name: "Skills" }).click();
-    await page.getByRole("button", { name: /apex-review/ }).click();
+    await piece(page, "apex-review").click();
     await expect(page.getByRole("button", { name: "More options" })).toHaveAttribute("aria-expanded", "true");
     await expect(page.getByRole("combobox", { name: "Effort" })).toHaveValue("high");
 });
 
-test("Build fits the window in every mode", async ({ page }) => {
+test("Build fits the window in every mode, says everything once and starts on one line", async ({ page }) => {
     await openBuild(page);
-    await page.getByRole("button", { name: /apex-review/ }).click();
+    await piece(page, "apex-review").click();
     for (const size of [
-        { width: 1440, height: 900 },
         { width: 1024, height: 640 },
+        { width: 1440, height: 900 },
+        { width: 3440, height: 1369 },
     ]) {
         await page.setViewportSize(size);
         for (const mode of ["Tutorial", "Form", "Code"]) {
             await page.getByRole("tab", { name: mode }).click();
             await expect.poll(() => page.locator(".aspis-shell__main").evaluate((main) => main.scrollHeight - main.clientHeight)).toBeLessThanOrEqual(0);
+            await saysEverythingOnce(page);
+            await startOnOneLine(page, panes);
         }
     }
+});
+
+test("Save stays beside the form on a maximized ultrawide window", async ({ page }) => {
+    await openBuild(page);
+    await page.setViewportSize({ width: 3440, height: 1369 });
+    await piece(page, "apex-review").click();
+    const save = await page.getByRole("button", { name: "Save" }).boundingBox();
+    const description = await field(page, "Description").boundingBox();
+    expect(save!.x + save!.width - (description!.x + description!.width)).toBeLessThanOrEqual(1);
 });

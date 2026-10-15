@@ -16,6 +16,10 @@ const readFolded = () => {
 };
 const when = (at: number) => new Date(at).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
+/*
+ * The board under one toolbar on the sidebar's top line. A tile carries only what tells it apart from its
+ * neighbours: the repository appears when the board mixes several, and the repository filter only exists then.
+ */
 export function Kanban({ server }: { server: ServerState }) {
     const board = useBoard(server);
     const [repo, setRepo] = useState(allRepos);
@@ -38,9 +42,10 @@ export function Kanban({ server }: { server: ServerState }) {
     const cards = board.cards ?? [];
     const phaseOf = useMemo(() => new Map(cards.map((card) => [card.id, card.phase])), [cards]);
     const repos = useMemo(() => [...new Set(cards.map((card) => card.folder).filter((folder): folder is string => Boolean(folder)))].sort(), [cards]);
+    const mixed = repos.length > 1;
     const needle = query.trim().toLowerCase();
     const visible = cards.filter(
-        (card) => (repo === allRepos || card.folder === repo) && (!needle || `#${card.id} ${card.title} ${card.brief}`.toLowerCase().includes(needle)),
+        (card) => (!mixed || repo === allRepos || card.folder === repo) && (!needle || `#${card.id} ${card.title} ${card.brief}`.toLowerCase().includes(needle)),
     );
     const humanTargets = (card: Card): Target[] =>
         targets(card, { actor: "human", now: Date.now(), dependencies: card.dependsOn.map((id) => phaseOf.get(id) ?? "archived") });
@@ -87,15 +92,17 @@ export function Kanban({ server }: { server: ServerState }) {
                     <div className="min-w-[200px] max-w-[560px] flex-1">
                         <TextField label="Search cards" hideLabel type="search" placeholder="Search title, brief or #id" value={query} onChange={(event) => setQuery(event.target.value)} />
                     </div>
-                    <div className="w-[240px]">
-                        <Select
-                            label="Repository"
-                            hideLabel
-                            value={repo}
-                            onChange={(event) => setRepo(event.target.value)}
-                            options={[{ value: allRepos, label: "All repositories" }, ...repos.map((folder) => ({ value: folder, label: folderName(folder) }))]}
-                        />
-                    </div>
+                    {mixed && (
+                        <div className="w-[240px]">
+                            <Select
+                                label="Repository"
+                                hideLabel
+                                value={repo}
+                                onChange={(event) => setRepo(event.target.value)}
+                                options={[{ value: allRepos, label: "All repositories" }, ...repos.map((folder) => ({ value: folder, label: folderName(folder) }))]}
+                            />
+                        </div>
+                    )}
                 </>
             }
             actions={
@@ -104,7 +111,7 @@ export function Kanban({ server }: { server: ServerState }) {
                 </Button>
             }
         >
-            <div className="min-h-0 flex-1 pt-[var(--aspis-space-4)]">
+            <div className="min-h-0 flex-1 pt-[var(--aspis-space-3)]">
                 <Board label="Kanban">
                     {phases.map((phase) => {
                         const column = visible.filter((card) => card.phase === phase);
@@ -161,8 +168,7 @@ export function Kanban({ server }: { server: ServerState }) {
                                         onDragEnd={() => setDragged(undefined)}
                                         meta={[
                                             card.priority > 0 && `P${card.priority}`,
-                                            card.implementer.harness,
-                                            card.folder && folderName(card.folder),
+                                            mixed && repo === allRepos && card.folder && folderName(card.folder),
                                             card.phase === "scheduled" && card.scheduledAt !== null && when(card.scheduledAt),
                                             card.recurrence,
                                             card.dependsOn.length > 0 && `${card.dependsOn.length} dep`,

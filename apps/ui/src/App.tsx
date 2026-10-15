@@ -1,4 +1,4 @@
-import { AppShell, type Command, CommandPalette, type NavEntry, Status, Toaster, setSingleKeyHotkeys, themeCatalog, useHotkeys, useToast } from "@dyarchia/aspis";
+import { AppShell, type Command, CommandPalette, IconButton, type NavEntry, Status, Toaster, setSingleKeyHotkeys, useHotkeys, useToast } from "@dyarchia/aspis";
 import type { Theme } from "@dyarchia/core";
 import { useEffect, useRef, useState } from "react";
 import { readHint, writeHint } from "./hints.ts";
@@ -7,13 +7,12 @@ import { useUpdates } from "./use-updates.ts";
 import { Home } from "./views/Home.tsx";
 import { Build } from "./views/build/Build.tsx";
 import { Kanban } from "./views/kanban/Kanban.tsx";
-import { SettingsView } from "./views/Settings.tsx";
+import { Settings } from "./views/Settings.tsx";
 
 const nav = [
     { id: "home", label: "Home", icon: "home", hotkey: "H" },
     { id: "kanban", label: "Kanban", icon: "board", hotkey: "K" },
     { id: "build", label: "Build", icon: "layers", hotkey: "B" },
-    { id: "settings", label: "Settings", icon: "settings", hotkey: "S" },
 ] as const satisfies readonly NavEntry<string>[];
 
 type View = (typeof nav)[number]["id"];
@@ -30,7 +29,9 @@ export function App() {
 
 /*
  * Moving to another view titles the window after it and, when the move came from the user, puts focus on the new
- * view's heading so the keyboard and the screen reader start from the top of what changed.
+ * view's heading so the keyboard and the screen reader start from the top of what changed. Settings is a dialog
+ * over whatever view is open, reached from the gear under the views, S or the palette. The palette offers only what
+ * would change something: never the view already open or the theme already in use.
  */
 function Workspace() {
     const server = useServer();
@@ -38,6 +39,7 @@ function Workspace() {
     const stored = readHint("view");
     const [view, setView] = useState<View>(isView(stored) ? stored : "home");
     const [palette, setPalette] = useState(false);
+    const [settings, setSettings] = useState(false);
     const [singleKeys, setSingleKeys] = useState(readHint("keys.single") !== "off");
     const moved = useRef(false);
     const updates = useUpdates((info) => toast({ text: `Version ${info.version} is available. Install it from Settings`, tone: "info" }));
@@ -64,8 +66,9 @@ function Workspace() {
     const otherTheme: Theme = server.settings.theme === "io" ? "nyx" : "io";
 
     const commands: Command[] = [
-        ...nav.map((entry) => ({ id: `go-${entry.id}`, label: `Go to ${entry.label}`, hotkey: entry.hotkey, run: () => go(entry.id) })),
-        ...(Object.keys(themeCatalog) as Theme[]).map((theme) => ({ id: `theme-${theme}`, label: `Use the ${themeCatalog[theme].label} theme`, run: () => chooseTheme(theme) })),
+        ...nav.filter((entry) => entry.id !== view).map((entry) => ({ id: `go-${entry.id}`, label: `Go to ${entry.label}`, hotkey: entry.hotkey, run: () => go(entry.id) })),
+        { id: "settings", label: "Open Settings", hotkey: "S", run: () => setSettings(true) },
+        { id: "theme", label: `Use the ${otherTheme} theme`, hotkey: "T", run: () => chooseTheme(otherTheme) },
         ...(updates.state.kind === "unsupported" ? [] : [{ id: "update-check", label: "Check for updates", run: () => void updates.check() }]),
         ...(updates.state.kind === "available"
             ? [{ id: "update-install", label: `Install ${updates.state.info.version}`, hint: "Restarts the app", run: () => void updates.install() }]
@@ -74,6 +77,7 @@ function Workspace() {
 
     useHotkeys({
         ...Object.fromEntries(nav.map((entry) => [entry.hotkey.toLowerCase(), () => go(entry.id)])),
+        s: () => setSettings(true),
         t: () => chooseTheme(otherTheme),
         "/": () => setPalette(true),
         "mod+k": () => setPalette((open) => !open),
@@ -82,18 +86,18 @@ function Workspace() {
     return (
         <>
             <AppShell
-                brand="Dyarchia Aspis"
                 nav={nav}
                 active={view}
                 onNavigate={go}
                 state={server.error ? "error" : server.live ? "live" : "connecting"}
                 status={<ServerStatus server={server} />}
+                tools={<IconButton icon="settings" label="Settings" hotkey="S" onClick={() => setSettings(true)} />}
             >
                 {view === "home" && <Home />}
                 {view === "kanban" && <Kanban server={server} />}
                 {view === "build" && <Build server={server} />}
-                {view === "settings" && <SettingsView server={server} updates={updates} onTheme={chooseTheme} singleKeys={singleKeys} onSingleKeys={chooseKeys} />}
             </AppShell>
+            <Settings open={settings} onClose={() => setSettings(false)} server={server} updates={updates} onTheme={chooseTheme} singleKeys={singleKeys} onSingleKeys={chooseKeys} />
             <CommandPalette open={palette} onClose={() => setPalette(false)} commands={commands} />
         </>
     );

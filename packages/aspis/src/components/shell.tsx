@@ -1,28 +1,32 @@
 import { type ReactNode, useEffect, useRef } from "react";
-import { Icon, type IconName, Kbd } from "./primitives.tsx";
+import { Icon, type IconName } from "./primitives.tsx";
 
 export interface NavEntry<T extends string> {
     id: T;
     label: string;
     icon: IconName;
     hotkey: string;
-    badge?: string;
 }
 
+/*
+ * The window already carries the app's name, so the sidebar holds only the views, the server state when it is not
+ * healthy, and the controls pinned under them (Settings). Shortcuts stay announced through aria-keyshortcuts and
+ * listed in the command palette instead of printed on every link.
+ */
 export function AppShell<T extends string>({
-    brand,
     nav,
     active,
     onNavigate,
     status,
+    tools,
     state,
     children,
 }: {
-    brand: string;
     nav: readonly NavEntry<T>[];
     active: T;
     onNavigate: (id: T) => void;
     status: ReactNode;
+    tools?: ReactNode;
     state?: string;
     children: ReactNode;
 }) {
@@ -31,10 +35,6 @@ export function AppShell<T extends string>({
             <a className="aspis-shell__skip" href="#aspis-main">
                 Skip to content
             </a>
-            <header className="aspis-shell__brand">
-                <span className="aspis-shell__mark" aria-hidden="true" />
-                <span className="aspis-shell__name">{brand}</span>
-            </header>
             <nav className="aspis-shell__nav" aria-label="Primary">
                 <ul>
                     {nav.map((entry) => (
@@ -48,15 +48,16 @@ export function AppShell<T extends string>({
                             >
                                 <Icon name={entry.icon} />
                                 <span className="aspis-shell__label">{entry.label}</span>
-                                {entry.badge && <span className="aspis-shell__badge">{entry.badge}</span>}
-                                <Kbd aria-hidden="true">{entry.hotkey}</Kbd>
                             </button>
                         </li>
                     ))}
                 </ul>
             </nav>
-            <div className="aspis-shell__status" role="status">
-                {status}
+            <div className="aspis-shell__foot">
+                <div className="aspis-shell__status" role="status">
+                    {status}
+                </div>
+                {tools}
             </div>
             <main id="aspis-main" className="aspis-shell__main" tabIndex={-1}>
                 {children}
