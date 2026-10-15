@@ -25,7 +25,7 @@ for (let attempt = 0; attempt < 40 && !browser; attempt++) {
 }
 if (!browser) throw new Error("WebView2 never exposed CDP");
 const page = browser.contexts()[0]!.pages()[0]!;
-await page.getByText(/server live/i).waitFor();
+await page.locator('.aspis-shell[data-state="live"]').waitFor({ state: "attached" });
 if (view) await page.keyboard.press(view);
 for (const step of [1, 2]) {
     await sleep(800);
