@@ -16,7 +16,8 @@ export function FieldControl({ field, value, highlight, onCommit }: { field: Fie
     const [invalid, setInvalid] = useState<string>();
     useEffect(() => setLocal(shown), [shown]);
 
-    const shared = { label: field.label, hint: field.help, error: invalid, required: field.required };
+    const hint = highlight ? field.help : undefined;
+    const shared = { label: field.label, hint, error: invalid, required: field.required };
 
     const commitText = () => {
         if (local === shown) return;
@@ -41,7 +42,7 @@ export function FieldControl({ field, value, highlight, onCommit }: { field: Fie
     };
 
     let control;
-    if (field.control === "toggle") control = <Switch label={field.label} hint={field.help} checked={value === true} onChange={(checked) => onCommit(checked || undefined)} />;
+    if (field.control === "toggle") control = <Switch label={field.label} hint={hint} checked={value === true} onChange={(checked) => onCommit(checked || undefined)} />;
     else if (field.control === "select")
         control = (
             <Select

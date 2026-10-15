@@ -78,8 +78,15 @@ export function Button({ variant = "secondary", icon, hotkey, className, childre
             <span className="aspis-button__label">
                 {icon && <Icon name={icon} />}
                 {children}
-                {hotkey && <Kbd aria-hidden="true">{hotkey}</Kbd>}
             </span>
+        </button>
+    );
+}
+
+export function IconButton({ icon, label, hotkey, className, type = "button", ...rest }: { icon: IconName; label: string; hotkey?: string } & ButtonHTMLAttributes<HTMLButtonElement>) {
+    return (
+        <button type={type} className={cx("aspis-icon-button", className)} aria-label={label} title={label} aria-keyshortcuts={hotkey && keyshortcut(hotkey)} {...rest}>
+            <Icon name={icon} />
         </button>
     );
 }

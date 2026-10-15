@@ -1,9 +1,4 @@
-export const themeCatalog = {
-    io: { label: "io" },
-    nyx: { label: "nyx" },
-} as const;
-
-export type ThemeName = keyof typeof themeCatalog;
+export type ThemeName = "io" | "nyx";
 
 let settle: ReturnType<typeof setTimeout> | undefined;
 

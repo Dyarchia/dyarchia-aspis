@@ -58,12 +58,13 @@ picked up interactively and end in Review, where an auditor and then you must bo
   and mods, in Claude Code's formats. The pieces live in a GitHub repository of the user's (chosen in Settings,
   created private with a develop branch when it does not exist yet), cloned under `~/.dyarchia-aspis/library/`.
 - Every piece has three modes over the same file: Tutorial walks the official steps for its kind and highlights the
-  fields of each step, Declarative is a form, Code is the file itself. A form change rewrites only its own key, so
-  comments, order and fields the form does not know survive.
+  fields of each step with its explanation, Form is the fields alone, Code is the file itself. A form change
+  rewrites only its own key, so comments, order and fields the form does not know survive.
 - Each kind is validated as Claude Code reads it: errors (what Claude Code would refuse or skip) block publishing,
   warnings do not.
 - Publishing moves the changes to a `feature/` branch and opens a pull request to develop for the user to merge;
-  later publishes join that pull request, and once it is merged Build returns to develop.
+  later publishes join that pull request, and once it is merged Build returns to develop. The publish controls
+  sit under the kinds and only appear when there are changes or a pull request.
 
 ## Stack
 
@@ -85,15 +86,23 @@ colour, type face, borders and motion.
   4.5:1 and control boundaries and focus 3:1 on every surface.
 - `e2e/support/audit.ts` measures every aspis element in both themes and fails on a 1px drift, and runs axe
   (WCAG 2.2 AA) on every view; serious and critical findings fail CI.
-- The theme lives in `state.db` and is pushed to every open client. `T` toggles it, `Ctrl K` opens commands.
+- The theme lives in `state.db` and is pushed to every open client. It is one switch in Settings, `T` toggles
+  it, `S` opens Settings and `Ctrl K` opens commands.
   Single-key shortcuts can be switched off in Settings and never fire while typing or with a dialog open.
 
-It is a desktop app, not a web page: every view is a fixed bar with its title, controls and actions over panes
-that fill the window. The window never scrolls as a page, only the panes do; e2e checks it at 1440x900 and at the
-1024x640 minimum. Forms lead with the fields every piece needs and keep the rest behind More options.
+It is a desktop app, not a web page: panes fill the window and every pane opens on the sidebar's top line. The
+window never scrolls as a page, only the panes do; e2e checks it at the 1024x640 minimum, at 1440x900 and at a
+maximized 3440x1440 window. Forms lead with the fields every piece needs and keep the rest behind More options.
+
+Minimalism is the first rule: the fewer things on screen the better, lines and text included. Anything that is
+not needed goes, and what can be a dialog is one (Settings is). Nothing is said twice: the window title names the
+app, the sidebar names the view, the list names the piece, and e2e fails when a heading, label, button, tab or
+link repeats on the same screen. Shortcuts are announced to screen readers and listed in the palette and in
+Settings, not printed on every control.
 
 Copy policy: a string stays only if it gives a fact, an action, or the reason something is blocked or invalid.
-No prose explaining how the system works, no messages for the healthy state, and empty states are one line.
+No prose explaining how the system works, no messages for the healthy state, no counts of zero, and empty states
+are one line.
 
 ## Layout
 
@@ -132,8 +141,8 @@ bun run dev
   artifacts are signed, so the build needs `TAURI_SIGNING_PRIVATE_KEY` (path or content of the private key)
   and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`; CI reads both from repository secrets. The public key lives in
   `tauri.conf.json`. Losing the private key means installed apps can no longer verify new releases.
-- `node scripts/snap-installed.ts <prefix> [view key]` launches the installed app with WebView2 remote debugging
-  and saves its window in both themes.
+- `node scripts/snap-installed.ts <prefix>` launches the installed app with WebView2 remote debugging, maximizes
+  it and saves every view and state in both themes, without changing anything.
 
 ## License
 

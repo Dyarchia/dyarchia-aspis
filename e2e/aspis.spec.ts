@@ -1,29 +1,32 @@
 import { type Page, expect, test } from "@playwright/test";
-import { type ThemeName, accessible, api, headers, live, sameLayout, useTheme } from "./support/audit.ts";
+import { type ThemeName, accessible, api, headers, live, sameLayout, saysEverythingOnce, startOnOneLine, useTheme } from "./support/audit.ts";
 
 const themes = ["io", "nyx"] as const;
 const views = [
-    { key: "h", name: "home" },
-    { key: "s", name: "settings" },
-    { key: "k", name: "kanban" },
-    { key: "b", name: "build" },
+    { key: "h", name: "home", panes: [] },
+    { key: "k", name: "kanban", panes: [".aspis-page__bar .aspis-field__input"] },
+    { key: "b", name: "build", panes: [] },
 ] as const;
-const windows = [
-    { width: 1440, height: 900 },
-    { width: 1024, height: 640 },
-];
-const sections = ["Theme", "Updates", "Scheduled runs", "Agent CLIs", "Library", "Keyboard", "About"];
 
 /*
- * Settings shows facts about the machine it runs on: whether each agent CLI is installed and where state.db lives.
- * Both differ between this PC and the CI runner, so the CLIs are answered with one fixed status and the path is
- * masked in the screenshot.
+ * The smallest window the app allows, a common laptop, and the maximized window on the user's 3440x1440 monitor.
+ */
+const windows = [
+    { width: 1024, height: 640 },
+    { width: 1440, height: 900 },
+    { width: 3440, height: 1369 },
+];
+
+/*
+ * Settings shows facts about the machine it runs on: whether each agent CLI is installed, where state.db lives and
+ * when the dispatcher last ran. They differ between this PC and the CI runner, and a longer path or one more line
+ * would change the dialog's height, so both answers are fixed here.
  */
 const agents = { installable: false, agents: ["claude-code", "kimi-code"].map((harness) => ({ harness, cli: true, installed: false })) };
-const machine = (page: Page) => [page.locator(".aspis-meta__item", { hasText: "State" }).locator(".aspis-meta__value")];
 
 async function open(page: Page, theme: ThemeName) {
     await page.route(`${api}/agents`, (route) => route.fulfill({ json: agents }));
+    await page.route(`${api}/health`, async (route) => route.fulfill({ json: { ...(await (await route.fetch()).json()), dbPath: "C:/Users/you/.dyarchia-aspis/state.db", lastDispatch: null } }));
     await page.request.put(`${api}/settings`, { headers, data: { theme } });
     await page.addInitScript(() => localStorage.clear());
     await page.goto("/");
@@ -36,7 +39,7 @@ const fits = (page: Page) =>
         .poll(() => page.locator(".aspis-shell__main").evaluate((main) => main.scrollHeight - main.clientHeight + (document.documentElement.scrollHeight - innerHeight)))
         .toBeLessThanOrEqual(0);
 
-const section = (page: Page, name: string) => page.getByRole("list", { name: "Sections" }).getByRole("button", { name, exact: true });
+const settings = (page: Page) => page.getByRole("dialog", { name: "Settings" });
 
 for (const view of views) {
     test(`${view.name} is one layout in both themes`, async ({ page }) => {
@@ -45,12 +48,14 @@ for (const view of views) {
         await sameLayout(page, async () => {});
     });
 
-    test(`${view.name} fits the window without scrolling`, async ({ page }) => {
+    test(`${view.name} fits every window, says everything once and starts on one line`, async ({ page }) => {
         await open(page, "io");
         await page.keyboard.press(view.key);
         for (const size of windows) {
             await page.setViewportSize(size);
             await fits(page);
+            await saysEverythingOnce(page);
+            await startOnOneLine(page, [...view.panes]);
         }
     });
 
@@ -59,35 +64,60 @@ for (const view of views) {
             await open(page, theme);
             await page.keyboard.press(view.key);
             await page.mouse.move(0, 0);
-            await expect(page).toHaveScreenshot(`${view.name}-${theme}.png`, { mask: machine(page) });
+            await expect(page).toHaveScreenshot(`${view.name}-${theme}.png`);
             await accessible(page);
         });
     }
 }
 
-test("every settings section fits the smallest window and is accessible", async ({ page }) => {
+for (const theme of themes) {
+    test(`settings in ${theme}`, async ({ page }) => {
+        await open(page, theme);
+        await page.getByRole("button", { name: "Settings" }).click();
+        await expect(settings(page)).toBeVisible();
+        await page.mouse.move(0, 0);
+        await expect(page).toHaveScreenshot(`settings-${theme}.png`);
+        await accessible(page);
+        await saysEverythingOnce(page);
+    });
+}
+
+test("settings fits the smallest window, and Escape gives focus back to the gear", async ({ page }) => {
+    await open(page, "io");
+    await page.setViewportSize(windows[0]!);
+    const gear = page.getByRole("button", { name: "Settings" });
+    await gear.click();
+    const box = settings(page).locator(".aspis-dialog__box");
+    await expect(box).toBeVisible();
+    expect(await box.evaluate((element) => element.getBoundingClientRect().bottom)).toBeLessThanOrEqual(windows[0]!.height);
+    await page.keyboard.press("Escape");
+    await expect(settings(page)).toHaveCount(0);
+    await expect(gear).toBeFocused();
+});
+
+test("the theme is one switch in Settings", async ({ page }) => {
     await open(page, "io");
     await page.keyboard.press("s");
-    await page.setViewportSize(windows[1]!);
-    for (const name of sections) {
-        await section(page, name).click();
-        await expect(section(page, name)).toHaveAttribute("aria-current", "true");
-        await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
-        await fits(page);
-        await accessible(page);
-    }
+    const nyx = settings(page).getByRole("switch", { name: "nyx" });
+    await expect(nyx).toHaveAttribute("aria-checked", "false");
+    await nyx.click();
+    await expect(page.locator('html[data-theme="nyx"]')).toBeAttached();
+    await nyx.click();
+    await expect(page.locator('html[data-theme="io"]')).toBeAttached();
 });
 
 for (const theme of themes) {
     test(`command palette in ${theme}`, async ({ page }) => {
         await open(page, theme);
         await page.keyboard.press("Control+k");
+        await expect(page.getByRole("option", { name: /Go to Home/ })).toHaveCount(0);
+        await expect(page.getByRole("option", { name: `Use the ${theme} theme` })).toHaveCount(0);
         await page.keyboard.type("set");
-        await expect(page.getByRole("option", { name: /Go to Settings/ })).toHaveAttribute("aria-selected", "true");
+        await expect(page.getByRole("option", { name: /Open Settings/ })).toHaveAttribute("aria-selected", "true");
         await expect(page).toHaveScreenshot(`palette-${theme}.png`);
         await accessible(page);
         await page.keyboard.press("Enter");
-        await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeFocused();
+        await expect(settings(page)).toBeVisible();
     });
 }
 
@@ -112,13 +142,15 @@ test("the palette stacks over a dialog, and Escape closes only the palette", asy
 
 test("single-key shortcuts can be switched off", async ({ page }) => {
     await open(page, "io");
+    const shortcuts = settings(page).getByRole("switch", { name: "Single-key shortcuts" });
     await page.keyboard.press("s");
-    await section(page, "Keyboard").click();
-    await page.getByRole("switch", { name: "Single-key shortcuts" }).click();
-    await page.locator("body").click({ position: { x: 600, y: 10 } });
+    await shortcuts.click();
+    await page.keyboard.press("Escape");
     await page.keyboard.press("k");
-    await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
-    await page.getByRole("switch", { name: "Single-key shortcuts" }).click();
+    await expect(page.getByRole("button", { name: "Home" })).toHaveAttribute("aria-current", "page");
+    await page.getByRole("button", { name: "Settings" }).click();
+    await shortcuts.click();
+    await expect(shortcuts).toHaveAttribute("aria-checked", "true");
 });
 
 test("theme hotkey persists in state.db and every client follows", async ({ page, browser }) => {

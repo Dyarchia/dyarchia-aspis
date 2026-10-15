@@ -1,4 +1,4 @@
-import { Button, Chip, EmptyState, Menu, Page, TextField, VisuallyHidden, useHotkeys } from "@dyarchia/aspis";
+import { Button, EmptyState, Menu, Page, TextField, VisuallyHidden, useHotkeys } from "@dyarchia/aspis";
 import { type KindId, kindIds, kinds, pieceAt } from "@dyarchia/library";
 import { useMemo, useState } from "react";
 import { useLibrary } from "../../use-library.ts";
@@ -10,8 +10,9 @@ import { Editor } from "./Editor.tsx";
 const nameRule = /^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$|^[a-z0-9]$/;
 
 /*
- * The library on the left (kinds, then the pieces of the chosen kind), the piece in the middle, and the publish
- * cycle in the header: changes go to a feature branch and a pull request to develop that the user merges.
+ * Three panes that start on the sidebar's top line: the kinds, the pieces of the chosen kind, and the piece. The
+ * publish cycle lives under the kinds and appears only when there is something to publish or a pull request to
+ * follow: changes go to a feature branch and a pull request to develop that the user merges.
  */
 export function Build({ server }: { server: ServerState }) {
     const library = useLibrary(server);
@@ -71,52 +72,46 @@ export function Build({ server }: { server: ServerState }) {
 
     const status = library.status;
     const pr = status.pr;
+    const count = status.changes.length;
     return (
-        <Page
-            title="Build"
-            tools={
-                <>
-                    <span className="aspis-tile__ref">{library.repo}</span>
-                    <Chip>{status.branch}</Chip>
-                    {pr && (
-                        <a href={pr.url} target="_blank" rel="noreferrer" className="no-underline">
-                            <Chip tone={pr.state === "OPEN" ? "info" : pr.state === "MERGED" ? "ok" : "idle"}>
-                                pull request {pr.state.toLowerCase()}
-                                <VisuallyHidden>, opens GitHub</VisuallyHidden>
-                            </Chip>
-                        </a>
-                    )}
-                    {status.changes.length > 0 && <span className="aspis-field__hint">{`${status.changes.length} unpublished change${status.changes.length > 1 ? "s" : ""}`}</span>}
-                </>
-            }
-            actions={
-                <>
-                    {pr && pr.state !== "OPEN" && (
-                        <Button variant="secondary" icon="history" disabled={library.busy} onClick={() => void library.sync()}>
-                            Back to develop
-                        </Button>
-                    )}
-                    <Button variant="primary" icon="arrow" disabled={library.busy || status.changes.length === 0} onClick={publish}>
-                        {pr?.state === "OPEN" ? "Update pull request" : "Publish"}
-                    </Button>
-                </>
-            }
-        >
+        <Page title="Build">
             <div className="grid min-h-0 flex-1 grid-cols-[200px_260px_minmax(0,1fr)]">
-                <div className="min-h-0 overflow-y-auto border-r border-[var(--aspis-line)]">
-                    <Menu
-                        label="Kinds"
-                        value={kind}
-                        items={kindIds.map((id) => ({ id, label: kinds[id].label, count: pieces.get(id)?.size ?? 0 }))}
-                        onSelect={(id) => {
-                            setKind(id);
-                            setSelected(undefined);
-                            setFilter("");
-                        }}
-                    />
+                <div className="flex min-h-0 flex-col border-r border-[var(--aspis-line)]">
+                    <div className="min-h-0 flex-1 overflow-y-auto">
+                        <Menu
+                            label="Kinds"
+                            value={kind}
+                            items={kindIds.map((id) => ({ id, label: kinds[id].label, count: pieces.get(id)?.size || undefined }))}
+                            onSelect={(id) => {
+                                setKind(id);
+                                setSelected(undefined);
+                                setFilter("");
+                            }}
+                        />
+                    </div>
+                    {(count > 0 || pr) && (
+                        <section aria-label="Publish" className="flex flex-col gap-[var(--aspis-space-3)] p-[var(--aspis-space-3)]">
+                            {pr && (
+                                <a href={pr.url} target="_blank" rel="noreferrer" className="aspis-field__hint flex min-h-[var(--aspis-row-h)] items-center">
+                                    Pull request {pr.state.toLowerCase()}
+                                    <VisuallyHidden>, opens GitHub</VisuallyHidden>
+                                </a>
+                            )}
+                            {pr && pr.state !== "OPEN" && (
+                                <Button variant="secondary" disabled={library.busy} onClick={() => void library.sync()}>
+                                    Back to develop
+                                </Button>
+                            )}
+                            {count > 0 && (
+                                <Button variant="primary" disabled={library.busy} onClick={publish}>
+                                    {pr?.state === "OPEN" ? "Update pull request" : `Publish ${count} change${count > 1 ? "s" : ""}`}
+                                </Button>
+                            )}
+                        </section>
+                    )}
                 </div>
                 <section aria-label={current.label} className="flex min-h-0 flex-col border-r border-[var(--aspis-line)]">
-                    <div className="flex items-end gap-[var(--aspis-space-3)] p-[var(--aspis-space-4)]">
+                    <div className="flex items-center gap-[var(--aspis-space-2)] px-[var(--aspis-space-2)] pt-[var(--aspis-space-3)]">
                         <div className="flex-1">
                             <TextField label={`Filter ${current.label.toLowerCase()}`} hideLabel placeholder="Filter" value={filter} onChange={(event) => setFilter(event.target.value)} />
                         </div>
@@ -128,7 +123,7 @@ export function Build({ server }: { server: ServerState }) {
                         <Menu
                             label={current.label}
                             value={selected}
-                            items={names.map((name) => ({ id: name, label: name, mark: changed.has(`${kind}/${name}`) ? <Chip tone="warn">changed</Chip> : undefined }))}
+                            items={names.map((name) => ({ id: name, label: name, changed: changed.has(`${kind}/${name}`) }))}
                             onSelect={setSelected}
                         />
                     </div>
@@ -137,9 +132,7 @@ export function Build({ server }: { server: ServerState }) {
                     {selected ? (
                         <Editor key={`${kind}/${selected}`} kind={current} name={selected} library={library} onDeleted={() => setSelected(undefined)} />
                     ) : (
-                        <div className="p-[var(--aspis-gutter)]">
-                            <EmptyState title={`${current.summary} Pick one or make a new one.`} />
-                        </div>
+                        <EmptyState title={current.summary} />
                     )}
                 </div>
             </div>

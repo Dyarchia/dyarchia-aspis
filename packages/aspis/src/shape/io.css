@@ -55,9 +55,7 @@
     border-color: var(--aspis-line-strong);
 }
 
-[data-theme="io"] .aspis-tabs__tab[aria-selected="true"],
-[data-theme="io"] .aspis-tabs__tab[aria-checked="true"],
-[data-theme="io"] .aspis-tabs__tab[aria-selected="true"] .aspis-tabs__count {
+[data-theme="io"] .aspis-tabs__tab[aria-selected="true"] {
     background: var(--aspis-invert-bg);
     color: var(--aspis-invert-ink);
 }
@@ -86,22 +84,6 @@
 
 [data-theme="io"] .aspis-switch__track[aria-checked="true"] .aspis-switch__thumb {
     background: var(--aspis-invert-ink);
-}
-
-[data-theme="io"] .aspis-page-head__title {
-    font-weight: 400;
-}
-
-[data-theme="io"] .aspis-group {
-    border-bottom-color: var(--aspis-line-strong);
-}
-
-[data-theme="io"] .aspis-meta__item {
-    border-bottom-color: transparent;
-}
-
-[data-theme="io"] .aspis-empty {
-    border-color: var(--aspis-line) transparent;
 }
 
 [data-theme="io"] .aspis-empty__title {
@@ -156,18 +138,9 @@
     color: var(--aspis-invert-ink);
 }
 
-[data-theme="io"] .aspis-shell__brand,
 [data-theme="io"] .aspis-shell__nav,
-[data-theme="io"] .aspis-shell__status {
+[data-theme="io"] .aspis-shell__foot {
     background: var(--aspis-bg);
-}
-
-[data-theme="io"] .aspis-shell__brand {
-    font-family: var(--aspis-font-mono);
-}
-
-[data-theme="io"] .aspis-shell__mark {
-    background: var(--aspis-accent);
 }
 
 [data-theme="io"] .aspis-shell__link[aria-current="page"]::before,
@@ -179,11 +152,6 @@
     left: -1px;
     width: 2px;
     background: var(--aspis-accent);
-}
-
-[data-theme="io"] .aspis-shell__link:hover .aspis-kbd,
-[data-theme="io"] .aspis-shell__link[aria-current="page"] .aspis-kbd {
-    color: var(--aspis-ink-2);
 }
 
 [data-theme="io"] .aspis-column {
