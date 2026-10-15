@@ -9,21 +9,6 @@
     }
 }
 
-@keyframes aspis-scan {
-    0% {
-        opacity: 0;
-        transform: translateX(-2rem);
-    }
-    25%,
-    75% {
-        opacity: 0.8;
-    }
-    100% {
-        opacity: 0;
-        transform: translateX(800%);
-    }
-}
-
 [data-theme="nyx"] .aspis-kbd {
     border-color: var(--aspis-line-strong);
     background: var(--aspis-hover);
@@ -82,14 +67,9 @@
     font-family: var(--aspis-font-read);
 }
 
-[data-theme="nyx"] .aspis-divider {
-    background: var(--aspis-line-strong);
-}
-
 [data-theme="nyx"] .aspis-tabs__tab[aria-selected="true"]::before,
 [data-theme="nyx"] .aspis-tabs__tab[aria-checked="true"]::before,
 [data-theme="nyx"] .aspis-shell__link[aria-current="page"]::before,
-[data-theme="nyx"] .aspis-row[aria-current]::before,
 [data-theme="nyx"] .aspis-menu__item[aria-current]::before,
 [data-theme="nyx"] .aspis-column[data-drop="allowed"]::before,
 [data-theme="nyx"] .aspis-tile[aria-current]::before,
@@ -163,135 +143,12 @@
     color: var(--aspis-ink-3);
 }
 
-[data-theme="nyx"] .aspis-section {
-    border-color: var(--aspis-line-faint);
-}
-
-[data-theme="nyx"] .aspis-section__cross {
-    opacity: 1;
-    mask-image: radial-gradient(circle, black 15%, transparent 75%);
-}
-
-[data-theme="nyx"] .aspis-section__cross::before,
-[data-theme="nyx"] .aspis-section__cross::after {
-    content: "";
-    position: absolute;
-    background: color-mix(in srgb, var(--aspis-ink-1) 25%, transparent);
-}
-
-[data-theme="nyx"] .aspis-section__cross::before {
-    left: 0;
-    right: 0;
-    top: 50%;
-    height: 1px;
-}
-
-[data-theme="nyx"] .aspis-section__cross::after {
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    width: 1px;
-}
-
-[data-theme="nyx"] .aspis-panel {
-    border-color: var(--aspis-line);
-}
-
-[data-theme="nyx"] .aspis-panel__frame {
-    background: var(--aspis-glow), var(--aspis-surface);
-    box-shadow: var(--aspis-shadow-surface);
-}
-
-[data-theme="nyx"] .aspis-panel__title {
-    color: var(--aspis-ink-3);
-}
-
-[data-theme="nyx"] .aspis-stats__item {
-    border-radius: 8px;
-    background: var(--aspis-surface-2);
-    box-shadow: inset 0 1px 0 var(--aspis-line-faint);
-    transition: transform var(--aspis-dur-base) var(--aspis-ease-spring);
-}
-
-[data-theme="nyx"] .aspis-stats__item:hover {
-    transform: translateY(-4px);
-}
-
-[data-theme="nyx"] .aspis-stats__label,
-[data-theme="nyx"] .aspis-bars__head {
-    font-family: var(--aspis-font-read);
-    text-transform: none;
-    letter-spacing: 0;
-    color: var(--aspis-ink-2);
-}
-
-[data-theme="nyx"] .aspis-bars {
-    border-radius: 8px;
-}
-
-[data-theme="nyx"] .aspis-bars__label {
-    font-family: var(--aspis-font-read);
-}
-
-[data-theme="nyx"] .aspis-bars__track::before {
-    background: linear-gradient(90deg, var(--aspis-ink-3), var(--aspis-ink-1));
-}
-
-[data-theme="nyx"] .aspis-bars__track::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 2rem;
-    background: linear-gradient(90deg, transparent, var(--aspis-ink-1), transparent);
-    opacity: 0;
-}
-
-[data-theme="nyx"] .aspis-bars:hover .aspis-bars__track::after {
-    animation: aspis-scan 5.6s ease-in-out infinite;
-}
-
 [data-theme="nyx"] .aspis-meta__value {
     color: var(--aspis-ink-2);
 }
 
 [data-theme="nyx"] .aspis-empty {
     border-style: dashed;
-}
-
-[data-theme="nyx"] .aspis-table {
-    border-radius: 8px;
-    background: var(--aspis-surface-deep);
-}
-
-[data-theme="nyx"] .aspis-table__title,
-[data-theme="nyx"] .aspis-table__head {
-    font-family: var(--aspis-font-read);
-    text-transform: none;
-    letter-spacing: 0;
-}
-
-[data-theme="nyx"] .aspis-table__head {
-    color: var(--aspis-ink-1);
-}
-
-[data-theme="nyx"] .aspis-table__cell {
-    border-bottom-color: var(--aspis-line-faint);
-}
-
-[data-theme="nyx"] .aspis-row {
-    border-radius: 8px;
-}
-
-[data-theme="nyx"] button.aspis-row:hover,
-[data-theme="nyx"] .aspis-row[aria-current] {
-    background: var(--aspis-hover);
-}
-
-[data-theme="nyx"] .aspis-row__lead,
-[data-theme="nyx"] .aspis-row__trail {
-    font-family: var(--aspis-font-mono);
 }
 
 [data-theme="nyx"] .aspis-code {

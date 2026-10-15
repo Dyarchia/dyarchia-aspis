@@ -1,4 +1,4 @@
-import { Select, Switch, TextArea, TextField } from "@dyarchia/aspis";
+import { Select, Switch, TextArea, TextField, cx } from "@dyarchia/aspis";
 import type { Field } from "@dyarchia/library";
 import { useEffect, useState } from "react";
 
@@ -16,7 +16,6 @@ export function FieldControl({ field, value, highlight, onCommit }: { field: Fie
     const [invalid, setInvalid] = useState<string>();
     useEffect(() => setLocal(shown), [shown]);
 
-    const frame = highlight ? "rounded-[var(--aspis-radius-item)] outline outline-2 outline-offset-4 outline-[var(--aspis-accent)]" : "";
     const shared = { label: field.label, hint: field.help, error: invalid, required: field.required };
 
     const commitText = () => {
@@ -76,7 +75,13 @@ export function FieldControl({ field, value, highlight, onCommit }: { field: Fie
             />
         );
     return (
-        <div className={frame} data-field={field.key}>
+        <div
+            className={cx(
+                highlight && "rounded-[var(--aspis-radius-item)] outline outline-2 outline-offset-4 outline-[var(--aspis-accent)]",
+                (field.control === "textarea" || field.control === "json") && "col-span-full",
+            )}
+            data-field={field.key}
+        >
             {control}
         </div>
     );

@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { readHint, writeHint } from "./hints.ts";
 import { type ServerState, useServer } from "./use-server.ts";
 import { useUpdates } from "./use-updates.ts";
-import { Gallery } from "./views/Gallery.tsx";
 import { Home } from "./views/Home.tsx";
 import { Build } from "./views/build/Build.tsx";
 import { Kanban } from "./views/kanban/Kanban.tsx";
@@ -14,7 +13,6 @@ const nav = [
     { id: "home", label: "Home", icon: "home", hotkey: "H" },
     { id: "kanban", label: "Kanban", icon: "board", hotkey: "K" },
     { id: "build", label: "Build", icon: "layers", hotkey: "B" },
-    { id: "aspis", label: "Aspis", icon: "shield", hotkey: "A" },
     { id: "settings", label: "Settings", icon: "settings", hotkey: "S" },
 ] as const satisfies readonly NavEntry<string>[];
 
@@ -94,7 +92,6 @@ function Workspace() {
                 {view === "home" && <Home />}
                 {view === "kanban" && <Kanban server={server} />}
                 {view === "build" && <Build server={server} />}
-                {view === "aspis" && <Gallery theme={server.settings.theme} onTheme={chooseTheme} />}
                 {view === "settings" && <SettingsView server={server} updates={updates} onTheme={chooseTheme} singleKeys={singleKeys} onSingleKeys={chooseKeys} />}
             </AppShell>
             <CommandPalette open={palette} onClose={() => setPalette(false)} commands={commands} />

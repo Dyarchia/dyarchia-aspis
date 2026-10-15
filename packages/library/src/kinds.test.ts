@@ -25,6 +25,14 @@ describe.each(kindIds)("%s", (id) => {
         for (const step of kind.steps) expect(step.source).toStartWith("https://code.claude.com/docs/en/");
     });
 
+    test("the form leads with real fields, every required one among them", () => {
+        const kind = kinds[id];
+        const keys = new Set([...kind.fields.map((field) => field.key), ...(kind.body ? ["body"] : [])]);
+        expect(kind.essentials.filter((key) => !keys.has(key))).toEqual([]);
+        expect(kind.fields.filter((field) => field.required && !kind.essentials.includes(field.key)).map((field) => field.key)).toEqual([]);
+        if (kind.body) expect(kind.essentials).toContain("body");
+    });
+
     test("every field reads back what the form wrote", () => {
         const { kind, piece } = scaffolded(id);
         for (const field of kind.fields) {

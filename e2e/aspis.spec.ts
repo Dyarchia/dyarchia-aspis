@@ -4,11 +4,15 @@ import { type ThemeName, accessible, api, headers, live, sameLayout, useTheme } 
 const themes = ["io", "nyx"] as const;
 const views = [
     { key: "h", name: "home" },
-    { key: "a", name: "aspis" },
     { key: "s", name: "settings" },
     { key: "k", name: "kanban" },
     { key: "b", name: "build" },
 ] as const;
+const windows = [
+    { width: 1440, height: 900 },
+    { width: 1024, height: 640 },
+];
+const sections = ["Theme", "Updates", "Scheduled runs", "Agent CLIs", "Library", "Keyboard", "About"];
 
 /*
  * Settings shows facts about the machine it runs on: whether each agent CLI is installed and where state.db lives.
@@ -16,44 +20,63 @@ const views = [
  * masked in the screenshot.
  */
 const agents = { installable: false, agents: ["claude-code", "kimi-code"].map((harness) => ({ harness, cli: true, installed: false })) };
+const machine = (page: Page) => [page.locator(".aspis-meta__item", { hasText: "State" }).locator(".aspis-meta__value")];
 
 async function open(page: Page, theme: ThemeName) {
     await page.route(`${api}/agents`, (route) => route.fulfill({ json: agents }));
     await page.request.put(`${api}/settings`, { headers, data: { theme } });
-    await page.clock.install();
     await page.addInitScript(() => localStorage.clear());
     await page.goto("/");
     await live(page);
     await useTheme(page, theme);
 }
 
-const fit = async (page: Page) => {
-    const height = await page.locator(".aspis-shell__main").evaluate((main) => main.scrollHeight);
-    await page.setViewportSize({ width: 1440, height: Math.max(900, height) });
-};
+const fits = (page: Page) =>
+    expect
+        .poll(() => page.locator(".aspis-shell__main").evaluate((main) => main.scrollHeight - main.clientHeight + (document.documentElement.scrollHeight - innerHeight)))
+        .toBeLessThanOrEqual(0);
+
+const section = (page: Page, name: string) => page.getByRole("list", { name: "Sections" }).getByRole("button", { name, exact: true });
 
 for (const view of views) {
     test(`${view.name} is one layout in both themes`, async ({ page }) => {
         await open(page, "io");
         await page.keyboard.press(view.key);
-        await page.clock.pauseAt(Date.now() + 60_000);
-        await fit(page);
         await sameLayout(page, async () => {});
+    });
+
+    test(`${view.name} fits the window without scrolling`, async ({ page }) => {
+        await open(page, "io");
+        await page.keyboard.press(view.key);
+        for (const size of windows) {
+            await page.setViewportSize(size);
+            await fits(page);
+        }
     });
 
     for (const theme of themes) {
         test(`${view.name} in ${theme}`, async ({ page }) => {
             await open(page, theme);
             await page.keyboard.press(view.key);
-            await page.clock.pauseAt(Date.now() + 60_000);
             await page.mouse.move(0, 0);
-            await fit(page);
-            await expect(page).toHaveScreenshot(`${view.name}-${theme}.png`, { timeout: 20_000, mask: [page.locator(".aspis-meta__item", { hasText: "State" }).locator(".aspis-meta__value")] });
-            await page.clock.resume();
-            await accessible(page, view.name === "aspis" ? ['[data-drop="refused"]'] : []);
+            await expect(page).toHaveScreenshot(`${view.name}-${theme}.png`, { mask: machine(page) });
+            await accessible(page);
         });
     }
 }
+
+test("every settings section fits the smallest window and is accessible", async ({ page }) => {
+    await open(page, "io");
+    await page.keyboard.press("s");
+    await page.setViewportSize(windows[1]!);
+    for (const name of sections) {
+        await section(page, name).click();
+        await expect(section(page, name)).toHaveAttribute("aria-current", "true");
+        await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
+        await fits(page);
+        await accessible(page);
+    }
+});
 
 for (const theme of themes) {
     test(`command palette in ${theme}`, async ({ page }) => {
@@ -69,10 +92,12 @@ for (const theme of themes) {
 }
 
 test("the palette stacks over a dialog, and Escape closes only the palette", async ({ page }) => {
+    const { id } = await (await page.request.post(`${api}/cards`, { headers, data: { title: "Palette over a panel" } })).json();
     await open(page, "io");
-    await page.keyboard.press("a");
-    await page.getByRole("button", { name: "Open card panel" }).click();
-    const panel = page.getByRole("dialog", { name: "#7 Archive stale Quote fields" });
+    await page.keyboard.press("k");
+    const tile = page.getByRole("button", { name: "Palette over a panel" });
+    await tile.click();
+    const panel = page.getByRole("dialog", { name: `#${id} Palette over a panel` });
     await expect(panel).toBeVisible();
     await page.keyboard.press("Control+k");
     await expect(page.getByRole("combobox", { name: "Command" })).toBeFocused();
@@ -81,12 +106,14 @@ test("the palette stacks over a dialog, and Escape closes only the palette", asy
     await expect(panel).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(panel).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Open card panel" })).toBeFocused();
+    await expect(tile).toBeFocused();
+    await page.request.delete(`${api}/cards/${id}`, { headers });
 });
 
 test("single-key shortcuts can be switched off", async ({ page }) => {
     await open(page, "io");
     await page.keyboard.press("s");
+    await section(page, "Keyboard").click();
     await page.getByRole("switch", { name: "Single-key shortcuts" }).click();
     await page.locator("body").click({ position: { x: 600, y: 10 } });
     await page.keyboard.press("k");
