@@ -1,7 +1,7 @@
 /*
- * Per-viewer conveniences only: the last view, the last settings section and a first-paint guess of the theme. The
- * theme itself lives in state.db; storage may be unavailable, so every access is guarded and a miss falls back to
- * defaults.
+ * Per-viewer conveniences only: the last view, the single-key switch, the folded columns and a first-paint guess of
+ * the theme. The theme itself lives in state.db; storage may be unavailable, so every access is guarded and a miss
+ * falls back to defaults.
  */
 export function readHint(key: string): string | undefined {
     try {

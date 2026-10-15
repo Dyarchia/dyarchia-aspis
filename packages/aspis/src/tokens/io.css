@@ -57,7 +57,6 @@
 
     --aspis-type-display: 400 var(--aspis-text-display) var(--aspis-font-display);
     --aspis-tracking-display: 0;
-    --aspis-type-title: 400 var(--aspis-text-title) var(--aspis-font-display);
     --aspis-type-body: 400 var(--aspis-text-body) var(--aspis-font-read);
     --aspis-type-item: 400 var(--aspis-text-item) var(--aspis-font-read);
     --aspis-type-ui: 400 var(--aspis-text-ui) var(--aspis-font-ui);
@@ -93,7 +92,6 @@
     --aspis-glow: none;
     --aspis-edge: none;
     --aspis-noise: none;
-    --aspis-rail: transparent;
     --aspis-glass: #141413;
     --aspis-icon-stroke: 1.25;
     --aspis-icon-cap: square;

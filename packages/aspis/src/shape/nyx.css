@@ -1,7 +1,7 @@
 /*
- * nyx paint: a technical frame of rails and registration crosses, surfaces held in double bezels, 1px gradient
- * edges on whatever is active, pills for controls and a soft spring on hover. Colour stays on data; everything
- * else is luminance. Paint only: the boxes come from base.css.
+ * nyx paint: surfaces held in double bezels, 1px gradient edges on whatever is active, pills for controls and a
+ * soft spring on hover. Colour stays on data; everything else is luminance. Paint only: the boxes come from
+ * base.css.
  */
 @keyframes aspis-orbit {
     to {
@@ -43,13 +43,7 @@
     z-index: 1;
     border: 2px solid var(--aspis-line-strong);
     border-radius: inherit;
-    background:
-        radial-gradient(0.7px 0.7px at 12% 30%, var(--aspis-ink-2), transparent 1px),
-        radial-gradient(0.7px 0.7px at 32% 72%, var(--aspis-ink-3), transparent 1px),
-        radial-gradient(0.7px 0.7px at 56% 22%, var(--aspis-ink-2), transparent 1px),
-        radial-gradient(0.7px 0.7px at 74% 64%, var(--aspis-ink-3), transparent 1px),
-        radial-gradient(0.7px 0.7px at 90% 38%, var(--aspis-ink-2), transparent 1px),
-        var(--aspis-bg);
+    background: var(--aspis-bg);
 }
 
 [data-theme="nyx"] .aspis-button[data-variant="secondary"] .aspis-button__glint {
@@ -68,7 +62,6 @@
 }
 
 [data-theme="nyx"] .aspis-tabs__tab[aria-selected="true"]::before,
-[data-theme="nyx"] .aspis-tabs__tab[aria-checked="true"]::before,
 [data-theme="nyx"] .aspis-shell__link[aria-current="page"]::before,
 [data-theme="nyx"] .aspis-menu__item[aria-current]::before,
 [data-theme="nyx"] .aspis-column[data-drop="allowed"]::before,
@@ -109,46 +102,8 @@
     background: var(--aspis-signal-ok);
 }
 
-[data-theme="nyx"] .aspis-page::before,
-[data-theme="nyx"] .aspis-page::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    border-left: 1px solid var(--aspis-rail);
-    border-right: 1px solid var(--aspis-rail);
-    mix-blend-mode: difference;
-    pointer-events: none;
-}
-
-[data-theme="nyx"] .aspis-page::before {
-    left: 12px;
-    right: 12px;
-}
-
-[data-theme="nyx"] .aspis-page::after {
-    left: 20px;
-    right: 20px;
-}
-
-[data-theme="nyx"] .aspis-page-head__title {
-    font-weight: 400;
-}
-
-[data-theme="nyx"] .aspis-group {
-    border-bottom-color: var(--aspis-line);
-}
-
 [data-theme="nyx"] .aspis-group__label {
     color: var(--aspis-ink-3);
-}
-
-[data-theme="nyx"] .aspis-meta__value {
-    color: var(--aspis-ink-2);
-}
-
-[data-theme="nyx"] .aspis-empty {
-    border-style: dashed;
 }
 
 [data-theme="nyx"] .aspis-code {
@@ -184,18 +139,6 @@
     backdrop-filter: blur(var(--aspis-blur));
     box-shadow: var(--aspis-shadow-pop);
     font-family: var(--aspis-font-read);
-}
-
-[data-theme="nyx"] .aspis-shell__brand {
-    font-family: var(--aspis-font-display);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-}
-
-[data-theme="nyx"] .aspis-shell__mark {
-    border-radius: 3px;
-    background: linear-gradient(135deg, var(--aspis-ink-1), var(--aspis-ink-3));
 }
 
 [data-theme="nyx"] .aspis-shell__link .aspis-icon {

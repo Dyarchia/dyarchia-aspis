@@ -1,4 +1,4 @@
-import { Button, Chip, GroupHeader, Icon, TabPanel, Tabs, TextArea, VisuallyHidden, cx, useHotkeys, useToast } from "@dyarchia/aspis";
+import { Button, Chip, Icon, TabPanel, Tabs, TextArea, VisuallyHidden, cx, useHotkeys, useToast } from "@dyarchia/aspis";
 import { type Field, type Kind, read, validate, write } from "@dyarchia/library";
 import { useEffect, useMemo, useState } from "react";
 import type { Library } from "../../use-library.ts";
@@ -16,7 +16,9 @@ const modes = [
 /*
  * One piece, three ways in. The file text is the only state: the form reads it and writes changes back
  * into it key by key, the code view edits it directly, and the tutorial is the same form walked one step at a time.
- * Saving writes the files to the library working tree; publishing is done from the header.
+ * Everything sits in one column, actions included, so Save stays beside what it saves on any window width. The
+ * list already names the piece and Save already says whether anything changed, so neither is repeated here.
+ * Saving writes the files to the library working tree; publishing is done under the kinds.
  */
 export function Editor({ kind, name, library, onDeleted }: { kind: Kind; name: string; library: Library; onDeleted: () => void }) {
     const toast = useToast();
@@ -48,7 +50,6 @@ export function Editor({ kind, name, library, onDeleted }: { kind: Kind; name: s
     const reading = read(kind, text);
     const dirty = Object.keys(texts).filter((file) => texts[file] !== saved[file]);
     const issues = validate(kind, { kind: kind.id, name, path: main, text, files });
-    const errors = issues.filter((issue) => issue.level === "error");
     const current = kind.steps[Math.min(step, kind.steps.length - 1)];
 
     const change = (key: string, value: unknown) => {
@@ -72,7 +73,7 @@ export function Editor({ kind, name, library, onDeleted }: { kind: Kind; name: s
     const extrasOpen = more ?? extrasInUse;
 
     const grid = (fields: readonly Field[], highlight: boolean) => (
-        <div className="grid max-w-[880px] grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-x-[var(--aspis-space-5)] gap-y-[var(--aspis-space-4)]">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-x-[var(--aspis-space-5)] gap-y-[var(--aspis-space-4)]">
             {fields.map((field) => (
                 <FieldControl key={field.key} field={field} value={reading.values[field.key]} highlight={highlight} onCommit={(value) => !reading.error && change(field.key, value)} />
             ))}
@@ -81,14 +82,15 @@ export function Editor({ kind, name, library, onDeleted }: { kind: Kind; name: s
 
     const body = (highlight: boolean) =>
         kind.body && (
-            <div className={cx("max-w-[880px]", highlight && "rounded-[var(--aspis-radius-control)] outline outline-2 outline-offset-4 outline-[var(--aspis-accent)]")}>
-                <TextArea label={kind.body.label} hint={kind.body.help} rows={14} value={reading.body} onChange={(event) => change("body", event.target.value)} />
+            <div className={cx(highlight && "rounded-[var(--aspis-radius-control)] outline outline-2 outline-offset-4 outline-[var(--aspis-accent)]")}>
+                <TextArea label={kind.body.label} hint={highlight ? kind.body.help : undefined} rows={14} value={reading.body} onChange={(event) => change("body", event.target.value)} />
             </div>
         );
 
     /*
      * The form leads with the fields every piece of this kind needs and keeps the rest behind More options, open
-     * on its own when one of them already holds a value or an issue. The tutorial shows only its step's fields.
+     * on its own when one of them already holds a value or an issue. The tutorial shows only its step's fields and
+     * is the one place their explanations appear; the form keeps to labels, values and errors.
      */
     const form = (keys?: readonly string[]) => (
         <div className="flex flex-col gap-[var(--aspis-space-5)]">
@@ -126,81 +128,78 @@ export function Editor({ kind, name, library, onDeleted }: { kind: Kind; name: s
 
     return (
         <div className="flex h-full min-h-0 flex-col">
-            <div className="flex flex-none flex-col gap-[var(--aspis-space-4)] border-b border-[var(--aspis-line)] px-[var(--aspis-space-5)] pt-[var(--aspis-space-4)] pb-[var(--aspis-space-3)]">
-                <div className="flex flex-wrap items-center gap-[var(--aspis-space-3)]">
-                    <h2 className="[font:var(--aspis-type-title)]">{name}</h2>
-                    {errors.length > 0 && <Chip tone="danger">{errors.length} to fix</Chip>}
-                    {dirty.length > 0 && <Chip tone="warn">unsaved</Chip>}
-                    <div className="ml-auto flex gap-[var(--aspis-space-3)]">
-                        {confirm ? (
-                            <>
-                                <Button variant="quiet" autoFocus onClick={() => setConfirm(false)}>
-                                    Keep it
-                                </Button>
-                                <Button
-                                    variant="secondary"
-                                    onClick={async () => {
-                                        await library.remove(kind.root(name));
-                                        onDeleted();
-                                    }}
-                                >
-                                    Delete for good
-                                </Button>
-                            </>
-                        ) : (
-                            <Button variant="quiet" onClick={() => setConfirm(true)}>
-                                Delete
-                            </Button>
-                        )}
-                        <Button variant="primary" icon="check" hotkey="Ctrl S" disabled={dirty.length === 0} onClick={() => void save()}>
-                            Save
-                        </Button>
-                    </div>
-                </div>
+            <div className="flex max-w-[calc(880px+2*var(--aspis-space-5))] flex-none items-center gap-[var(--aspis-space-3)] px-[var(--aspis-space-5)] pt-[var(--aspis-space-3)]">
                 <Tabs label="Mode" id="editor-mode" value={mode} onChange={setMode} tabs={modes} />
+                <div className="ml-auto flex gap-[var(--aspis-space-3)]">
+                    {confirm ? (
+                        <>
+                            <Button variant="quiet" autoFocus onClick={() => setConfirm(false)}>
+                                Keep it
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                onClick={async () => {
+                                    await library.remove(kind.root(name));
+                                    onDeleted();
+                                }}
+                            >
+                                Delete for good
+                            </Button>
+                        </>
+                    ) : (
+                        <Button variant="quiet" onClick={() => setConfirm(true)}>
+                            Delete
+                        </Button>
+                    )}
+                    <Button variant="primary" hotkey="Ctrl S" disabled={dirty.length === 0} onClick={() => void save()}>
+                        Save
+                    </Button>
+                </div>
             </div>
             <TabPanel id="editor-mode" value={mode} className="min-h-0 flex-1 overflow-y-auto p-[var(--aspis-space-5)]">
-                {mode === "tutorial" && current && (
-                    <div className="grid grid-cols-[minmax(240px,320px)_minmax(0,1fr)] gap-[var(--aspis-space-6)]">
-                        <div className="flex flex-col gap-[var(--aspis-space-4)]">
-                            <GroupHeader label={`Step ${Math.min(step, kind.steps.length - 1) + 1} of ${kind.steps.length}`} />
-                            <h3 className="m-0">{current.title}</h3>
-                            <p className="m-0">{current.text}</p>
-                            <a className="aspis-field__hint inline-flex w-fit items-center gap-[var(--aspis-space-1)]" href={current.source} target="_blank" rel="noreferrer">
-                                Docs
-                                <Icon name="external" size={12} />
-                                <VisuallyHidden>, opens code.claude.com</VisuallyHidden>
-                            </a>
-                            <div className="flex gap-[var(--aspis-space-3)]">
-                                <Button variant="secondary" disabled={step === 0} onClick={() => setStep(step - 1)}>
-                                    Back
-                                </Button>
-                                <Button variant="primary" disabled={step >= kind.steps.length - 1} onClick={() => setStep(step + 1)}>
-                                    Next
-                                </Button>
+                <div className={cx("flex max-w-[880px] flex-col gap-[var(--aspis-space-5)]", mode === "code" && "h-full")}>
+                    {mode === "tutorial" && current && (
+                        <>
+                            <div className="flex flex-col gap-[var(--aspis-space-3)]">
+                                <span className="aspis-field__hint">{`Step ${Math.min(step, kind.steps.length - 1) + 1} of ${kind.steps.length}`}</span>
+                                <h2 className="m-0 [font:var(--aspis-type-item)] font-semibold">{current.title}</h2>
+                                <p className="m-0">{current.text}</p>
+                                <div className="flex items-center gap-[var(--aspis-space-3)]">
+                                    <Button variant="secondary" disabled={step === 0} onClick={() => setStep(step - 1)}>
+                                        Back
+                                    </Button>
+                                    <Button variant="primary" disabled={step >= kind.steps.length - 1} onClick={() => setStep(step + 1)}>
+                                        Next
+                                    </Button>
+                                    <a className="aspis-field__hint ml-auto inline-flex items-center gap-[var(--aspis-space-1)]" href={current.source} target="_blank" rel="noreferrer">
+                                        Docs
+                                        <Icon name="external" size={12} />
+                                        <VisuallyHidden>, opens code.claude.com</VisuallyHidden>
+                                    </a>
+                                </div>
                             </div>
-                        </div>
-                        {form(current.fields)}
-                    </div>
-                )}
+                            {form(current.fields)}
+                        </>
+                    )}
 
-                {mode === "form" && form()}
+                    {mode === "form" && form()}
 
-                {mode === "code" && (
-                    <div className="flex h-full flex-col gap-[var(--aspis-space-4)]">
-                        {files.length > 1 && <Tabs label="Files" value={path} onChange={setPath} tabs={files.map((file) => ({ id: file, label: file.split("/").slice(2).join("/") || file }))} />}
-                        <CodeEditor
-                            path={path}
-                            value={texts[path] ?? ""}
-                            onChange={(text) => setTexts((all) => ({ ...all, [path]: text }))}
-                            onSave={() => dirty.length > 0 && void save()}
-                        />
-                    </div>
-                )}
+                    {mode === "code" && (
+                        <>
+                            {files.length > 1 && <Tabs label="Files" value={path} onChange={setPath} tabs={files.map((file) => ({ id: file, label: file.split("/").slice(2).join("/") || file }))} />}
+                            <CodeEditor
+                                path={path}
+                                value={texts[path] ?? ""}
+                                onChange={(text) => setTexts((all) => ({ ...all, [path]: text }))}
+                                onSave={() => dirty.length > 0 && void save()}
+                            />
+                        </>
+                    )}
+                </div>
             </TabPanel>
 
             {issues.length > 0 && (
-                <ul className="m-0 flex max-h-[30%] flex-none list-none flex-col gap-[var(--aspis-space-2)] overflow-y-auto border-t border-[var(--aspis-line)] px-[var(--aspis-space-5)] py-[var(--aspis-space-3)]">
+                <ul className="m-0 flex max-h-[30%] max-w-[calc(880px+2*var(--aspis-space-5))] flex-none list-none flex-col gap-[var(--aspis-space-2)] overflow-y-auto px-[var(--aspis-space-5)] py-[var(--aspis-space-3)]">
                     {issues.map((issue, index) => (
                         <li key={index}>
                             <Chip tone={issue.level === "error" ? "danger" : "warn"}>{issue.level}</Chip> <span className="aspis-field__hint">{issue.message}</span>

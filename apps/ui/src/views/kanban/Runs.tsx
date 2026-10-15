@@ -1,6 +1,6 @@
-import { CodeBlock, LiveLog, TabPanel, Tabs, type Tone } from "@dyarchia/aspis";
+import { CodeBlock, GroupHeader, LiveLog, TabPanel, Tabs, type Tone } from "@dyarchia/aspis";
 import { type Card, type Run, type RunStatus, resumeCommands, runLines } from "@dyarchia/core";
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import type { BoardApi } from "./use-board.ts";
 
 const kindLabels: Record<Run["kind"], string> = { headless: "Run", interactive: "Session", audit: "Audit" };
@@ -21,10 +21,11 @@ function status(run: Run): [string, Tone] {
 }
 
 /*
- * The attempts of a card and the log of the selected one. A live log is read from where the last read stopped,
- * a few times per second, so the answer appears as the harness writes it; a finished log is read once.
+ * The attempts of a card and the log of the selected one, under their own heading, and nothing at all before the
+ * first attempt. A live log is read from where the last read stopped, a few times per second, so the answer
+ * appears as the harness writes it; a finished log is read once.
  */
-export function RunHistory({ card, board, changes, empty }: { card: Card; board: BoardApi; changes: number; empty: string }) {
+export function RunHistory({ card, board, changes, label, actions }: { card: Card; board: BoardApi; changes: number; label: string; actions?: ReactNode }) {
     const cardId = card.id;
     const [runs, setRuns] = useState<Run[]>([]);
     const [selected, setSelected] = useState<string>();
@@ -62,11 +63,12 @@ export function RunHistory({ card, board, changes, empty }: { card: Card; board:
     }, [cardId, run?.id, live]);
 
     const lines = useMemo(() => runLines(text), [text]);
-    if (!run) return <span className="aspis-field__hint">{empty}</span>;
-    const [label, tone] = status(run);
+    if (!run) return null;
+    const [state, tone] = status(run);
 
     return (
         <div className="flex flex-col gap-[var(--aspis-space-3)]">
+            <GroupHeader label={label} actions={actions} />
             {runs.length > 1 && (
                 <Tabs
                     label="Attempts"
@@ -77,7 +79,7 @@ export function RunHistory({ card, board, changes, empty }: { card: Card; board:
                 />
             )}
             <TabPanel id={`attempts-${card.id}`} value={String(run.id)} className="h-[340px]">
-                <LiveLog title={run.branch} status={label} tone={tone} lines={lines} streaming={live} />
+                <LiveLog title={run.branch} status={state} tone={tone} lines={lines} streaming={live} />
             </TabPanel>
             {run.error && <span className="aspis-field__hint">{run.error}</span>}
             {run.sessionId && run.kind !== "interactive" && (

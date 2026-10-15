@@ -92,11 +92,20 @@ export function Select({
     );
 }
 
-export function Switch({ checked, onChange, label, hint }: { checked: boolean; onChange: (checked: boolean) => void; label: string; hint?: string }) {
+/*
+ * A two-way choice where off has a name of its own (io and nyx) shows that name before the track; the switch is
+ * still named by its on side, which is what checked means to a screen reader.
+ */
+export function Switch({ checked, onChange, label, off, hint }: { checked: boolean; onChange: (checked: boolean) => void; label: string; off?: string; hint?: string }) {
     const id = useId();
     return (
         <div className="aspis-field">
             <label className="aspis-switch">
+                {off && (
+                    <span className="aspis-switch__label" aria-hidden="true">
+                        {off}
+                    </span>
+                )}
                 <button
                     type="button"
                     role="switch"
@@ -124,7 +133,6 @@ export function Switch({ checked, onChange, label, hint }: { checked: boolean; o
 export interface TabItem<T extends string> {
     id: T;
     label: string;
-    count?: number;
 }
 
 const keySteps: Record<string, (index: number, length: number) => number> = {
@@ -137,9 +145,8 @@ const keySteps: Record<string, (index: number, length: number) => number> = {
 };
 
 /*
- * A row of exclusive choices. As tabs (the default) it switches the panel rendered by TabPanel with the same id;
- * as a radio group it picks a value, like the theme. Either way one choice is in the tab order and the arrow keys,
- * Home and End move between them.
+ * A row of tabs that switches the panel rendered by TabPanel with the same id. One tab is in the tab order and the
+ * arrow keys, Home and End move between them.
  */
 export function Tabs<T extends string>({
     tabs,
@@ -147,14 +154,12 @@ export function Tabs<T extends string>({
     onChange,
     label,
     id,
-    kind = "tabs",
 }: {
     tabs: readonly TabItem<T>[];
     value: T;
     onChange: (id: T) => void;
     label: string;
     id?: string;
-    kind?: "tabs" | "radio";
 }) {
     const move = (event: KeyboardEvent<HTMLDivElement>) => {
         const step = keySteps[event.key];
@@ -164,25 +169,22 @@ export function Tabs<T extends string>({
         onChange(next.id);
         event.currentTarget.querySelector<HTMLButtonElement>(`[data-tab="${next.id}"]`)?.focus();
     };
-    const radio = kind === "radio";
     return (
-        <div role={radio ? "radiogroup" : "tablist"} aria-label={label} className="aspis-tabs" onKeyDown={move}>
+        <div role="tablist" aria-label={label} className="aspis-tabs" onKeyDown={move}>
             {tabs.map((tab) => (
                 <button
                     key={tab.id}
                     type="button"
-                    role={radio ? "radio" : "tab"}
+                    role="tab"
                     id={id && `${id}-${tab.id}`}
                     data-tab={tab.id}
-                    aria-selected={radio ? undefined : tab.id === value}
-                    aria-checked={radio ? tab.id === value : undefined}
-                    aria-controls={!radio && id ? `${id}-panel` : undefined}
+                    aria-selected={tab.id === value}
+                    aria-controls={id && `${id}-panel`}
                     tabIndex={tab.id === value ? 0 : -1}
                     className="aspis-tabs__tab"
                     onClick={() => onChange(tab.id)}
                 >
                     {tab.label}
-                    {tab.count !== undefined && <span className="aspis-tabs__count">{tab.count}</span>}
                 </button>
             ))}
         </div>
