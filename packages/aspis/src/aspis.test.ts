@@ -24,7 +24,7 @@ const views = (dir: string): string =>
 const app = views(join(src, "..", "..", "..", "apps", "ui", "src"));
 
 const classesIn = (text: string) => all(text, /\b(aspis-[a-z]+(?:-[a-z]+)*(?:__[a-z]+(?:-[a-z]+)*)?)\b/g);
-const markupClasses = new Set([...classesIn(markup)].filter((name) => !name.startsWith("aspis-ratio") && !name.startsWith("aspis-main")));
+const markupClasses = new Set([...classesIn(markup)].filter((name) => !name.startsWith("aspis-main")));
 const cssClasses = (css: string) => all(uncomment(css), /\.(aspis-[a-z-]+(?:__[a-z-]+)?)/g);
 
 interface Rule {
@@ -89,11 +89,17 @@ describe("tokens", () => {
 
     test("every token used is defined, and every token defined is used", () => {
         const local = all(base, /(--aspis-[a-z0-9-]+)\s*:/g);
-        const defined = new Set([...geometry.keys(), ...palettes.io!.keys(), ...local, "--aspis-ratio", "--aspis-tone"]);
+        const defined = new Set([...geometry.keys(), ...palettes.io!.keys(), ...local, "--aspis-tone"]);
         const tokenText = [...Object.values(palettes), geometry].flatMap((map) => [...map.values()]).join("\n");
         const used = all(structure.join("\n") + markup + app + tokenText, /var\((--aspis-[a-z0-9-]+)/g);
         expect([...used].filter((name) => !defined.has(name))).toEqual([]);
         expect([...defined].filter((name) => !used.has(name) && !local.has(name))).toEqual([]);
+    });
+
+    test("every animation defined is used", () => {
+        const css = uncomment(structure.join("\n"));
+        const defined = [...css.matchAll(/@keyframes ([a-z-]+)/g)].map((match) => match[1]!);
+        expect(defined.filter((name) => !new RegExp(`animation(-name)?:[^;]*\\b${name}\\b`).test(css))).toEqual([]);
     });
 });
 
@@ -122,9 +128,9 @@ describe("one layout, two paints", () => {
         expect(breaches).toEqual([]);
     });
 
-    test.each(themes)("shape/%s.css never hides what the other theme shows", (theme) => {
-        const hidden = rules(shapes[theme]!).filter((rule) => rule.declarations.some(([name, value]) => (name === "opacity" && Number(value) === 0) || name === "visibility"));
-        expect(hidden.flatMap((rule) => rule.selectors).filter((selector) => !/::(before|after)$/.test(selector))).toEqual([]);
+    test.each(themes)("shape/%s.css never hides or fades content, only decoration", (theme) => {
+        const faded = rules(shapes[theme]!).filter((rule) => rule.declarations.some(([name, value]) => (name === "opacity" && Number(value) < 1) || name === "visibility"));
+        expect(faded.flatMap((rule) => rule.selectors).filter((selector) => !/::(before|after)$|__glint$/.test(selector))).toEqual([]);
     });
 
     test("every component class is laid out in base, and every styled class exists in markup", () => {
@@ -155,7 +161,7 @@ const contrast = (front: Rgb, back: Rgb) => {
 
 describe.each(themes)("contrast in %s", (theme) => {
     const color = (token: string) => parseColor(palettes[theme]!.get(`--aspis-${token}`)!)!;
-    const grounds = ["bg", "bg-raised", "surface", "surface-2", "surface-deep"];
+    const grounds = ["bg", "bg-raised", "surface", "surface-deep"];
     const text = ["ink-1", "ink-2", "ink-3", "accent", "signal-ok", "signal-warn", "signal-danger", "signal-info", "syntax-keyword", "syntax-function", "syntax-literal", "syntax-argument", "syntax-comment"];
     const ratios = (fronts: string[], backs: string[]) => fronts.flatMap((front) => backs.map((back) => [`${front} on ${back}`, contrast(color(front), color(back))] as const));
 

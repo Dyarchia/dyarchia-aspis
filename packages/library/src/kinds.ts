@@ -57,6 +57,7 @@ const skills: Kind = {
         { key: "background", label: "Background", control: "toggle", help: "With context fork: off waits for the result." },
         { key: "paths", label: "Paths", control: "tags", placeholder: "src/api/**", help: "Loads on its own only for matching files." },
     ],
+    essentials: ["name", "description", "when_to_use", "body"],
     body: { label: "Instructions", help: "$ARGUMENTS, $1, $name take what you typed; !`command` inserts its output." },
     steps: [
         { title: "Name it", text: "A skill is a folder whose name becomes the command you type. The name field can rename it; otherwise the folder decides.", fields: ["name"], source: docs("skills#create-your-first-skill") },
@@ -134,6 +135,7 @@ const agents: Kind = {
         { key: "color", label: "Color", control: "select", options: ["red", "blue", "green", "yellow", "purple", "orange", "pink", "cyan"] },
         { key: "initialPrompt", label: "Initial prompt", control: "textarea", help: "First turn when it runs as the main agent with --agent." },
     ],
+    essentials: ["name", "description", "tools", "model", "body"],
     body: { label: "System prompt", help: "It sees only what it is given, not your conversation." },
     steps: [
         { title: "Give it a name and a trigger", text: "Claude delegates by reading descriptions, so say what work this agent takes and when it should get it.", fields: ["name", "description"], source: docs("sub-agents#write-subagent-files") },
@@ -168,6 +170,7 @@ const commands: Kind = {
     owns: inFolder("commands", (name) => `commands/${name}.md`),
     scaffold: (name) => ({ [`commands/${name}.md`]: "" }),
     fields: skillFields,
+    essentials: ["description", "argument-hint", "body"],
     body: { label: "Prompt", help: "$ARGUMENTS, $1, $name take what you typed; !`command` inserts its output." },
     steps: [
         { title: "Name the command", text: "The file name is the command: deploy.md is /deploy.", fields: [], source: docs("skills#how-a-skill-gets-its-command-name") },
@@ -200,6 +203,7 @@ const prompts: Kind = {
         { key: "description", label: "Description", control: "textarea", required: true },
         { key: "variables", label: "Variables", control: "tags", placeholder: "jira, org", help: "The {{names}} the template expects." },
     ],
+    essentials: ["description", "variables", "body"],
     body: { label: "Template", help: "Write {{name}} where a variable goes." },
     steps: [
         { title: "Say what it is for", text: "A template is reused across tasks; its description is how you find it again.", fields: ["description"], source: docs("prompt-library") },
@@ -234,6 +238,7 @@ const rules: Kind = {
     owns: inFolder("rules", (name) => `rules/${name}.md`),
     scaffold: (name) => ({ [`rules/${name}.md`]: "" }),
     fields: [{ key: "paths", label: "Paths", control: "tags", placeholder: "src/api/**/*.ts", help: "Loads only for matching files. Empty: always loads." }],
+    essentials: ["paths", "body"],
     body: { label: "Rules", help: "@path imports another file." },
     steps: [
         {
@@ -365,6 +370,7 @@ const hooks: Kind = {
         { key: "timeout", label: "Timeout (s)", control: "number", help: "Seconds before it is stopped. Defaults: 600 for commands, 30 for prompts." },
         { key: "statusMessage", label: "Status message", control: "text", help: "Shown while it runs." },
     ],
+    essentials: ["description", "event", "matcher", "type", "command", "url", "prompt"],
     steps: [
         { title: "Choose the moment", text: "Hooks run at fixed points: before or after a tool, when a prompt is sent, when Claude stops. Pick where your check belongs.", fields: ["event", "description"], source: docs("hooks#hook-events") },
         {
@@ -457,6 +463,7 @@ const plugins: Kind = {
         { key: "license", label: "License", control: "text", placeholder: "MIT", help: "SPDX identifier." },
         { key: "keywords", label: "Keywords", control: "tags" },
     ],
+    essentials: ["name", "displayName", "version", "description"],
     steps: [
         { title: "Make the folder", text: "A plugin is a folder with a .claude-plugin subfolder, which holds plugin.json and nothing else.", fields: [], source: docs("plugins/create#create-your-first-plugin") },
         { title: "Write the manifest", text: "Only the name is required: it is how the plugin is installed. Description, version and author help whoever installs it.", fields: ["name", "displayName", "version", "description", "author", "authorEmail"], source: docs("plugins/create#create-your-first-plugin") },
@@ -502,6 +509,7 @@ const mods: Kind = {
         [`mods/${name}/hooks/register.ts`]: register,
     }),
     fields: manifestFields,
+    essentials: ["name", "displayName", "version", "description"],
     steps: [
         { title: "Make the folders", text: "A mod is a plugin with code: a .claude-plugin folder for the manifest and a hooks folder for the module.", fields: [], source: docs("plugins/mods/create#write-a-mod-yourself") },
         { title: "Write a plain manifest", text: "Name, version, description and author, as for any plugin. Mods add no manifest fields.", fields: ["name", "version", "description", "author", "authorEmail"], source: docs("plugins/mods/create#write-a-mod-yourself") },

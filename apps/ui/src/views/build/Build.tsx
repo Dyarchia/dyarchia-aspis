@@ -1,4 +1,4 @@
-import { Button, Chip, EmptyState, Menu, Page, PageHeader, TextField, VisuallyHidden, useHotkeys } from "@dyarchia/aspis";
+import { Button, Chip, EmptyState, Menu, Page, TextField, VisuallyHidden, useHotkeys } from "@dyarchia/aspis";
 import { type KindId, kindIds, kinds, pieceAt } from "@dyarchia/library";
 import { useMemo, useState } from "react";
 import { useLibrary } from "../../use-library.ts";
@@ -57,9 +57,11 @@ export function Build({ server }: { server: ServerState }) {
 
     useHotkeys({ n: () => library.status && create() });
 
+    if (!library.loaded) return <Page title="Build">{null}</Page>;
+
     if (!library.repo || !library.status)
         return (
-            <Page head={<PageHeader title="Build" />}>
+            <Page title="Build">
                 <EmptyState
                     title="Connect the GitHub repository that holds your library"
                     action={<LibraryConnect repo={repo} onRepo={setRepo} busy={library.busy} onConnect={() => void library.connect(repo.trim())} />}
@@ -70,12 +72,10 @@ export function Build({ server }: { server: ServerState }) {
     const status = library.status;
     const pr = status.pr;
     return (
-        <div className="flex h-full min-h-0 flex-col">
-            <div className="flex flex-wrap items-center gap-[var(--aspis-space-4)] p-[var(--aspis-space-4)]">
-                <h1 className="aspis-sr" tabIndex={-1}>
-                    Build
-                </h1>
-                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-[var(--aspis-space-3)]">
+        <Page
+            title="Build"
+            tools={
+                <>
                     <span className="aspis-tile__ref">{library.repo}</span>
                     <Chip>{status.branch}</Chip>
                     {pr && (
@@ -87,17 +87,22 @@ export function Build({ server }: { server: ServerState }) {
                         </a>
                     )}
                     {status.changes.length > 0 && <span className="aspis-field__hint">{`${status.changes.length} unpublished change${status.changes.length > 1 ? "s" : ""}`}</span>}
-                </div>
-                {pr && pr.state !== "OPEN" && (
-                    <Button variant="secondary" icon="history" disabled={library.busy} onClick={() => void library.sync()}>
-                        Back to develop
+                </>
+            }
+            actions={
+                <>
+                    {pr && pr.state !== "OPEN" && (
+                        <Button variant="secondary" icon="history" disabled={library.busy} onClick={() => void library.sync()}>
+                            Back to develop
+                        </Button>
+                    )}
+                    <Button variant="primary" icon="arrow" disabled={library.busy || status.changes.length === 0} onClick={publish}>
+                        {pr?.state === "OPEN" ? "Update pull request" : "Publish"}
                     </Button>
-                )}
-                <Button variant="primary" icon="arrow" disabled={library.busy || status.changes.length === 0} onClick={publish}>
-                    {pr?.state === "OPEN" ? "Update pull request" : "Publish"}
-                </Button>
-            </div>
-            <div className="grid min-h-0 flex-1 grid-cols-[200px_260px_minmax(0,1fr)] border-t border-[var(--aspis-line)]">
+                </>
+            }
+        >
+            <div className="grid min-h-0 flex-1 grid-cols-[200px_260px_minmax(0,1fr)]">
                 <div className="min-h-0 overflow-y-auto border-r border-[var(--aspis-line)]">
                     <Menu
                         label="Kinds"
@@ -128,7 +133,7 @@ export function Build({ server }: { server: ServerState }) {
                         />
                     </div>
                 </section>
-                <div className="min-h-0 overflow-y-auto">
+                <div className="min-h-0">
                     {selected ? (
                         <Editor key={`${kind}/${selected}`} kind={current} name={selected} library={library} onDeleted={() => setSelected(undefined)} />
                     ) : (
@@ -139,6 +144,6 @@ export function Build({ server }: { server: ServerState }) {
                 </div>
             </div>
             <Prompt request={prompt} onClose={() => setPrompt(undefined)} />
-        </div>
+        </Page>
     );
 }

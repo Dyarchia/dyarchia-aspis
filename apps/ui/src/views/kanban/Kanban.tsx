@@ -1,4 +1,4 @@
-import { Board, Button, Column, type DropState, Mark, Select, TextField, Tile, useHotkeys } from "@dyarchia/aspis";
+import { Board, Button, Column, type DropState, Mark, Page, Select, TextField, Tile, useHotkeys } from "@dyarchia/aspis";
 import { type Card, type Phase, type Target, phaseLabels, phases, targets } from "@dyarchia/core";
 import { useMemo, useState } from "react";
 import { readHint, writeHint } from "../../hints.ts";
@@ -80,28 +80,31 @@ export function Kanban({ server }: { server: ServerState }) {
     useHotkeys({ n: () => setCreating(true) });
 
     return (
-        <div className="flex h-full min-h-0 flex-col">
-            <h1 className="aspis-sr" tabIndex={-1}>
-                Kanban
-            </h1>
-            <div className="flex flex-wrap items-end gap-[var(--aspis-space-4)] p-[var(--aspis-space-4)]">
-                <div className="min-w-[200px] flex-1">
-                    <TextField label="Search cards" hideLabel type="search" placeholder="Search title, brief or #id" value={query} onChange={(event) => setQuery(event.target.value)} />
-                </div>
-                <div className="w-[260px]">
-                    <Select
-                        label="Repository"
-                        hideLabel
-                        value={repo}
-                        onChange={(event) => setRepo(event.target.value)}
-                        options={[{ value: allRepos, label: "All repositories" }, ...repos.map((folder) => ({ value: folder, label: folderName(folder) }))]}
-                    />
-                </div>
+        <Page
+            title="Kanban"
+            tools={
+                <>
+                    <div className="min-w-[200px] max-w-[560px] flex-1">
+                        <TextField label="Search cards" hideLabel type="search" placeholder="Search title, brief or #id" value={query} onChange={(event) => setQuery(event.target.value)} />
+                    </div>
+                    <div className="w-[240px]">
+                        <Select
+                            label="Repository"
+                            hideLabel
+                            value={repo}
+                            onChange={(event) => setRepo(event.target.value)}
+                            options={[{ value: allRepos, label: "All repositories" }, ...repos.map((folder) => ({ value: folder, label: folderName(folder) }))]}
+                        />
+                    </div>
+                </>
+            }
+            actions={
                 <Button variant="primary" icon="plus" hotkey="N" data-new-card onClick={() => setCreating(true)}>
                     New card
                 </Button>
-            </div>
-            <div className="min-h-0 flex-1">
+            }
+        >
+            <div className="min-h-0 flex-1 pt-[var(--aspis-space-4)]">
                 <Board label="Kanban">
                     {phases.map((phase) => {
                         const column = visible.filter((card) => card.phase === phase);
@@ -190,6 +193,6 @@ export function Kanban({ server }: { server: ServerState }) {
                 onPrompt={setPrompt}
             />
             <Prompt request={prompt} onClose={() => setPrompt(undefined)} />
-        </div>
+        </Page>
     );
 }

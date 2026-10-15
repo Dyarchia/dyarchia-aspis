@@ -8,7 +8,6 @@
     --aspis-bg: #000101;
     --aspis-bg-raised: #020204;
     --aspis-surface: #101112;
-    --aspis-surface-2: #020305;
     --aspis-surface-deep: #09090c;
     --aspis-ink-1: #ecebe7;
     --aspis-ink-2: rgb(255 255 255 / 0.7);
@@ -71,7 +70,6 @@
     --aspis-case-control: none;
     --aspis-tracking-control: 0;
     --aspis-type-data: 400 var(--aspis-text-data) var(--aspis-font-read);
-    --aspis-type-value: 400 var(--aspis-text-title) var(--aspis-font-read);
     --aspis-type-code: 400 var(--aspis-text-code) var(--aspis-font-mono);
     --aspis-type-field: 400 var(--aspis-text-item) var(--aspis-font-read);
 
@@ -87,7 +85,6 @@
     --aspis-dur-fast: 0.15s;
     --aspis-dur-base: 0.4s;
     --aspis-dur-theme: 0.45s;
-    --aspis-dim: 1;
 
     --aspis-shadow-pop: 0 10px 30px rgb(0 0 0 / 0.6);
     --aspis-shadow-ring: 0 0 0 3px rgb(236 235 231 / 0.5);

@@ -51,10 +51,6 @@
     text-decoration-color: transparent;
 }
 
-[data-theme="io"] .aspis-divider {
-    background: var(--aspis-line);
-}
-
 [data-theme="io"] .aspis-tabs {
     border-color: var(--aspis-line-strong);
 }
@@ -100,55 +96,6 @@
     border-bottom-color: var(--aspis-line-strong);
 }
 
-[data-theme="io"] .aspis-section {
-    border-color: transparent;
-}
-
-[data-theme="io"] .aspis-panel {
-    border-color: transparent;
-}
-
-[data-theme="io"] .aspis-panel__frame::before,
-[data-theme="io"] .aspis-panel__frame::after {
-    content: "";
-    position: absolute;
-    z-index: 1;
-    width: 5px;
-    height: 5px;
-    background: var(--aspis-bg);
-}
-
-[data-theme="io"] .aspis-panel__frame::before {
-    top: -1px;
-    left: -1px;
-    border-right: 1px solid var(--aspis-line);
-    border-bottom: 1px solid var(--aspis-line);
-}
-
-[data-theme="io"] .aspis-panel__frame::after {
-    right: -1px;
-    bottom: -1px;
-    border-left: 1px solid var(--aspis-line);
-    border-top: 1px solid var(--aspis-line);
-}
-
-[data-theme="io"] .aspis-panel__bar {
-    background: var(--aspis-surface);
-    color: var(--aspis-ink-1);
-}
-
-[data-theme="io"] .aspis-stats__item {
-    background: var(--aspis-bg);
-}
-
-[data-theme="io"] .aspis-bars__track {
-    background: var(--aspis-line);
-}
-
-[data-theme="io"] .aspis-bars__track::before {
-    background: repeating-linear-gradient(90deg, var(--aspis-ink-1) 0 6px, transparent 6px 8px);
-}
-
 [data-theme="io"] .aspis-meta__item {
     border-bottom-color: transparent;
 }
@@ -161,33 +108,21 @@
     font-family: var(--aspis-font-mono);
 }
 
-[data-theme="io"] .aspis-table {
-    background: var(--aspis-bg);
-}
-
-[data-theme="io"] .aspis-table__cell:last-child {
-    color: var(--aspis-ink-1);
-}
-
-[data-theme="io"] [data-theme="io"] .aspis-row {
-    border-color: transparent transparent var(--aspis-line);
-}
-
-[data-theme="io"] .aspis-row[aria-current] {
-    border-bottom-color: var(--aspis-ink-2);
-}
-
+/*
+ * io's hover dims everything else by stepping its ink down one level, never by fading it: the dimmed text keeps
+ * the contrast its ink guarantees.
+ */
 @media (hover: hover) {
-    [data-theme="io"] .aspis-list:hover button.aspis-row:not(:hover) {
-        opacity: var(--aspis-dim);
+    [data-theme="io"] .aspis-column__list:hover .aspis-tile:not(:hover) {
+        border-color: var(--aspis-line-faint);
     }
 
-    [data-theme="io"] .aspis-column__list:hover .aspis-tile:not(:hover) {
-        opacity: var(--aspis-dim);
+    [data-theme="io"] .aspis-column__list:hover .aspis-tile:not(:hover) .aspis-tile__title {
+        color: var(--aspis-ink-2);
     }
 
     [data-theme="io"] .aspis-menu__list:hover .aspis-menu__item:not(:hover) {
-        opacity: var(--aspis-dim);
+        color: var(--aspis-ink-3);
     }
 }
 

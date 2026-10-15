@@ -81,12 +81,16 @@ colour, type face, borders and motion.
 - `tokens/<theme>.css` holds the paint: colours, families, weights, case, radii, shadows and timing.
 - `base.css` lays out every component and reads tokens only.
 - `shape/<theme>.css` may only paint. `aspis.test.ts` parses it against a property whitelist, and also checks
-  that both themes share one token vocabulary, that no theme hides what the other shows, and that text reaches
+  that both themes share one token vocabulary, that no theme hides or fades content, and that text reaches
   4.5:1 and control boundaries and focus 3:1 on every surface.
 - `e2e/support/audit.ts` measures every aspis element in both themes and fails on a 1px drift, and runs axe
   (WCAG 2.2 AA) on every view; serious and critical findings fail CI.
 - The theme lives in `state.db` and is pushed to every open client. `T` toggles it, `Ctrl K` opens commands.
   Single-key shortcuts can be switched off in Settings and never fire while typing or with a dialog open.
+
+It is a desktop app, not a web page: every view is a fixed bar with its title, controls and actions over panes
+that fill the window. The window never scrolls as a page, only the panes do; e2e checks it at 1440x900 and at the
+1024x640 minimum. Forms lead with the fields every piece needs and keep the rest behind More options.
 
 Copy policy: a string stays only if it gives a fact, an action, or the reason something is blocked or invalid.
 No prose explaining how the system works, no messages for the healthy state, and empty states are one line.
