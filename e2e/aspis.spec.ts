@@ -19,14 +19,14 @@ const windows = [
 
 /*
  * Settings shows facts about the machine it runs on: whether each agent CLI is installed, where state.db lives and
- * when the dispatcher last ran. They differ between this PC and the CI runner, so the CLIs are answered with one
- * fixed status and the facts are masked in the screenshot.
+ * when the dispatcher last ran. They differ between this PC and the CI runner, and a longer path or one more line
+ * would change the dialog's height, so both answers are fixed here.
  */
 const agents = { installable: false, agents: ["claude-code", "kimi-code"].map((harness) => ({ harness, cli: true, installed: false })) };
-const machine = (page: Page) => [page.locator("[data-machine]")];
 
 async function open(page: Page, theme: ThemeName) {
     await page.route(`${api}/agents`, (route) => route.fulfill({ json: agents }));
+    await page.route(`${api}/health`, async (route) => route.fulfill({ json: { ...(await (await route.fetch()).json()), dbPath: "C:/Users/you/.dyarchia-aspis/state.db", lastDispatch: null } }));
     await page.request.put(`${api}/settings`, { headers, data: { theme } });
     await page.addInitScript(() => localStorage.clear());
     await page.goto("/");
@@ -76,7 +76,7 @@ for (const theme of themes) {
         await page.getByRole("button", { name: "Settings" }).click();
         await expect(settings(page)).toBeVisible();
         await page.mouse.move(0, 0);
-        await expect(page).toHaveScreenshot(`settings-${theme}.png`, { mask: machine(page) });
+        await expect(page).toHaveScreenshot(`settings-${theme}.png`);
         await accessible(page);
         await saysEverythingOnce(page);
     });

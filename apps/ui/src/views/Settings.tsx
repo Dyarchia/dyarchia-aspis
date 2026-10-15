@@ -129,8 +129,10 @@ function SettingsBody({
                 hint="H K B open views, S Settings, T theme, N new. Ctrl K opens commands either way."
             />
 
-            <div className="flex flex-col gap-[var(--aspis-space-1)]" data-machine>
-                <span className="aspis-field__hint">{server.health?.dbPath ?? "…"}</span>
+            <div className="flex min-w-0 flex-col gap-[var(--aspis-space-1)]">
+                <span className="aspis-field__hint truncate" title={server.health?.dbPath}>
+                    {server.health?.dbPath ?? "…"}
+                </span>
                 {server.health?.lastDispatch && <span className="aspis-field__hint">Last dispatch {new Date(server.health.lastDispatch).toLocaleString()}</span>}
             </div>
         </>
