@@ -91,7 +91,7 @@ export function CodeEditor({ path, value, onChange, onSave }: { path: string; va
 
     return (
         <>
-            <div ref={host} className="h-[560px] overflow-hidden rounded-[var(--aspis-radius-inset)] border border-[var(--aspis-line)]" />
+            <div ref={host} className="min-h-0 flex-1 overflow-hidden rounded-[var(--aspis-radius-inset)] border border-[var(--aspis-line)]" />
             <VisuallyHidden id={hint}>Tab indents. Press Escape, then Tab, to leave the editor.</VisuallyHidden>
         </>
     );

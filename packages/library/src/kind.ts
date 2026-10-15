@@ -49,6 +49,7 @@ export interface Kind {
     owns: (path: string) => string | undefined;
     scaffold: (name: string) => Record<string, string>;
     fields: readonly Field[];
+    essentials: readonly string[];
     body?: { label: string; help?: string };
     steps: readonly Step[];
     check?: (piece: Piece, values: Record<string, unknown>, body: string) => Issue[];

@@ -29,8 +29,9 @@ export function useLibrary({ conn, changes }: ServerState) {
     const reload = useCallback(async () => {
         if (!conn) return;
         const next = await request(conn, "/library", LibraryState);
+        const listed = next.status ? await request(conn, "/library/files", z.array(z.string())) : [];
         setState(next);
-        setFiles(next.status ? await request(conn, "/library/files", z.array(z.string())) : []);
+        setFiles(listed);
     }, [conn]);
 
     useEffect(() => {
@@ -59,6 +60,7 @@ export function useLibrary({ conn, changes }: ServerState) {
 
     return {
         ...state,
+        loaded: state !== undefined,
         files,
         busy,
         reload,

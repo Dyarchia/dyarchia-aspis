@@ -84,3 +84,35 @@ for (const theme of ["io", "nyx"] as const) {
         await expect(page).toHaveScreenshot(`build-code-${theme}.png`);
     });
 }
+
+test("the form leads with what a skill needs, and More options opens on its own once one of them is set", async ({ page }) => {
+    await openBuild(page);
+    await page.getByRole("button", { name: /apex-review/ }).click();
+    const more = page.getByRole("button", { name: "More options" });
+    await expect(more).toHaveAttribute("aria-expanded", "false");
+    await expect(field(page, "Description")).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Effort" })).toBeHidden();
+    await more.click();
+    await page.getByRole("combobox", { name: "Effort" }).selectOption("high");
+    await page.keyboard.press("Control+s");
+    await page.getByRole("button", { name: "Agents" }).click();
+    await page.getByRole("button", { name: "Skills" }).click();
+    await page.getByRole("button", { name: /apex-review/ }).click();
+    await expect(page.getByRole("button", { name: "More options" })).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByRole("combobox", { name: "Effort" })).toHaveValue("high");
+});
+
+test("Build fits the window in every mode", async ({ page }) => {
+    await openBuild(page);
+    await page.getByRole("button", { name: /apex-review/ }).click();
+    for (const size of [
+        { width: 1440, height: 900 },
+        { width: 1024, height: 640 },
+    ]) {
+        await page.setViewportSize(size);
+        for (const mode of ["Tutorial", "Form", "Code"]) {
+            await page.getByRole("tab", { name: mode }).click();
+            await expect.poll(() => page.locator(".aspis-shell__main").evaluate((main) => main.scrollHeight - main.clientHeight)).toBeLessThanOrEqual(0);
+        }
+    }
+});
