@@ -2,7 +2,7 @@ import { type APIRequestContext, type Page, expect, test } from "@playwright/tes
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { accessible, live, sameLayout } from "./support/audit.ts";
+import { accessible, live, sameLayout, saysEverythingOnce } from "./support/audit.ts";
 
 const api = "http://127.0.0.1:4319";
 const headers = { authorization: "Bearer dev", "content-type": "application/json" };
@@ -87,10 +87,12 @@ test("the board in both themes", async ({ page, request }) => {
         await page.mouse.move(0, 0);
         await expect(page).toHaveScreenshot(`board-${theme}.png`);
         await accessible(page);
+        await saysEverythingOnce(page);
         await column(page, "Review").getByText("Archive stale Quote fields").click();
         await expect(page.locator(".aspis-dialog__box")).toBeVisible();
         await expect(page).toHaveScreenshot(`card-${theme}.png`, { mask: [page.locator(".aspis-thread__when")] });
         await accessible(page);
+        await saysEverythingOnce(page);
     }
 });
 
@@ -100,6 +102,10 @@ test("the board and the card panel are one layout in both themes", async ({ page
     await column(page, "Review").getByText("Archive stale Quote fields").click();
     await expect(page.locator(".aspis-dialog__box")).toBeVisible();
     await sameLayout(page, async () => {});
+    await page.keyboard.press("Escape");
+    await column(page, "Triage").getByText("Map the Quote record types").click();
+    await expect(page.locator(".aspis-dialog__box")).toBeVisible();
+    await saysEverythingOnce(page);
 });
 
 test("the card panel keeps focus while the board changes, and gives it back on close", async ({ page }) => {
