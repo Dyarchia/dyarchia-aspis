@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { git } from "./git.ts";
 
@@ -8,8 +8,7 @@ export const fakeClaude = join(import.meta.dir, "fake-claude.ts");
 export async function makeRepo(path: string) {
     mkdirSync(path, { recursive: true });
     await git(path, "init", "-q", "-b", "develop");
-    await git(path, "config", "user.name", "Aspis Test");
-    await git(path, "config", "user.email", "test@aspis.local");
+    appendFileSync(join(path, ".git", "config"), "[user]\n\tname = Aspis Test\n\temail = test@aspis.local\n");
     writeFileSync(join(path, "README.md"), "# repo\n");
     await git(path, "add", "-A");
     await git(path, "commit", "-q", "-m", "init");
