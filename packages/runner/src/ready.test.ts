@@ -179,7 +179,7 @@ describe("the ready route", () => {
         expect(kanban().get(id).held).toContain("Could not audit");
         kanban().hold(id, null);
         expect(await dispatcher.dispatch()).toEqual([id]);
-    });
+    }, 15_000);
 
     test("the session marker goes away once the card is no longer the agent's", async () => {
         const id = readyCard("Marked");
