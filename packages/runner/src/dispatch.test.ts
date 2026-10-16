@@ -1,14 +1,15 @@
 import { runLines } from "@dyarchia/core";
 import { Store } from "@dyarchia/store";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Dispatcher } from "./dispatch.ts";
 import { git } from "./git.ts";
-import { fakeClaude, makeRepo, removeDir } from "./testing.ts";
+import { fakeClaude, makeRepo, tempFolders } from "./testing.ts";
 
 const runner = { harness: "claude-code", model: "claude-opus-5-5", effort: "high" };
+
+const folder = tempFolders("aspis-runner-");
 
 let dir: string;
 let repo: string;
@@ -16,17 +17,14 @@ let store: Store;
 let dispatcher: Dispatcher;
 
 beforeEach(async () => {
-    dir = mkdtempSync(join(tmpdir(), "aspis-runner-"));
+    dir = folder();
     repo = join(dir, "repo");
     await makeRepo(repo);
     store = new Store(join(dir, "state.db"));
     dispatcher = new Dispatcher({ store, claude: [process.execPath, fakeClaude], pollMs: 20 });
 });
 
-afterEach(async () => {
-    store.close();
-    await removeDir(dir);
-});
+afterEach(() => store.close());
 
 const kanban = () => dispatcher.kanban;
 
