@@ -1,13 +1,13 @@
 import { Kanban, Store } from "@dyarchia/store";
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Desktop, retryAfterMs } from "./desktop.ts";
-import { removeDir } from "./testing.ts";
+import { tempFolders } from "./testing.ts";
 
 const runner = { harness: "claude-code", model: "claude-opus-5-5", effort: "high" };
 const now = new Date(2026, 9, 14, 9, 0).getTime();
+const folder = tempFolders("aspis-desktop-");
+
 let dir: string;
 let store: Store;
 let kanban: Kanban;
@@ -17,7 +17,7 @@ let kicks: number;
 let desktop: Desktop;
 
 beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), "aspis-desktop-"));
+    dir = folder();
     store = new Store(join(dir, "state.db"));
     kanban = new Kanban(store);
     calls = [];
@@ -31,10 +31,7 @@ beforeEach(() => {
     });
 });
 
-afterEach(async () => {
-    store.close();
-    await removeDir(dir);
-});
+afterEach(() => store.close());
 
 function scheduled(at: number) {
     const card = kanban.create("Nightly");
