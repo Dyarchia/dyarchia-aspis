@@ -1,9 +1,21 @@
 import AxeBuilder from "@axe-core/playwright";
-import { type Page, expect } from "@playwright/test";
+import { type APIRequestContext, type Page, expect } from "@playwright/test";
+import { join } from "node:path";
 
 export const api = "http://127.0.0.1:4319";
 export const headers = { authorization: "Bearer dev", "content-type": "application/json" };
 export type ThemeName = "io" | "nyx";
+
+/* The project every e2e card lives on unless a test makes its own, made the first time a spec asks for it. */
+export async function project(request: APIRequestContext): Promise<number> {
+    const boards = (await (await request.get(`${api}/boards`, { headers })).json()) as { id: number; name: string }[];
+    const found = boards.find((board) => board.name === "ivirma-crm");
+    if (found) return found.id;
+    const folder = join(process.env.ASPIS_E2E_HOME!, "repos", "ivirma-crm");
+    const created = await request.post(`${api}/boards`, { headers, data: { name: "ivirma-crm", folder } });
+    expect(created.ok(), await created.text()).toBe(true);
+    return ((await created.json()) as { id: number }).id;
+}
 
 export async function useTheme(page: Page, theme: ThemeName) {
     await page.request.put(`${api}/settings`, { headers, data: { theme } });
