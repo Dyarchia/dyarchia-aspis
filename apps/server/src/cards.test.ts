@@ -91,7 +91,8 @@ test("a board is a project: one per folder, archived boards take no cards, delet
     const folder = join(dir, "project");
     const project = Board.parse(await (await call(shipped, "/boards", "POST", { name: "Project", folder })).json());
     expect(existsSync(folder)).toBe(true);
-    expect((await call(shipped, "/boards", "POST", { name: "Twin", folder })).status).toBe(409);
+    expect((await call(shipped, "/boards", "POST", { name: "project", folder: dir })).status).toBe(409);
+    expect(await read(await call(shipped, `/boards/folder?name=site&folder=${encodeURIComponent(dir)}`))).toEqual({ folder: join(dir, "site"), exists: false });
     expect((await call(shipped, "/boards", "POST", { name: "Relative", folder: "repos/x" })).status).toBe(400);
 
     const card = Card.parse(await (await call(shipped, "/cards", "POST", { title: "On the project", board: project.id })).json());

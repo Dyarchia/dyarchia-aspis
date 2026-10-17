@@ -17,7 +17,7 @@ import {
     targets,
     verdict,
 } from "@dyarchia/core";
-import { mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import type { Store } from "./index.ts";
 
@@ -118,9 +118,26 @@ export class Kanban {
         return board;
     }
 
+    /*
+     * The folder a board asks for is where the project goes, not always the project itself: a git repository, or a
+     * folder already named after the board, is used as it is; anywhere else the project is a folder named after the
+     * board inside it. Picking Downloads for "nyx-board" means Downloads\nyx-board, never Downloads itself.
+     */
+    projectPath(name: string, folder: string): { folder: string; exists: boolean } {
+        const where = folder.trim();
+        if (!isAbsolute(where)) throw new KanbanError(`${where} is not an absolute path`, 400);
+        const normal = resolve(where);
+        const leaf = name.trim().replace(/[<>:"/\\|?*]+/g, "-").replace(/[. ]+$/, "");
+        if (!leaf) throw new KanbanError("The board needs a name", 400);
+        const own = existsSync(join(normal, ".git")) || basename(normal).toLowerCase() === leaf.toLowerCase();
+        const path = own ? normal : join(normal, leaf);
+        return { folder: path, exists: existsSync(path) };
+    }
+
     createBoard(draft: BoardDraft, now = Date.now()): Board {
         const { name, folder } = BoardDraft.parse(draft);
-        const id = this.db.query("INSERT INTO boards (name, folder, created_at) VALUES (?, ?, ?)").run(name, this.projectFolder(folder), now).lastInsertRowid;
+        const path = this.projectFolder(this.projectPath(name, folder).folder);
+        const id = this.db.query("INSERT INTO boards (name, folder, created_at) VALUES (?, ?, ?)").run(name, path, now).lastInsertRowid;
         return this.board(Number(id));
     }
 
@@ -131,7 +148,7 @@ export class Kanban {
     editBoard(id: number, edit: BoardEdit, now = Date.now()): Board {
         const board = this.board(id);
         const { name, folder, archived } = BoardEdit.parse(edit);
-        const moved = folder === undefined ? undefined : this.projectFolder(folder, id);
+        const moved = folder === undefined || folder === board.folder ? undefined : this.projectFolder(this.projectPath(name ?? board.name, folder).folder, id);
         this.db.transaction(() => {
             this.db.query("UPDATE boards SET name = ?, folder = ?, archived = ? WHERE id = ?").run(name ?? board.name, moved ?? board.folder, (archived ?? board.archived) ? 1 : 0, id);
             if (moved !== undefined && moved !== board.folder) {

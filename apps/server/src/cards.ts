@@ -24,6 +24,7 @@ export function boardRoutes(kanban: Kanban, changed: () => void) {
     const mutate = mutator(changed);
     return new Hono()
         .get("/", (c) => c.json(kanban.boards()))
+        .get("/folder", (c) => c.json(kanban.projectPath(c.req.query("name") ?? "", c.req.query("folder") ?? "")))
         .post("/", async (c) => {
             const draft = BoardDraft.parse(await c.req.json());
             return c.json(

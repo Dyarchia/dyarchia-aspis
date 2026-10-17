@@ -53,6 +53,8 @@ export function useBoard(server: ServerState) {
         createBoard: (draft: BoardDraft) => run(() => api("/boards", Board, json("POST", draft))),
         editBoard: (id: number, edit: BoardEdit) => run(() => api(`/boards/${id}`, Board, json("PATCH", edit))),
         removeBoard: (id: number) => run(() => api(`/boards/${id}`, z.null(), { method: "DELETE" })),
+        projectPath: (name: string, folder: string) =>
+            api(`/boards/folder?${new URLSearchParams({ name, folder })}`, z.object({ folder: z.string(), exists: z.boolean() })).catch(() => undefined),
         detail: (id: number) => api(`/cards/${id}`, CardDetail),
         create: (title: string, board: number) => run(() => api("/cards", Card, json("POST", { title, board }))),
         edit: (id: number, edit: CardEdit) => run(() => api(`/cards/${id}`, Card, json("PATCH", edit))),
