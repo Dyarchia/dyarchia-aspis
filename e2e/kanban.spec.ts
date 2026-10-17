@@ -2,7 +2,7 @@ import { type APIRequestContext, type Page, expect, test } from "@playwright/tes
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { accessible, live, project, sameLayout, saysEverythingOnce } from "./support/audit.ts";
+import { accessible, live, project, sameLayout, saysEverythingOnce, scrollsOnlyDown } from "./support/audit.ts";
 
 const api = "http://127.0.0.1:4319";
 const headers = { authorization: "Bearer dev", "content-type": "application/json" };
@@ -62,7 +62,7 @@ async function confirm(page: Page, text: string) {
 
 test.describe.configure({ mode: "serial" });
 
-test("a board is a project: made from the selector, remembered, shown with its tally among all boards, and archived", async ({ page, request }) => {
+test("a board is a project: made from +, remembered, archived; a card is born in Triage by Enter, Add or leaving the field", async ({ page, request }) => {
     await project(request);
     await openBoard(page);
     const picker = page.getByRole("combobox", { name: "Board" });
@@ -72,29 +72,37 @@ test("a board is a project: made from the selector, remembered, shown with its t
     await dialog.getByLabel("Folder").fill(join(process.env.ASPIS_E2E_HOME!, "repos", "site"));
     await dialog.getByRole("button", { name: "Create" }).click();
     await expect(picker.locator("option:checked")).toHaveText("site");
-    await expect(column(page, "Triage")).toBeVisible();
 
+    const triage = column(page, "Triage");
+    const title = page.getByLabel("New card title");
     await page.keyboard.press("n");
-    await page.getByLabel("New card title").fill("Only on site");
+    await title.fill("Born by Enter");
     await page.keyboard.press("Enter");
-    await expect(column(page, "Triage").getByText("Only on site")).toBeVisible();
-    await expect(page.getByLabel("New card title")).toHaveCount(0);
-    await expect(column(page, "Triage").getByRole("button", { name: "New card" })).toBeFocused();
+    await expect(triage.getByText("Born by Enter")).toBeVisible();
+    await expect(title).toHaveCount(0);
+    await expect(triage.getByRole("button", { name: "New card" })).toBeFocused();
 
+    await triage.getByRole("button", { name: "New card" }).click();
+    await title.fill("Born by Add");
+    await triage.getByRole("button", { name: "Add" }).click();
+    await expect(triage.getByText("Born by Add")).toBeVisible();
+
+    await triage.getByRole("button", { name: "New card" }).click();
+    await title.fill("Born by leaving");
+    await page.getByRole("combobox", { name: "Search cards" }).or(page.getByRole("searchbox", { name: "Search cards" })).click();
+    await expect(triage.getByText("Born by leaving")).toBeVisible();
+    await expect(title).toHaveCount(0);
+    await expect(triage.getByRole("button")).toHaveCount(5);
+
+    await page.keyboard.press("Escape");
     await page.keyboard.press("h");
     await page.keyboard.press("k");
     await expect(picker.locator("option:checked")).toHaveText("site");
-
-    await picker.selectOption({ label: "All boards" });
-    const tile = page.getByRole("list", { name: "Boards" }).getByRole("button", { name: "site" });
-    await expect(tile).toContainText("1 waiting");
-    await saysEverythingOnce(page);
-    await tile.click();
-    await expect(column(page, "Triage").getByText("Only on site")).toBeVisible();
+    await expect(picker.locator("option")).toHaveText(["ivirma-crm", "site"]);
 
     await page.getByRole("button", { name: "Board settings" }).click();
     await page.getByRole("dialog", { name: "site" }).getByRole("button", { name: "Archive" }).click();
-    await expect(picker.locator("option:checked")).toHaveText("All boards");
+    await expect(picker.locator("option:checked")).toHaveText("ivirma-crm");
     await expect(picker.locator('optgroup[label="Archived"] option')).toHaveText(["site"]);
 });
 
@@ -129,6 +137,7 @@ test("the board in both themes", async ({ page, request }) => {
         await expect(page).toHaveScreenshot(`card-${theme}.png`, { mask: [page.locator(".aspis-thread__when")] });
         await accessible(page);
         await saysEverythingOnce(page);
+        await scrollsOnlyDown(page);
     }
 });
 
