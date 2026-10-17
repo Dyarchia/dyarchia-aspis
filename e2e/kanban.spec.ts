@@ -66,7 +66,7 @@ test("a board is a project: made from the selector, remembered, shown with its t
     await project(request);
     await openBoard(page);
     const picker = page.getByRole("combobox", { name: "Board" });
-    await picker.selectOption({ label: "New board" });
+    await page.getByRole("button", { name: "New board" }).click();
     const dialog = page.getByRole("dialog", { name: "New board" });
     await dialog.getByLabel("Name").fill("site");
     await dialog.getByLabel("Folder").fill(join(process.env.ASPIS_E2E_HOME!, "repos", "site"));
@@ -78,6 +78,8 @@ test("a board is a project: made from the selector, remembered, shown with its t
     await page.getByLabel("New card title").fill("Only on site");
     await page.keyboard.press("Enter");
     await expect(column(page, "Triage").getByText("Only on site")).toBeVisible();
+    await expect(page.getByLabel("New card title")).toHaveCount(0);
+    await expect(column(page, "Triage").getByRole("button", { name: "New card" })).toBeFocused();
 
     await page.keyboard.press("h");
     await page.keyboard.press("k");
@@ -90,7 +92,7 @@ test("a board is a project: made from the selector, remembered, shown with its t
     await tile.click();
     await expect(column(page, "Triage").getByText("Only on site")).toBeVisible();
 
-    await picker.selectOption({ label: "Edit board" });
+    await page.getByRole("button", { name: "Board settings" }).click();
     await page.getByRole("dialog", { name: "site" }).getByRole("button", { name: "Archive" }).click();
     await expect(picker.locator("option:checked")).toHaveText("All boards");
     await expect(picker.locator('optgroup[label="Archived"] option')).toHaveText(["site"]);

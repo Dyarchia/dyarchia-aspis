@@ -16,9 +16,10 @@ move a card, from where to where and under which condition) live in one pure fun
 the store only moves cards through it. Scheduled cards run headless and archive themselves; Ready cards are
 picked up interactively and end in Review, where an auditor and then you must both approve before Done.
 
-Each project is a board: a name and the folder its cards run in. The first control of the Kanban toolbar picks
-the board, shows all boards at once as tiles with what waits on each, or makes a new one; the choice is
-remembered. A new card takes its board's folder. Archived boards stay listed under Archived, and deleting a board
+Each project is a board: a name and the folder its cards run in. Three quiet controls end the Kanban toolbar, as
+in dyarchia-desktop: the board's name switches boards or shows all of them as tiles with what waits on each, +
+makes a new board and the sliders edit the open one; the choice is remembered. Cards are born in Triage, from the
++ on its column, and take their board's folder. Archived boards stay listed under Archived, and deleting a board
 removes it and its cards from Aspis, never the folder on disk.
 
 The window keeps Windows' own title bar, so snapping and Snap Layouts stay, and paints it with the theme.
