@@ -205,10 +205,6 @@
     border-radius: var(--aspis-radius-surface) 0 0 var(--aspis-radius-surface);
 }
 
-[data-theme="nyx"] .aspis-dialog__close {
-    border-radius: 50%;
-}
-
 [data-theme="nyx"] .aspis-thread__text {
     font-weight: 400;
 }
