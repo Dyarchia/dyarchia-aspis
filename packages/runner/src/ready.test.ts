@@ -33,8 +33,9 @@ afterEach(() => store.close());
 const kanban = () => ready.kanban;
 
 function readyCard(title: string, extra: Record<string, unknown> = {}) {
-    const card = kanban().create(title);
-    kanban().edit(card.id, { brief: `Brief of ${title}`, implementer: claude, auditor: claude, folder: repo, retries: 0, ...extra }, "human");
+    const board = kanban().boards()[0]?.id ?? kanban().createBoard({ name: "repo", folder: repo }).id;
+    const card = kanban().create(title, board);
+    kanban().edit(card.id, { brief: `Brief of ${title}`, implementer: claude, auditor: claude, retries: 0, ...extra }, "human");
     return kanban().move(card.id, { to: "ready" }, "human").id;
 }
 

@@ -22,6 +22,7 @@
         "@dyarchia/library": "workspace:*",
         "@lezer/highlight": "1.2.5",
         "@tauri-apps/api": "2.12.3",
+        "@tauri-apps/plugin-dialog": "2.8.1",
         "react": "19.3.0",
         "react-dom": "19.3.0",
         "zod": "4.6.7"

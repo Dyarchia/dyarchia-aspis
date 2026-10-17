@@ -6,7 +6,7 @@ import { cors } from "hono/cors";
 import { ZodError } from "zod";
 import pkg from "../../../package.json" with { type: "json" };
 import { agentRoutes } from "./agents.ts";
-import { cardRoutes } from "./cards.ts";
+import { boardRoutes, cardRoutes } from "./cards.ts";
 import { libraryRoutes } from "./library.ts";
 import { runRoutes } from "./runs.ts";
 
@@ -81,6 +81,7 @@ export function startServer({ store, token, hostname, port, actors }: ServerOpti
             publish({ type: "settings", settings });
             return c.json(settings);
         })
+        .route("/boards", boardRoutes(kanban, changed))
         .route("/cards", cardRoutes(kanban, changed))
         .route("/cards", runRoutes(kanban, runs, changed))
         .route("/agents", agentRoutes())

@@ -16,6 +16,13 @@ move a card, from where to where and under which condition) live in one pure fun
 the store only moves cards through it. Scheduled cards run headless and archive themselves; Ready cards are
 picked up interactively and end in Review, where an auditor and then you must both approve before Done.
 
+Each project is a board: a name and the folder its cards run in. The first control of the Kanban toolbar picks
+the board, shows all boards at once as tiles with what waits on each, or makes a new one; the choice is
+remembered. A new card takes its board's folder. Archived boards stay listed under Archived, and deleting a board
+removes it and its cards from Aspis, never the folder on disk.
+
+The window keeps Windows' own title bar, so snapping and Snap Layouts stay, and paints it with the theme.
+
 ## Scheduled runs
 
 - Nothing polls. Each Scheduled card has its own one-shot Task Scheduler entry at its time, which starts

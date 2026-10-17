@@ -11,6 +11,7 @@ const card = (overrides: Partial<Card> = {}): Card => ({
     phase: "triage",
     route: null,
     priority: 0,
+    board: 1,
     folder: "C:/repo",
     baseBranch: "develop",
     permission: "auto",

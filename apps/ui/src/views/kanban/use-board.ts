@@ -1,5 +1,5 @@
 import { useToast } from "@dyarchia/aspis";
-import { type Actor, Card, CardDetail, type CardEdit, CardEvent, type MoveRequest, Run, RunLog } from "@dyarchia/core";
+import { type Actor, Board, type BoardDraft, type BoardEdit, Card, CardDetail, type CardEdit, CardEvent, type MoveRequest, Run, RunLog } from "@dyarchia/core";
 import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 import { request } from "../../server.ts";
@@ -11,11 +11,16 @@ export function useBoard(server: ServerState) {
     const { conn, changes } = server;
     const toast = useToast();
     const [cards, setCards] = useState<Card[]>();
+    const [boards, setBoards] = useState<Board[]>();
 
     useEffect(() => {
         if (!conn) return;
         let stale = false;
-        void request(conn, "/cards", z.array(Card)).then((next) => !stale && setCards(next));
+        void Promise.all([request(conn, "/boards", z.array(Board)), request(conn, "/cards", z.array(Card))]).then(([nextBoards, nextCards]) => {
+            if (stale) return;
+            setBoards(nextBoards);
+            setCards(nextCards);
+        });
         return () => {
             stale = true;
         };
@@ -42,10 +47,14 @@ export function useBoard(server: ServerState) {
     );
 
     return {
+        boards,
         cards,
         run,
+        createBoard: (draft: BoardDraft) => run(() => api("/boards", Board, json("POST", draft))),
+        editBoard: (id: number, edit: BoardEdit) => run(() => api(`/boards/${id}`, Board, json("PATCH", edit))),
+        removeBoard: (id: number) => run(() => api(`/boards/${id}`, z.null(), { method: "DELETE" })),
         detail: (id: number) => api(`/cards/${id}`, CardDetail),
-        create: (title: string) => run(() => api("/cards", Card, json("POST", { title }))),
+        create: (title: string, board: number) => run(() => api("/cards", Card, json("POST", { title, board }))),
         edit: (id: number, edit: CardEdit) => run(() => api(`/cards/${id}`, Card, json("PATCH", edit))),
         move: (id: number, move: MoveRequest) => run(() => api(`/cards/${id}/move`, Card, json("POST", move))),
         note: (id: number, text: string) => run(() => api(`/cards/${id}/notes`, CardEvent, json("POST", { text }))),

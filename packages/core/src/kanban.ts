@@ -31,8 +31,24 @@ export type Verdict = z.infer<typeof Verdict>;
 export const CardFile = z.object({ id: z.number().int(), name: z.string(), bytes: z.number().int(), at: z.number() });
 export type CardFile = z.infer<typeof CardFile>;
 
+export const Board = z.object({
+    id: z.number().int(),
+    name: z.string(),
+    folder: z.string(),
+    archived: z.boolean(),
+    createdAt: z.number(),
+});
+export type Board = z.infer<typeof Board>;
+
+export const BoardDraft = z.object({ name: z.string().trim().min(1, "The board needs a name"), folder: z.string().trim().min(1, "The board needs a folder") });
+export type BoardDraft = z.infer<typeof BoardDraft>;
+
+export const BoardEdit = BoardDraft.partial().extend({ archived: z.boolean().optional() });
+export type BoardEdit = z.infer<typeof BoardEdit>;
+
 export const Card = z.object({
     id: z.number().int(),
+    board: z.number().int(),
     title: z.string(),
     brief: z.string(),
     phase: Phase,

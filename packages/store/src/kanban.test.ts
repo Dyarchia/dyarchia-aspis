@@ -10,11 +10,13 @@ const now = new Date(2026, 9, 13, 9, 0).getTime();
 let dir: string;
 let store: Store;
 let kanban: Kanban;
+let board: number;
 
 beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "aspis-kanban-"));
     store = new Store(join(dir, "state.db"));
     kanban = new Kanban(store);
+    board = kanban.createBoard({ name: "Repo", folder: join(dir, "repo") }).id;
 });
 
 afterEach(() => {
@@ -23,17 +25,18 @@ afterEach(() => {
 });
 
 const prepared = (title = "Refactor the trigger handler") => {
-    const card = kanban.create(title, now);
-    return kanban.edit(card.id, { brief: "Move the pricing rules", implementer: runner, auditor: runner, folder: "C:/repo", scheduledAt: now - 1 }, "human", now);
+    const card = kanban.create(title, board, now);
+    return kanban.edit(card.id, { brief: "Move the pricing rules", implementer: runner, auditor: runner, scheduledAt: now - 1 }, "human", now);
 };
 
 describe("kanban service", () => {
-    test("a new card starts in triage and inherits the runners of the last one", () => {
+    test("a new card starts in triage, works in its board's folder and inherits the runners of the board's last card", () => {
         const first = prepared();
         expect(first.phase).toBe("triage");
-        const second = kanban.create("Write callout tests", now);
+        const second = kanban.create("Write callout tests", board, now);
         expect(second.implementer).toEqual(runner);
-        expect(second.folder).toBe("C:/repo");
+        expect(second.folder).toBe(join(dir, "repo"));
+        expect(second.board).toBe(board);
         expect(second.brief).toBe("");
         expect(kanban.events(second.id).map((event) => event.kind)).toEqual(["created"]);
     });

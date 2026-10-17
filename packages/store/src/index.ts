@@ -1,9 +1,34 @@
 import { Database } from "bun:sqlite";
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
-const migrations = [
+/*
+ * A project is a board with a name and a folder, and every card lives on one board. Cards written before boards
+ * existed get a board per folder they already named; cards with no folder share one called Unsorted, whose folder
+ * is left blank until the user sets it.
+ */
+function boards(db: Database) {
+    db.exec(
+        `CREATE TABLE boards (
+             id INTEGER PRIMARY KEY,
+             name TEXT NOT NULL,
+             folder TEXT NOT NULL,
+             archived INTEGER NOT NULL DEFAULT 0,
+             created_at INTEGER NOT NULL
+         );
+         ALTER TABLE cards ADD COLUMN board_id INTEGER REFERENCES boards (id) ON DELETE CASCADE;
+         CREATE INDEX cards_board ON cards (board_id);`,
+    );
+    const now = Date.now();
+    for (const { folder } of db.query<{ folder: string | null }, []>("SELECT DISTINCT folder FROM cards ORDER BY folder").all()) {
+        const name = folder ? basename(folder.replace(/[\\/]+$/, "")) || folder : "Unsorted";
+        const board = db.query("INSERT INTO boards (name, folder, created_at) VALUES (?, ?, ?)").run(name, folder ?? "", now).lastInsertRowid;
+        db.query("UPDATE cards SET board_id = ? WHERE folder IS ?").run(board, folder);
+    }
+}
+
+export const migrations: (string | ((db: Database) => void))[] = [
     `CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
      CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL);
      INSERT INTO meta (key, value) VALUES ('created_at', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));`,
@@ -74,6 +99,7 @@ const migrations = [
      CREATE INDEX cards_session ON cards (session_id);`,
     `ALTER TABLE runs ADD COLUMN session_id TEXT;
      ALTER TABLE cards ADD COLUMN wake_at INTEGER;`,
+    boards,
 ];
 
 export const aspisHome = () => process.env.ASPIS_HOME ?? join(homedir(), ".dyarchia-aspis");
@@ -138,7 +164,9 @@ export class Store {
     private migrate(): void {
         for (let version = this.schemaVersion; version < migrations.length; version++) {
             this.db.transaction(() => {
-                this.db.exec(migrations[version]!);
+                const step = migrations[version]!;
+                if (typeof step === "string") this.db.exec(step);
+                else step(this.db);
                 this.db.exec(`PRAGMA user_version = ${version + 1}`);
             })();
         }
