@@ -29,8 +29,9 @@ afterEach(() => store.close());
 const kanban = () => dispatcher.kanban;
 
 function scheduled(title: string, brief: string, extra: Record<string, unknown> = {}) {
-    const card = kanban().create(title);
-    kanban().edit(card.id, { brief, implementer: runner, auditor: runner, folder: repo, scheduledAt: Date.now() - 1000, retries: 0, ...extra }, "human");
+    const board = kanban().boards()[0]?.id ?? kanban().createBoard({ name: "repo", folder: repo }).id;
+    const card = kanban().create(title, board);
+    kanban().edit(card.id, { brief, implementer: runner, auditor: runner, scheduledAt: Date.now() - 1000, retries: 0, ...extra }, "human");
     return kanban().move(card.id, { to: "scheduled" }, "human").id;
 }
 

@@ -1,8 +1,9 @@
+import { Database } from "bun:sqlite";
 import { afterEach, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store } from "./index.ts";
+import { Kanban, Store, migrations } from "./index.ts";
 
 const dirs: string[] = [];
 const tempDb = () => {
@@ -18,12 +19,38 @@ afterEach(() => {
 test("creates the database in WAL mode and migrates once", () => {
     const path = tempDb();
     const store = new Store(path);
-    expect(store.schemaVersion).toBe(5);
+    expect(store.schemaVersion).toBe(6);
     expect(store.db.query<{ journal_mode: string }, []>("PRAGMA journal_mode").get()!.journal_mode).toBe("wal");
     store.close();
     const reopened = new Store(path);
-    expect(reopened.schemaVersion).toBe(5);
+    expect(reopened.schemaVersion).toBe(6);
     reopened.close();
+});
+
+test("cards written before boards get one board per folder, and the folderless ones share Unsorted", () => {
+    const path = tempDb();
+    const legacy = new Database(path, { create: true, strict: true });
+    for (const [version, step] of migrations.slice(0, 5).entries()) {
+        legacy.exec(step as string);
+        legacy.exec(`PRAGMA user_version = ${version + 1}`);
+    }
+    const insert = legacy.query("INSERT INTO cards (title, phase, folder, implementer, auditor, created_at, updated_at) VALUES (?, 'triage', ?, '{}', '{}', 1, 1)");
+    insert.run("One", "C:/repos/crm/");
+    insert.run("Two", "C:/repos/crm/");
+    insert.run("Three", "C:/repos/site");
+    insert.run("Four", null);
+    legacy.close();
+
+    const store = new Store(path);
+    const kanban = new Kanban(store);
+    expect(kanban.boards().map(({ name, folder }) => [name, folder])).toEqual([
+        ["crm", "C:/repos/crm/"],
+        ["site", "C:/repos/site"],
+        ["Unsorted", ""],
+    ]);
+    const boardOf = (title: string) => kanban.boards().find((board) => board.id === store.db.query<{ board_id: number }, [string]>("SELECT board_id FROM cards WHERE title = ?").get(title)!.board_id)!.name;
+    expect(["One", "Two", "Three", "Four"].map(boardOf)).toEqual(["crm", "crm", "site", "Unsorted"]);
+    store.close();
 });
 
 test("settings round trip and upsert", () => {

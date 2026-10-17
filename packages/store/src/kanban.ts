@@ -1,5 +1,8 @@
 import {
     type Actor,
+    type Board,
+    BoardDraft,
+    BoardEdit,
     type Card,
     type CardEdit,
     type CardEvent,
@@ -14,8 +17,8 @@ import {
     targets,
     verdict,
 } from "@dyarchia/core";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import type { Store } from "./index.ts";
 
 export class KanbanError extends Error {
@@ -27,8 +30,17 @@ export class KanbanError extends Error {
     }
 }
 
+interface BoardRow {
+    id: number;
+    name: string;
+    folder: string;
+    archived: number;
+    created_at: number;
+}
+
 interface CardRow {
     id: number;
+    board_id: number;
     title: string;
     brief: string;
     phase: Card["phase"];
@@ -80,7 +92,7 @@ const columns: Record<string, string> = {
 const json = new Set(["implementer", "auditor", "auditorVerdict", "humanVerdict"]);
 const verdictOf = (value: string | null) => (value === null ? null : Verdict.parse(JSON.parse(value)));
 const modelPhases: readonly Phase[] = ["ready", "running", "blocked", "review"];
-const inherited = ["folder", "baseBranch", "permission", "retries", "implementer", "auditor"] as const;
+const inherited = ["baseBranch", "permission", "retries", "implementer", "auditor"] as const;
 
 export class Kanban {
     readonly filesDir: string;
@@ -91,6 +103,68 @@ export class Kanban {
 
     private get db() {
         return this.store.db;
+    }
+
+    boards(): Board[] {
+        return this.db
+            .query<BoardRow, []>("SELECT * FROM boards ORDER BY name COLLATE NOCASE, id")
+            .all()
+            .map((row) => ({ id: row.id, name: row.name, folder: row.folder, archived: row.archived === 1, createdAt: row.created_at }));
+    }
+
+    board(id: number): Board {
+        const board = this.boards().find((candidate) => candidate.id === id);
+        if (!board) throw new KanbanError(`Board ${id} does not exist`, 404);
+        return board;
+    }
+
+    createBoard(draft: BoardDraft, now = Date.now()): Board {
+        const { name, folder } = BoardDraft.parse(draft);
+        const id = this.db.query("INSERT INTO boards (name, folder, created_at) VALUES (?, ?, ?)").run(name, this.projectFolder(folder), now).lastInsertRowid;
+        return this.board(Number(id));
+    }
+
+    /*
+     * A new folder is copied onto the board's cards that can still change, so the board and what runs from it agree;
+     * cards already past Triage, Scheduled and Ready keep the folder they ran in.
+     */
+    editBoard(id: number, edit: BoardEdit, now = Date.now()): Board {
+        const board = this.board(id);
+        const { name, folder, archived } = BoardEdit.parse(edit);
+        const moved = folder === undefined ? undefined : this.projectFolder(folder, id);
+        this.db.transaction(() => {
+            this.db.query("UPDATE boards SET name = ?, folder = ?, archived = ? WHERE id = ?").run(name ?? board.name, moved ?? board.folder, (archived ?? board.archived) ? 1 : 0, id);
+            if (moved !== undefined && moved !== board.folder) {
+                this.db.query("UPDATE cards SET folder = ?, updated_at = ? WHERE board_id = ? AND phase IN ('triage', 'scheduled', 'ready')").run(moved, now, id);
+            }
+        })();
+        return this.board(id);
+    }
+
+    /* Deleting a board deletes its cards and what they hold in Aspis; the project folder on disk is never touched. */
+    removeBoard(id: number): void {
+        this.board(id);
+        const cards = this.db.query<{ id: number }, [number]>("SELECT id FROM cards WHERE board_id = ?").all(id);
+        if (this.db.query("SELECT 1 FROM runs JOIN cards ON cards.id = runs.card_id WHERE cards.board_id = ? AND runs.status = 'running'").get(id)) {
+            throw new KanbanError("A card on this board is running", 409);
+        }
+        this.db.query("DELETE FROM boards WHERE id = ?").run(id);
+        for (const card of cards) {
+            rmSync(join(this.filesDir, String(card.id)), { recursive: true, force: true });
+            rmSync(join(dirname(this.store.path), "runs", String(card.id)), { recursive: true, force: true });
+        }
+    }
+
+    private projectFolder(folder: string, board?: number): string {
+        const path = folder.trim();
+        if (!isAbsolute(path)) throw new KanbanError(`${path} is not an absolute path`, 400);
+        const normal = resolve(path);
+        const taken = this.boards().find((other) => other.id !== board && other.folder && resolve(other.folder).toLowerCase() === normal.toLowerCase());
+        if (taken) throw new KanbanError(`${taken.name} already works in that folder`, 409);
+        const info = statSync(normal, { throwIfNoEntry: false });
+        if (info && !info.isDirectory()) throw new KanbanError(`${normal} is a file, not a folder`, 400);
+        if (!info) mkdirSync(normal, { recursive: true });
+        return normal;
     }
 
     list(): Card[] {
@@ -119,20 +193,23 @@ export class Kanban {
         return targets(card, { actor, now, dependencies: this.dependencyPhases(card) });
     }
 
-    create(title: string, now = Date.now()): Card {
+    create(title: string, board: number, now = Date.now()): Card {
         const name = title.trim();
         if (!name) throw new KanbanError("A card needs a title", 400);
-        const last = this.db.query<CardRow, []>("SELECT * FROM cards ORDER BY id DESC LIMIT 1").get();
+        const { folder, archived } = this.board(board);
+        if (archived) throw new KanbanError("The board is archived", 409);
+        const last = this.db.query<CardRow, [number]>("SELECT * FROM cards WHERE board_id = ? ORDER BY id DESC LIMIT 1").get(board);
         const base = last ? this.hydrate(last) : undefined;
         const defaults = Object.fromEntries(inherited.map((field) => [field, base?.[field]]));
         const id = this.db.transaction(() => {
             const result = this.db
                 .query(
-                    "INSERT INTO cards (title, phase, folder, base_branch, permission, retries, implementer, auditor, created_at, updated_at) VALUES (?, 'triage', ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO cards (board_id, title, phase, folder, base_branch, permission, retries, implementer, auditor, created_at, updated_at) VALUES (?, ?, 'triage', ?, ?, ?, ?, ?, ?, ?, ?)",
                 )
                 .run(
+                    board,
                     name,
-                    defaults.folder ?? null,
+                    folder || null,
                     defaults.baseBranch ?? null,
                     defaults.permission ?? "auto",
                     defaults.retries ?? 2,
@@ -288,10 +365,11 @@ export class Kanban {
     private repeat(card: Card, next: Partial<Card>, now: number) {
         const result = this.db
             .query(
-                `INSERT INTO cards (title, brief, phase, priority, folder, base_branch, permission, implementer, auditor, scheduled_at, recurrence, time_limit_min, retries, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO cards (board_id, title, brief, phase, priority, folder, base_branch, permission, implementer, auditor, scheduled_at, recurrence, time_limit_min, retries, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             )
             .run(
+                card.board,
                 card.title,
                 card.brief,
                 next.phase!,
@@ -348,6 +426,7 @@ export class Kanban {
     private hydrate(row: CardRow): Card {
         return {
             id: row.id,
+            board: row.board_id,
             title: row.title,
             brief: row.brief,
             phase: row.phase,

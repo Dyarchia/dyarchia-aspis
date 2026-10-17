@@ -1,30 +1,54 @@
-import { CardEdit, MoveRequest } from "@dyarchia/core";
+import { BoardDraft, BoardEdit, CardEdit, MoveRequest } from "@dyarchia/core";
 import { type Kanban, KanbanError } from "@dyarchia/store";
 import { Hono } from "hono";
 import { z } from "zod";
 
-const Title = z.object({ title: z.string() });
+const NewCard = z.object({ title: z.string(), board: z.number().int() });
 export const Note = z.object({ text: z.string() });
 export const VerdictBody = z.object({ ok: z.boolean(), reason: z.string() });
 export const id = (value: string) => {
     const parsed = Number(value);
-    if (!Number.isInteger(parsed)) throw new KanbanError(`${value} is not a card id`, 400);
+    if (!Number.isInteger(parsed)) throw new KanbanError(`${value} is not an id`, 400);
     return parsed;
 };
 
-export function cardRoutes(kanban: Kanban, changed: () => void) {
-    const mutate = <T>(action: () => T): T => {
+const mutator =
+    (changed: () => void) =>
+    <T>(action: () => T): T => {
         const result = action();
         changed();
         return result;
     };
 
+export function boardRoutes(kanban: Kanban, changed: () => void) {
+    const mutate = mutator(changed);
+    return new Hono()
+        .get("/", (c) => c.json(kanban.boards()))
+        .post("/", async (c) => {
+            const draft = BoardDraft.parse(await c.req.json());
+            return c.json(
+                mutate(() => kanban.createBoard(draft)),
+                201,
+            );
+        })
+        .patch("/:id", async (c) => {
+            const edit = BoardEdit.parse(await c.req.json());
+            return c.json(mutate(() => kanban.editBoard(id(c.req.param("id")), edit)));
+        })
+        .delete("/:id", (c) => {
+            mutate(() => kanban.removeBoard(id(c.req.param("id"))));
+            return c.body(null, 204);
+        });
+}
+
+export function cardRoutes(kanban: Kanban, changed: () => void) {
+    const mutate = mutator(changed);
     return new Hono()
         .get("/", (c) => c.json(kanban.list()))
         .post("/", async (c) => {
-            const { title } = Title.parse(await c.req.json());
+            const { title, board } = NewCard.parse(await c.req.json());
             return c.json(
-                mutate(() => kanban.create(title)),
+                mutate(() => kanban.create(title, board)),
                 201,
             );
         })

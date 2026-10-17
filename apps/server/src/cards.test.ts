@@ -1,7 +1,7 @@
 import { afterAll, expect, test } from "bun:test";
-import { Card } from "@dyarchia/core";
+import { Board, Card } from "@dyarchia/core";
 import { Runs, Store } from "@dyarchia/store";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { actorRoutes } from "./actors.ts";
@@ -16,6 +16,7 @@ const call = (server: typeof shipped, path: string, method = "GET", body?: unkno
     fetch(`http://127.0.0.1:${server.server.port}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
 const read = async <T>(response: Response) => (await response.json()) as T;
 const runner = { harness: "claude-code", model: "claude-opus-5-5", effort: "high" };
+const board = Board.parse(await (await call(shipped, "/boards", "POST", { name: "Repo", folder: join(dir, "repo") })).json()).id;
 
 afterAll(() => {
     shipped.stop();
@@ -26,7 +27,7 @@ afterAll(() => {
 });
 
 test("cards are created, edited and moved only where the rules allow", async () => {
-    const created = Card.parse(await (await call(shipped, "/cards", "POST", { title: "Write callout tests" })).json());
+    const created = Card.parse(await (await call(shipped, "/cards", "POST", { title: "Write callout tests", board })).json());
     expect(created.phase).toBe("triage");
 
     const refused = await call(shipped, `/cards/${created.id}/move`, "POST", { to: "ready" });
@@ -43,7 +44,7 @@ test("cards are created, edited and moved only where the rules allow", async () 
 });
 
 test("the shipped server has no actor routes and the dev one acts through the same rules", async () => {
-    const card = Card.parse(await (await call(shipped, "/cards", "POST", { title: "Pick me" })).json());
+    const card = Card.parse(await (await call(shipped, "/cards", "POST", { title: "Pick me", board })).json());
     await call(shipped, `/cards/${card.id}`, "PATCH", { brief: "x", implementer: runner, auditor: runner });
     await call(shipped, `/cards/${card.id}/move`, "POST", { to: "ready" });
 
@@ -56,7 +57,7 @@ test("the shipped server has no actor routes and the dev one acts through the sa
 });
 
 test("files go up as form data and come back as they were", async () => {
-    const card = Card.parse(await (await call(shipped, "/cards", "POST", { title: "With a file" })).json());
+    const card = Card.parse(await (await call(shipped, "/cards", "POST", { title: "With a file", board })).json());
     const form = new FormData();
     form.append("file", new File(["# Spec"], "spec.md"));
     const uploaded = Card.parse(
@@ -69,7 +70,7 @@ test("files go up as form data and come back as they were", async () => {
 });
 
 test("a run's log is served whole lines at a time and only running scheduled cards stop", async () => {
-    const card = Card.parse(await (await call(shipped, "/cards", "POST", { title: "Logged" })).json());
+    const card = Card.parse(await (await call(shipped, "/cards", "POST", { title: "Logged", board })).json());
     const runs = new Runs(store);
     const run = runs.start(card.id, "feature/develop/card-logged");
     mkdirSync(dirname(runs.logPath(run)), { recursive: true });
@@ -84,4 +85,24 @@ test("a run's log is served whole lines at a time and only running scheduled car
 
     const stop = await call(shipped, `/cards/${card.id}/stop`, "POST");
     expect(stop.status).toBe(409);
+});
+
+test("a board is a project: one per folder, archived boards take no cards, deleting one keeps the folder", async () => {
+    const folder = join(dir, "project");
+    const project = Board.parse(await (await call(shipped, "/boards", "POST", { name: "Project", folder })).json());
+    expect(existsSync(folder)).toBe(true);
+    expect((await call(shipped, "/boards", "POST", { name: "Twin", folder })).status).toBe(409);
+    expect((await call(shipped, "/boards", "POST", { name: "Relative", folder: "repos/x" })).status).toBe(400);
+
+    const card = Card.parse(await (await call(shipped, "/cards", "POST", { title: "On the project", board: project.id })).json());
+    expect(card.folder).toBe(folder);
+
+    const archived = Board.parse(await (await call(shipped, `/boards/${project.id}`, "PATCH", { archived: true })).json());
+    expect(archived.archived).toBe(true);
+    expect((await call(shipped, "/cards", "POST", { title: "Refused", board: project.id })).status).toBe(409);
+
+    expect((await call(shipped, `/boards/${project.id}`, "DELETE")).status).toBe(204);
+    expect((await call(shipped, `/cards/${card.id}`)).status).toBe(404);
+    expect(existsSync(folder)).toBe(true);
+    expect((await read<Board[]>(await call(shipped, "/boards"))).map((entry) => entry.id)).not.toContain(project.id);
 });

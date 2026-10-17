@@ -34,8 +34,9 @@ beforeEach(() => {
 afterEach(() => store.close());
 
 function scheduled(at: number) {
-    const card = kanban.create("Nightly");
-    kanban.edit(card.id, { brief: "x", implementer: runner, folder: "C:/repo", scheduledAt: at }, "human", now);
+    const board = kanban.boards()[0]?.id ?? kanban.createBoard({ name: "repo", folder: join(dir, "repo") }).id;
+    const card = kanban.create("Nightly", board);
+    kanban.edit(card.id, { brief: "x", implementer: runner, scheduledAt: at }, "human", now);
     return kanban.move(card.id, { to: "scheduled" }, "human", now).id;
 }
 
