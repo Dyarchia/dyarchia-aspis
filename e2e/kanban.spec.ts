@@ -18,7 +18,7 @@ async function call<T = { id: number }>(request: APIRequestContext, path: string
 
 async function card(request: APIRequestContext, title: string, extra: Record<string, unknown> = {}) {
     const { id } = await call(request, "/cards", "POST", { title, board: await project(request) });
-    await call(request, `/cards/${id}`, "PATCH", { brief: `Brief for ${title}`, implementer: runner, auditor, baseBranch: "develop", ...extra });
+    await call(request, `/cards/${id}`, "PATCH", { brief: `Brief for ${title}`, implementer: runner, auditor, folder: "C:/repos/ivirma-crm", baseBranch: "develop", ...extra });
     return id;
 }
 
@@ -90,7 +90,7 @@ test("a board is a project: made from the selector, remembered, shown with its t
     await tile.click();
     await expect(column(page, "Triage").getByText("Only on site")).toBeVisible();
 
-    await page.getByRole("button", { name: "Board settings" }).click();
+    await picker.selectOption({ label: "Edit board" });
     await page.getByRole("dialog", { name: "site" }).getByRole("button", { name: "Archive" }).click();
     await expect(picker.locator("option:checked")).toHaveText("All boards");
     await expect(picker.locator('optgroup[label="Archived"] option')).toHaveText(["site"]);

@@ -1,4 +1,4 @@
-import { Board, Button, Column, type DropState, EmptyState, Gallery, IconButton, Mark, Page, Select, TextField, Tile, useHotkeys } from "@dyarchia/aspis";
+import { Board, Button, Column, type DropState, EmptyState, Gallery, Mark, Page, Select, TextField, Tile, useHotkeys } from "@dyarchia/aspis";
 import { type Board as Project, type Card, type Phase, type Target, phaseLabels, phases, targets } from "@dyarchia/core";
 import { useMemo, useState } from "react";
 import { readHint, writeHint } from "../../hints.ts";
@@ -10,6 +10,7 @@ import { useBoard } from "./use-board.ts";
 
 const allBoards = "all";
 const newBoard = "new";
+const editBoard = "edit";
 const waiting: Phase[] = ["triage", "scheduled"];
 const where = (folder: string) => {
     const parts = folder.split(/[\\/]/).filter(Boolean);
@@ -37,8 +38,9 @@ const when = (at: number) => new Date(at).toLocaleString(undefined, { day: "2-di
 
 /*
  * One board per project, picked from the first control of the toolbar on the sidebar's top line, which also offers
- * every board at once and a new one. The choice is remembered; with none, or one that no longer exists, the view
- * opens on all boards as a gallery, and with no board at all it asks for the first.
+ * every board at once, a new one and editing the open one, so the board needs no gear of its own beside the app's.
+ * The choice is remembered; with none, or one that no longer exists, the view opens on all boards as a gallery, and
+ * with no board at all it asks for the first.
  */
 export function Kanban({ server }: { server: ServerState }) {
     const board = useBoard(server);
@@ -68,6 +70,7 @@ export function Kanban({ server }: { server: ServerState }) {
     const visible = cards.filter((card) => card.board === current?.id && (!needle || `#${card.id} ${card.title} ${card.brief}`.toLowerCase().includes(needle)));
     const choose = (value: string) => {
         if (value === newBoard) return setEditing({});
+        if (value === editBoard) return setEditing({ board: current });
         setChosen(value);
         setOpen(undefined);
         writeHint("kanban.board", value);
@@ -155,6 +158,7 @@ export function Kanban({ server }: { server: ServerState }) {
                                 ...boards.filter((entry) => !entry.archived).map((entry) => ({ value: String(entry.id), label: entry.name })),
                                 { value: allBoards, label: "All boards" },
                                 { value: newBoard, label: "New board" },
+                                ...(current ? [{ value: editBoard, label: "Edit board" }] : []),
                                 ...boards.filter((entry) => entry.archived).map((entry) => ({ value: String(entry.id), label: entry.name, group: "Archived" })),
                             ]}
                         />
@@ -167,15 +171,10 @@ export function Kanban({ server }: { server: ServerState }) {
                 </>
             }
             actions={
-                current && (
-                    <>
-                        <IconButton icon="settings" label="Board settings" onClick={() => setEditing({ board: current })} />
-                        {writable && (
-                            <Button variant="primary" icon="plus" hotkey="N" data-new-card onClick={() => setCreating(true)}>
-                                New card
-                            </Button>
-                        )}
-                    </>
+                writable && (
+                    <Button variant="primary" icon="plus" hotkey="N" data-new-card onClick={() => setCreating(true)}>
+                        New card
+                    </Button>
                 )
             }
         >
