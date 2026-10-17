@@ -1,5 +1,5 @@
 import { type Page, expect, test } from "@playwright/test";
-import { type ThemeName, accessible, api, headers, live, project, sameLayout, saysEverythingOnce, startOnOneLine, useTheme } from "./support/audit.ts";
+import { type ThemeName, accessible, api, headers, live, project, sameLayout, saysEverythingOnce, scrollsOnlyDown, startOnOneLine, useTheme } from "./support/audit.ts";
 
 const themes = ["io", "nyx"] as const;
 const views = [
@@ -58,6 +58,7 @@ for (const view of views) {
             await fits(page);
             await saysEverythingOnce(page);
             await startOnOneLine(page, [...view.panes]);
+            await scrollsOnlyDown(page);
         }
     });
 

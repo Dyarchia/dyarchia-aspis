@@ -1,6 +1,6 @@
-import { Board, Button, Column, type DropState, EmptyState, Gallery, IconButton, Mark, Page, Select, TextField, Tile, useHotkeys } from "@dyarchia/aspis";
+import { Board, Button, Column, type DropState, EmptyState, IconButton, Mark, Page, Select, TextField, Tile, useHotkeys } from "@dyarchia/aspis";
 import { type Board as Project, type Card, type Phase, type Target, phaseLabels, phases, targets } from "@dyarchia/core";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { readHint, writeHint } from "../../hints.ts";
 import type { ServerState } from "../../use-server.ts";
 import { type BoardRequest, BoardDialog } from "./BoardDialog.tsx";
@@ -8,25 +8,6 @@ import { CardPanel } from "./CardPanel.tsx";
 import { Prompt, type PromptRequest } from "./Prompt.tsx";
 import { useBoard } from "./use-board.ts";
 
-const allBoards = "all";
-const waiting: Phase[] = ["triage", "scheduled"];
-const where = (folder: string) => {
-    const parts = folder.split(/[\\/]/).filter(Boolean);
-    return parts.length > 3 ? `…\\${parts.slice(-2).join("\\")}` : folder || "No folder";
-};
-const tally = (cards: readonly Card[]) =>
-    (
-        [
-            [cards.filter((card) => card.phase === "running").length, "running"],
-            [cards.filter((card) => card.phase === "ready").length, "ready"],
-            [cards.filter((card) => card.phase === "review").length, "in review"],
-            [cards.filter((card) => card.phase === "blocked").length, "blocked"],
-            [cards.filter((card) => waiting.includes(card.phase)).length, "waiting"],
-            [cards.filter((card) => card.phase === "done").length, "done"],
-        ] as const
-    )
-        .filter(([count]) => count > 0)
-        .map(([count, word]) => `${count} ${word}`);
 const foldedByDefault: Phase[] = ["done", "archived"];
 const readFolded = () => {
     const hint = readHint("kanban.folded");
@@ -36,17 +17,21 @@ const when = (at: number) => new Date(at).toLocaleString(undefined, { day: "2-di
 
 /*
  * One board per project. Three quiet controls at the end of the toolbar, as in dyarchia-desktop: the board's name
- * switches boards or shows all of them, + makes a new one and the sliders edit the open one. The choice is
- * remembered; with none, or one that no longer exists, the view opens on all boards as a gallery, and with no
- * board at all it asks for the first. Cards are born in Triage, so the + for a new card lives on its column.
+ * switches boards, + makes a new one and the sliders edit the open one. The choice is remembered; with none, or one
+ * that no longer exists, the first open board opens, and with no board at all the view asks for the first.
+ *
+ * Cards are born in Triage, from the + on its column. As in Desktop, Enter, the Add key and leaving the field all
+ * mean a typed title is a card; the draft is closed before the card is asked for, so the blur that follows finds
+ * nothing left to add, and a refusal puts the title back. Escape closes the draft and keeps what was typed.
  */
 export function Kanban({ server }: { server: ServerState }) {
     const board = useBoard(server);
-    const [chosen, setChosen] = useState(readHint("kanban.board") ?? allBoards);
+    const [chosen, setChosen] = useState(readHint("kanban.board") ?? "");
     const [editing, setEditing] = useState<BoardRequest>();
     const [query, setQuery] = useState("");
     const [creating, setCreating] = useState(false);
     const [draft, setDraft] = useState("");
+    const drafting = useRef(false);
     const [open, setOpen] = useState<number>();
     const [dragged, setDragged] = useState<Card>();
     const [prompt, setPrompt] = useState<PromptRequest>();
@@ -62,7 +47,7 @@ export function Kanban({ server }: { server: ServerState }) {
 
     const cards = board.cards ?? [];
     const boards = board.boards ?? [];
-    const current = boards.find((candidate) => String(candidate.id) === chosen);
+    const current = boards.find((candidate) => String(candidate.id) === chosen) ?? boards.find((candidate) => !candidate.archived) ?? boards[0];
     const phaseOf = useMemo(() => new Map(cards.map((card) => [card.id, card.phase])), [cards]);
     const needle = query.trim().toLowerCase();
     const visible = cards.filter((card) => card.board === current?.id && (!needle || `#${card.id} ${card.title} ${card.brief}`.toLowerCase().includes(needle)));
@@ -73,7 +58,7 @@ export function Kanban({ server }: { server: ServerState }) {
     };
     const saved = (next?: Project) => {
         setEditing(undefined);
-        choose(next && !next.archived ? String(next.id) : allBoards);
+        choose(next && !next.archived ? String(next.id) : "");
     };
     const humanTargets = (card: Card): Target[] =>
         targets(card, { actor: "human", now: Date.now(), dependencies: card.dependsOn.map((id) => phaseOf.get(id) ?? "archived") });
@@ -104,17 +89,31 @@ export function Kanban({ server }: { server: ServerState }) {
         if (target) moveCard(card, target);
     };
 
-    const create = async () => {
+    const writable = Boolean(current && !current.archived);
+    const focusNewCard = () => document.querySelector<HTMLElement>("[data-new-card]")?.focus();
+    const startDraft = () => {
+        drafting.current = true;
+        setCreating(true);
+    };
+    const park = () => {
+        drafting.current = false;
+        setCreating(false);
+        focusNewCard();
+    };
+    const commit = async (refocus: boolean) => {
+        if (!drafting.current) return;
+        drafting.current = false;
         const title = draft.trim();
-        if (!title || !current) return setCreating(false);
-        if (!(await board.create(title, current.id))) return;
         setDraft("");
         setCreating(false);
-        document.querySelector<HTMLElement>("[data-new-card]")?.focus();
+        if (refocus) focusNewCard();
+        if (!title || !current) return;
+        if (await board.create(title, current.id)) return;
+        setDraft(title);
+        startDraft();
     };
-    const writable = Boolean(current && !current.archived);
 
-    useHotkeys({ n: () => writable && setCreating(true) });
+    useHotkeys({ n: () => writable && startDraft() });
 
     const dialog = (
         <BoardDialog
@@ -158,11 +157,10 @@ export function Kanban({ server }: { server: ServerState }) {
                         label="Board"
                         hideLabel
                         quiet
-                        value={current ? String(current.id) : allBoards}
+                        value={current ? String(current.id) : ""}
                         onChange={(event) => choose(event.target.value)}
                         options={[
                             ...boards.filter((entry) => !entry.archived).map((entry) => ({ value: String(entry.id), label: entry.name })),
-                            { value: allBoards, label: "All boards" },
                             ...boards.filter((entry) => entry.archived).map((entry) => ({ value: String(entry.id), label: entry.name, group: "Archived" })),
                         ]}
                     />
@@ -172,98 +170,84 @@ export function Kanban({ server }: { server: ServerState }) {
             }
         >
             <div className="min-h-0 flex-1 pt-[var(--aspis-space-3)]">
-                {!current ? (
-                    <Gallery label="Boards">
-                        {boards
-                            .filter((entry) => !entry.archived)
-                            .map((entry) => (
-                                <Tile
-                                    key={entry.id}
-                                    reference={where(entry.folder)}
-                                    title={entry.name}
-                                    meta={tally(cards.filter((card) => card.board === entry.id))}
-                                    onOpen={() => choose(String(entry.id))}
-                                />
-                            ))}
-                    </Gallery>
-                ) : (
-                    <Board label="Kanban">
-                        {phases.map((phase) => {
-                            const column = visible.filter((card) => card.phase === phase);
-                            return (
-                                <Column
-                                    key={phase}
-                                    title={phaseLabels[phase]}
-                                    count={column.length}
-                                    drop={dropState(phase)}
-                                    folded={folded.has(phase)}
-                                    onFold={() => fold(phase)}
-                                    actions={phase === "triage" && writable && <IconButton icon="plus" label="New card" hotkey="N" data-new-card onClick={() => setCreating(true)} />}
-                                    onDragOver={(event) => {
-                                        if (dropState(phase) === "allowed") event.preventDefault();
-                                    }}
-                                    onDrop={(event) => {
-                                        event.preventDefault();
-                                        drop(phase);
-                                    }}
-                                >
-                                    {phase === "triage" && creating && (
-                                        <li className="aspis-column__item">
-                                            <TextField
-                                                label="New card title"
-                                                hideLabel
-                                                autoFocus
-                                                placeholder="Title"
-                                                value={draft}
-                                                onChange={(event) => setDraft(event.target.value)}
-                                                onKeyDown={(event) => {
-                                                    if (event.key === "Enter") void create();
-                                                    if (event.key === "Escape") {
-                                                        setDraft("");
-                                                        setCreating(false);
-                                                        document.querySelector<HTMLElement>("[data-new-card]")?.focus();
-                                                    }
-                                                }}
-                                            />
-                                        </li>
-                                    )}
-                                    {column.map((card) => (
-                                        <Tile
-                                            key={card.id}
-                                            reference={`#${card.id}`}
-                                            title={card.title}
-                                            note={card.phase === "blocked" ? (card.blockedReason ?? undefined) : card.phase === "scheduled" && card.held ? `Waiting: ${card.held}` : undefined}
-                                            active={card.id === open}
-                                            draggable={humanTargets(card).length > 0}
-                                            onOpen={() => setOpen(card.id)}
-                                            onDragStart={(event) => {
-                                                event.dataTransfer.setData("text/plain", String(card.id));
-                                                event.dataTransfer.effectAllowed = "move";
-                                                setDragged(card);
+                <Board label="Kanban">
+                    {phases.map((phase) => {
+                        const column = visible.filter((card) => card.phase === phase);
+                        return (
+                            <Column
+                                key={phase}
+                                title={phaseLabels[phase]}
+                                count={column.length}
+                                drop={dropState(phase)}
+                                folded={folded.has(phase)}
+                                onFold={() => fold(phase)}
+                                actions={phase === "triage" && writable && <IconButton icon="plus" label="New card" hotkey="N" data-new-card onClick={startDraft} />}
+                                onDragOver={(event) => {
+                                    if (dropState(phase) === "allowed") event.preventDefault();
+                                }}
+                                onDrop={(event) => {
+                                    event.preventDefault();
+                                    drop(phase);
+                                }}
+                            >
+                                {phase === "triage" && creating && (
+                                    <li className="aspis-column__item flex items-center gap-[var(--aspis-space-1)]">
+                                        <TextField
+                                            label="New card title"
+                                            hideLabel
+                                            autoFocus
+                                            className="flex-1"
+                                            placeholder="Title"
+                                            value={draft}
+                                            onChange={(event) => setDraft(event.target.value)}
+                                            onBlur={() => void commit(false)}
+                                            onKeyDown={(event) => {
+                                                if (event.key === "Enter") {
+                                                    event.preventDefault();
+                                                    void commit(true);
+                                                }
+                                                if (event.key === "Escape") park();
                                             }}
-                                            onDragEnd={() => setDragged(undefined)}
-                                            meta={[
-                                                card.priority > 0 && `P${card.priority}`,
-                                                card.phase === "scheduled" && card.scheduledAt !== null && when(card.scheduledAt),
-                                                card.recurrence,
-                                                card.dependsOn.length > 0 && `${card.dependsOn.length} dep`,
-                                                card.files.length > 0 && `${card.files.length} file${card.files.length > 1 ? "s" : ""}`,
-                                            ].filter(Boolean)}
-                                            marks={
-                                                card.phase === "review" ? (
-                                                    <>
-                                                        <Mark ok={card.auditorVerdict?.ok ?? null} label="Auditor" title={card.auditorVerdict?.reason} />
-                                                        <Mark ok={card.humanVerdict?.ok ?? null} label="You" title={card.humanVerdict?.reason} />
-                                                    </>
-                                                ) : undefined
-                                            }
                                         />
-                                    ))}
-                                </Column>
-                            );
-                        })}
-                    </Board>
-                )}
+                                        <IconButton icon="check" label="Add" onMouseDown={(event) => event.preventDefault()} onClick={() => void commit(true)} />
+                                    </li>
+                                )}
+                                {column.map((card) => (
+                                    <Tile
+                                        key={card.id}
+                                        reference={`#${card.id}`}
+                                        title={card.title}
+                                        note={card.phase === "blocked" ? (card.blockedReason ?? undefined) : card.phase === "scheduled" && card.held ? `Waiting: ${card.held}` : undefined}
+                                        active={card.id === open}
+                                        draggable={humanTargets(card).length > 0}
+                                        onOpen={() => setOpen(card.id)}
+                                        onDragStart={(event) => {
+                                            event.dataTransfer.setData("text/plain", String(card.id));
+                                            event.dataTransfer.effectAllowed = "move";
+                                            setDragged(card);
+                                        }}
+                                        onDragEnd={() => setDragged(undefined)}
+                                        meta={[
+                                            card.priority > 0 && `P${card.priority}`,
+                                            card.phase === "scheduled" && card.scheduledAt !== null && when(card.scheduledAt),
+                                            card.recurrence,
+                                            card.dependsOn.length > 0 && `${card.dependsOn.length} dep`,
+                                            card.files.length > 0 && `${card.files.length} file${card.files.length > 1 ? "s" : ""}`,
+                                        ].filter(Boolean)}
+                                        marks={
+                                            card.phase === "review" ? (
+                                                <>
+                                                    <Mark ok={card.auditorVerdict?.ok ?? null} label="Auditor" title={card.auditorVerdict?.reason} />
+                                                    <Mark ok={card.humanVerdict?.ok ?? null} label="You" title={card.humanVerdict?.reason} />
+                                                </>
+                                            ) : undefined
+                                        }
+                                    />
+                                ))}
+                            </Column>
+                        );
+                    })}
+                </Board>
             </div>
             <CardPanel
                 id={open}

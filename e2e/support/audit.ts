@@ -23,6 +23,24 @@ export async function useTheme(page: Page, theme: ThemeName) {
     await page.evaluate(() => document.fonts.ready);
 }
 
+/*
+ * Only the panes scroll, and only down: no element may scroll sideways, and a dialog never scrolls itself beside its
+ * body. A second scrollbar or a horizontal one is always something leaking out of its box. The board is the one
+ * exception: its columns scroll sideways when the window is too narrow for all of them.
+ */
+export async function scrollsOnlyDown(page: Page) {
+    const leaks = await page.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>("*")].flatMap((element) => {
+            const style = getComputedStyle(element);
+            const scrolls = (axis: string) => ["auto", "scroll"].includes(axis);
+            const sideways = scrolls(style.overflowX) && element.scrollWidth > element.clientWidth && !element.matches(".aspis-board");
+            const dialog = element.matches("dialog") && element.scrollHeight > element.clientHeight;
+            return sideways || dialog ? [`${element.tagName.toLowerCase()}.${[...element.classList].join(".")}`] : [];
+        }),
+    );
+    expect(leaks).toEqual([]);
+}
+
 export const live = (page: Page) => expect(page.locator('.aspis-shell[data-state="live"]')).toBeAttached();
 
 /*

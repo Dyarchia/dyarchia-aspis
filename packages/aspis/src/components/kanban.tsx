@@ -9,15 +9,6 @@ export function Board({ children, label }: { children: ReactNode; label: string 
     );
 }
 
-/* Every board as a tile, filling the width with as many columns as fit. */
-export function Gallery({ children, label }: { children: ReactNode; label: string }) {
-    return (
-        <ol className="aspis-gallery" aria-label={label}>
-            {children}
-        </ol>
-    );
-}
-
 export type DropState = "allowed" | "refused" | undefined;
 
 /*

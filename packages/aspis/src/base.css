@@ -282,6 +282,10 @@ a {
     color: var(--aspis-ink-2);
 }
 
+.aspis-button[data-variant="quiet"] .aspis-button__glint {
+    display: none;
+}
+
 .aspis-button[data-variant="quiet"]:hover {
     color: var(--aspis-ink-1);
 }
@@ -1074,19 +1078,6 @@ a {
     overflow-x: auto;
 }
 
-.aspis-gallery {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-    align-content: start;
-    gap: var(--aspis-space-3);
-    height: 100%;
-    min-height: 0;
-    margin: 0;
-    padding: 0 var(--aspis-space-4) var(--aspis-space-4);
-    overflow-y: auto;
-    list-style: none;
-}
-
 .aspis-column {
     position: relative;
     display: flex;
@@ -1293,7 +1284,12 @@ a {
     padding: 14vh var(--aspis-space-4) var(--aspis-space-6);
 }
 
+/*
+ * The box and its scrolling body hold their own absolutely placed pieces (screen-reader text, glints), so nothing
+ * inside can stretch the dialog and give it a second scrollbar beside the body's.
+ */
 .aspis-dialog__box {
+    position: relative;
     display: flex;
     flex-direction: column;
     max-height: 100%;
@@ -1355,8 +1351,10 @@ a {
     flex: 1;
     flex-direction: column;
     gap: var(--aspis-space-5);
+    position: relative;
     min-height: 0;
     padding: var(--aspis-space-5);
+    overflow-x: hidden;
     overflow-y: auto;
 }
 

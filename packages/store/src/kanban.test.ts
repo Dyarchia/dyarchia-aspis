@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Kanban, Store } from "./index.ts";
@@ -28,6 +28,26 @@ const prepared = (title = "Refactor the trigger handler") => {
     const card = kanban.create(title, board, now);
     return kanban.edit(card.id, { brief: "Move the pricing rules", implementer: runner, auditor: runner, scheduledAt: now - 1 }, "human", now);
 };
+
+describe("boards", () => {
+    test("a folder is where the project goes: a repository or a folder named after the board is used as it is", () => {
+        const repo = join(dir, "crm");
+        mkdirSync(join(repo, ".git"), { recursive: true });
+        expect(kanban.projectPath("Anything", repo)).toEqual({ folder: repo, exists: true });
+        expect(kanban.projectPath("Site", join(dir, "site"))).toEqual({ folder: join(dir, "site"), exists: false });
+        expect(kanban.projectPath("nyx-board", dir)).toEqual({ folder: join(dir, "nyx-board"), exists: false });
+        expect(kanban.projectPath("a/b: c?", dir).folder).toBe(join(dir, "a-b- c-"));
+        expect(() => kanban.projectPath("x", "relative/path")).toThrow("not an absolute path");
+    });
+
+    test("a board made in a plain folder creates its own folder inside it, and renaming it moves nothing", () => {
+        const created = kanban.createBoard({ name: "nyx-board", folder: dir });
+        expect(created.folder).toBe(join(dir, "nyx-board"));
+        expect(existsSync(created.folder)).toBe(true);
+        expect(kanban.editBoard(created.id, { name: "nyx", folder: created.folder }).folder).toBe(join(dir, "nyx-board"));
+        expect(kanban.editBoard(created.id, { folder: dir }).folder).toBe(join(dir, "nyx"));
+    });
+});
 
 describe("kanban service", () => {
     test("a new card starts in triage, works in its board's folder and inherits the runners of the board's last card", () => {
