@@ -367,8 +367,12 @@ a {
         box-shadow var(--aspis-dur-fast) ease;
 }
 
+/*
+ * A field shows focus on its own line (the theme lights it up), so the ring every other control gets would only
+ * draw a second, heavier box around it. Contrast themes get the ring back below.
+ */
 .aspis-field__input:focus-visible {
-    outline-offset: 0;
+    outline: none;
 }
 
 .aspis-field__input::placeholder {
@@ -388,6 +392,14 @@ a {
 .aspis-field__control[data-kind="select"] .aspis-field__input {
     padding-right: 32px;
     cursor: pointer;
+}
+
+.aspis-field__control[data-variant="quiet"] .aspis-field__input {
+    width: auto;
+    field-sizing: content;
+    padding-left: var(--aspis-space-2);
+    border-color: transparent;
+    background: transparent;
 }
 
 .aspis-field__control[data-kind="area"] .aspis-field__input {
@@ -1492,8 +1504,9 @@ a {
  * Highlight, and focus as a solid outline, since shadows and backgrounds are dropped in that mode.
  */
 @media (forced-colors: active) {
-    :focus-visible {
-        outline-color: Highlight;
+    :focus-visible,
+    .aspis-field__input:focus-visible {
+        outline: var(--aspis-focus-w) solid Highlight;
     }
 
     .aspis-button,

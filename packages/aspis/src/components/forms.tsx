@@ -69,16 +69,18 @@ export interface SelectOption {
     group?: string;
 }
 
+/* A quiet select is only its value and chevron, sized to the value: a switch in a toolbar rather than a form field. */
 export function Select({
     label,
     hint,
     error,
     hideLabel,
     options,
+    quiet,
     className,
     id,
     ...rest
-}: FieldFrame & { options: readonly SelectOption[] } & SelectHTMLAttributes<HTMLSelectElement>) {
+}: FieldFrame & { options: readonly SelectOption[]; quiet?: boolean } & SelectHTMLAttributes<HTMLSelectElement>) {
     const field = useField(id, { label, hint, error });
     const groups = [...new Set(options.flatMap((option) => (option.group ? [option.group] : [])))];
     const render = (option: SelectOption) => (
@@ -89,7 +91,7 @@ export function Select({
     return (
         <div className={cx("aspis-field", className)}>
             <Label htmlFor={field.control} frame={{ label, hideLabel }} required={rest.required} />
-            <div className="aspis-field__control" data-kind="select">
+            <div className="aspis-field__control" data-kind="select" data-variant={quiet ? "quiet" : undefined}>
                 <select id={field.control} className="aspis-field__input" {...field.described} {...rest}>
                     {options.filter((option) => !option.group).map(render)}
                     {groups.map((group) => (

@@ -1,4 +1,4 @@
-import { Board, Button, Column, type DropState, EmptyState, Gallery, Mark, Page, Select, TextField, Tile, useHotkeys } from "@dyarchia/aspis";
+import { Board, Button, Column, type DropState, EmptyState, Gallery, IconButton, Mark, Page, Select, TextField, Tile, useHotkeys } from "@dyarchia/aspis";
 import { type Board as Project, type Card, type Phase, type Target, phaseLabels, phases, targets } from "@dyarchia/core";
 import { useMemo, useState } from "react";
 import { readHint, writeHint } from "../../hints.ts";
@@ -9,8 +9,6 @@ import { Prompt, type PromptRequest } from "./Prompt.tsx";
 import { useBoard } from "./use-board.ts";
 
 const allBoards = "all";
-const newBoard = "new";
-const editBoard = "edit";
 const waiting: Phase[] = ["triage", "scheduled"];
 const where = (folder: string) => {
     const parts = folder.split(/[\\/]/).filter(Boolean);
@@ -37,10 +35,10 @@ const readFolded = () => {
 const when = (at: number) => new Date(at).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
 /*
- * One board per project, picked from the first control of the toolbar on the sidebar's top line, which also offers
- * every board at once, a new one and editing the open one, so the board needs no gear of its own beside the app's.
- * The choice is remembered; with none, or one that no longer exists, the view opens on all boards as a gallery, and
- * with no board at all it asks for the first.
+ * One board per project. Three quiet controls at the end of the toolbar, as in dyarchia-desktop: the board's name
+ * switches boards or shows all of them, + makes a new one and the sliders edit the open one. The choice is
+ * remembered; with none, or one that no longer exists, the view opens on all boards as a gallery, and with no
+ * board at all it asks for the first. Cards are born in Triage, so the + for a new card lives on its column.
  */
 export function Kanban({ server }: { server: ServerState }) {
     const board = useBoard(server);
@@ -69,8 +67,6 @@ export function Kanban({ server }: { server: ServerState }) {
     const needle = query.trim().toLowerCase();
     const visible = cards.filter((card) => card.board === current?.id && (!needle || `#${card.id} ${card.title} ${card.brief}`.toLowerCase().includes(needle)));
     const choose = (value: string) => {
-        if (value === newBoard) return setEditing({});
-        if (value === editBoard) return setEditing({ board: current });
         setChosen(value);
         setOpen(undefined);
         writeHint("kanban.board", value);
@@ -111,7 +107,10 @@ export function Kanban({ server }: { server: ServerState }) {
     const create = async () => {
         const title = draft.trim();
         if (!title || !current) return setCreating(false);
-        if (await board.create(title, current.id)) setDraft("");
+        if (!(await board.create(title, current.id))) return;
+        setDraft("");
+        setCreating(false);
+        document.querySelector<HTMLElement>("[data-new-card]")?.focus();
     };
     const writable = Boolean(current && !current.archived);
 
@@ -147,35 +146,29 @@ export function Kanban({ server }: { server: ServerState }) {
         <Page
             title="Kanban"
             tools={
-                <>
-                    <div className="w-[240px]">
-                        <Select
-                            label="Board"
-                            hideLabel
-                            value={current ? String(current.id) : allBoards}
-                            onChange={(event) => choose(event.target.value)}
-                            options={[
-                                ...boards.filter((entry) => !entry.archived).map((entry) => ({ value: String(entry.id), label: entry.name })),
-                                { value: allBoards, label: "All boards" },
-                                { value: newBoard, label: "New board" },
-                                ...(current ? [{ value: editBoard, label: "Edit board" }] : []),
-                                ...boards.filter((entry) => entry.archived).map((entry) => ({ value: String(entry.id), label: entry.name, group: "Archived" })),
-                            ]}
-                        />
+                current && (
+                    <div className="min-w-[200px] max-w-[560px] flex-1">
+                        <TextField label="Search cards" hideLabel type="search" placeholder="Search title, brief or #id" value={query} onChange={(event) => setQuery(event.target.value)} />
                     </div>
-                    {current && (
-                        <div className="min-w-[200px] max-w-[560px] flex-1">
-                            <TextField label="Search cards" hideLabel type="search" placeholder="Search title, brief or #id" value={query} onChange={(event) => setQuery(event.target.value)} />
-                        </div>
-                    )}
-                </>
+                )
             }
             actions={
-                writable && (
-                    <Button variant="primary" icon="plus" hotkey="N" data-new-card onClick={() => setCreating(true)}>
-                        New card
-                    </Button>
-                )
+                <>
+                    <Select
+                        label="Board"
+                        hideLabel
+                        quiet
+                        value={current ? String(current.id) : allBoards}
+                        onChange={(event) => choose(event.target.value)}
+                        options={[
+                            ...boards.filter((entry) => !entry.archived).map((entry) => ({ value: String(entry.id), label: entry.name })),
+                            { value: allBoards, label: "All boards" },
+                            ...boards.filter((entry) => entry.archived).map((entry) => ({ value: String(entry.id), label: entry.name, group: "Archived" })),
+                        ]}
+                    />
+                    <IconButton icon="plus" label="New board" onClick={() => setEditing({})} />
+                    {current && <IconButton icon="sliders" label="Board settings" onClick={() => setEditing({ board: current })} />}
+                </>
             }
         >
             <div className="min-h-0 flex-1 pt-[var(--aspis-space-3)]">
@@ -205,6 +198,7 @@ export function Kanban({ server }: { server: ServerState }) {
                                     drop={dropState(phase)}
                                     folded={folded.has(phase)}
                                     onFold={() => fold(phase)}
+                                    actions={phase === "triage" && writable && <IconButton icon="plus" label="New card" hotkey="N" data-new-card onClick={() => setCreating(true)} />}
                                     onDragOver={(event) => {
                                         if (dropState(phase) === "allowed") event.preventDefault();
                                     }}
