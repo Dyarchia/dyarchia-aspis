@@ -25,7 +25,7 @@ test("rejects requests without the token", async () => {
 test("serves health with the token", async () => {
     const res = await fetch(`${base}/health`, { headers: { authorization: "Bearer secret" } });
     const health = Health.parse(await res.json());
-    expect(health.schemaVersion).toBe(7);
+    expect(health.schemaVersion).toBe(8);
     expect(health.dbPath).toBe(store.path);
 });
 
@@ -53,11 +53,7 @@ test("persists the theme and broadcasts it", async () => {
 
     await Bun.sleep(50);
     ws.close();
-    expect(events).toContainEqual({ type: "settings", settings: { theme: "nyx", maxRunning: 2 } });
-
-    const capped = await fetch(`${base}/settings`, { method: "PUT", headers: auth, body: JSON.stringify({ maxRunning: 4 }) });
-    expect(Settings.parse(await capped.json())).toEqual({ theme: "nyx", maxRunning: 4 });
-    expect((await fetch(`${base}/settings`, { method: "PUT", headers: auth, body: JSON.stringify({ maxRunning: 0 }) })).status).toBe(400);
+    expect(events).toContainEqual({ type: "settings", settings: { theme: "nyx" } });
 });
 
 test("pushes a change when another connection writes", async () => {

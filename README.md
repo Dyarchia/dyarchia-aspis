@@ -19,9 +19,8 @@ picked up interactively and end in Review, where an auditor and then you must bo
 Each project is a board: a name and the folder its cards run in. Three quiet controls end the Kanban toolbar, as
 in dyarchia-desktop: the board's name switches boards, + makes a new board and the sliders edit the open one; the
 choice is remembered. Cards are born in Triage, from the + on its column (Enter, Add or leaving the field makes
-the card), and take their board's folder and runners. Board settings, as in Desktop, hold the name, the folder,
-how many cards the board runs at once (and all boards together) and the implementer and auditor every new card
-starts with. Folder says where the project goes: a git repository, or a folder
+the card), and take their board's folder and runners. Board settings, laid out as in Desktop, hold the name, the
+folder and the implementer and auditor every new card starts with. Folder says where the project goes: a git repository, or a folder
 already named after the board, is used as it is; anywhere else the board gets its own folder inside it (Downloads
 and "nyx-board" make Downloads\nyx-board), and the dialog names that folder before saving. Archived boards stay
 listed under Archived, and deleting a board removes it and its cards from Aspis, never the folder on disk.
@@ -34,8 +33,7 @@ The window keeps Windows' own title bar, so snapping and Snap Layouts stay, and 
   `dyarchia-aspis.exe --dispatch` as the signed-in user, so cards run with the app closed. Work that is due right
   now (a card past its time, one you unblocked, an audit) is started at once. Any change to the board brings Task
   Scheduler in line with it; the uninstaller removes every entry.
-- The dispatcher starts every due card with `claude -p` in its folder, one card per repository at a time and no
-  more than its board, and all boards together, allow (Max running in Board settings). A
+- The dispatcher starts every due card with `claude -p` in its folder, one card per repository at a time. A
   repository that is not on the base branch, or has uncommitted changes, holds the card, the board shows why and
   the card looks again in 15 minutes. When a card finishes, the next one waiting on its repository starts.
 - Each card works on `feature/develop/card-<id>-<slug>`, branched from its base (the card's own, else

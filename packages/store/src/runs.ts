@@ -64,14 +64,6 @@ export class Runs {
         );
     }
 
-    running(board?: number, now = Date.now()): number {
-        return this.db
-            .query<{ count: number }, [number, number | null, number | null]>(
-                "SELECT count(*) AS count FROM runs JOIN cards ON cards.id = runs.card_id WHERE runs.status = 'running' AND runs.kind = 'headless' AND runs.heartbeat_at > ? AND (? IS NULL OR cards.board_id = ?)",
-            )
-            .get(now - staleAfterMs, board ?? null, board ?? null)!.count;
-    }
-
     start(cardId: number, branch: string, now = Date.now(), kind: RunKind = "headless", sessionId: string | null = null): Run {
         const attempt = this.db.query<{ n: number }, [number, string]>("SELECT COUNT(*) AS n FROM runs WHERE card_id = ? AND kind = ?").get(cardId, kind)!.n + 1;
         const id = Number(

@@ -1,5 +1,5 @@
 import { Button, Dialog, Form, FormRow, IconButton, TextField } from "@dyarchia/aspis";
-import { type Board, type BoardRunners, MaxRunning, type Settings, emptyRunner } from "@dyarchia/core";
+import { type Board, type BoardRunners, emptyRunner } from "@dyarchia/core";
 import { isTauri } from "@tauri-apps/api/core";
 import { open as pickFolder } from "@tauri-apps/plugin-dialog";
 import { useEffect, useId, useState } from "react";
@@ -9,11 +9,10 @@ import type { BoardApi } from "./use-board.ts";
 export type BoardRequest = { board?: Board };
 
 const blank: BoardRunners = { implementer: emptyRunner, auditor: emptyRunner };
-const cap = (text: string) => MaxRunning.catch(1).parse(Math.round(Number(text)));
 
 /*
- * One dialog makes a board and edits one, as Desktop does: the project's name and folder, how many of its cards run
- * at once (and how many all boards run together), and the runners every new card on it starts with. Folder says
+ * One dialog makes a board and edits one, laid out as in Desktop: the project's name and folder, and the runners
+ * every new card on it starts with. Folder says
  * where the project goes, and the line under it names the folder that saving will use or create, so the result is
  * never a surprise. Deleting takes a second press and removes the board and its cards from Aspis; the folder on disk
  * is never touched.
@@ -22,24 +21,18 @@ export function BoardDialog({
     request,
     api,
     cards,
-    settings,
-    onSettings,
     onClose,
     onSaved,
 }: {
     request?: BoardRequest;
     api: BoardApi;
     cards: number;
-    settings: Settings;
-    onSettings: (patch: Partial<Settings>) => Promise<void>;
     onClose: () => void;
     onSaved: (board?: Board) => void;
 }) {
     const board = request?.board;
     const [name, setName] = useState("");
     const [folder, setFolder] = useState("");
-    const [mine, setMine] = useState("1");
-    const [all, setAll] = useState("1");
     const [runners, setRunners] = useState(blank);
     const [confirm, setConfirm] = useState(false);
     const [target, setTarget] = useState<{ folder: string; exists: boolean }>();
@@ -48,8 +41,6 @@ export function BoardDialog({
     useEffect(() => {
         setName(board?.name ?? "");
         setFolder(board?.folder ?? "");
-        setMine(String(board?.maxRunning ?? 1));
-        setAll(String(settings.maxRunning));
         setRunners(board?.runners ?? blank);
         setConfirm(false);
     }, [request, board]);
@@ -68,12 +59,10 @@ export function BoardDialog({
     }, [request, moved, name, folder]);
 
     const ready = name.trim() && folder.trim();
-    const across = cap(all) !== settings.maxRunning;
-    const changed = !board || name.trim() !== board.name || moved || cap(mine) !== board.maxRunning || JSON.stringify(runners) !== JSON.stringify(board.runners) || across;
+    const changed = !board || name.trim() !== board.name || moved || JSON.stringify(runners) !== JSON.stringify(board.runners);
     const save = async () => {
         if (!ready || !changed) return;
-        if (across) await onSettings({ maxRunning: cap(all) });
-        const draft = { name: name.trim(), maxRunning: cap(mine), runners };
+        const draft = { name: name.trim(), runners };
         const saved = board ? await api.editBoard(board.id, { ...draft, ...(moved ? { folder: folder.trim() } : {}) }) : await api.createBoard({ ...draft, folder: folder.trim() });
         if (saved) onSaved(saved);
     };
@@ -147,14 +136,6 @@ export function BoardDialog({
                                 {hint}
                             </p>
                         )}
-                    </FormRow>
-                    <FormRow label="Max running">
-                        <div className="flex items-center gap-[var(--aspis-space-3)]">
-                            <TextField label="Max running on this board" hideLabel className="flex-none" type="number" min={1} max={10} value={mine} onChange={(event) => setMine(event.target.value)} />
-                            <span className="aspis-field__hint mr-[var(--aspis-space-3)] whitespace-nowrap">This board</span>
-                            <TextField label="Max running on all boards" hideLabel className="flex-none" type="number" min={1} max={10} value={all} onChange={(event) => setAll(event.target.value)} />
-                            <span className="aspis-field__hint whitespace-nowrap">All boards</span>
-                        </div>
                     </FormRow>
                     <FormRow label="Runners">
                         <RunnerHeads />

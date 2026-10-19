@@ -126,24 +126,6 @@ describe("the scheduled route", () => {
         expect(await dispatcher.dispatch()).toEqual([second]);
     });
 
-    test("a board runs as many cards at once as it allows, and all boards together as the settings allow", async () => {
-        const other = join(dir, "other");
-        await makeRepo(other);
-        const first = scheduled("Here", "Anything", { priority: 1 });
-        const second = scheduled("There", "Anything", { folder: other });
-        expect((await dispatcher.claim()).map((claim) => claim.card.id)).toEqual([first]);
-        expect(kanban().get(second).held).toBe("repo already runs 1 card at once");
-
-        const board = kanban().boards()[0]!.id;
-        kanban().editBoard(board, { maxRunning: 2 });
-        store.setSetting("maxRunning", "1");
-        expect(await dispatcher.claim()).toEqual([]);
-        expect(kanban().get(second).held).toBe("All boards already run 1 card at once");
-
-        store.setSetting("maxRunning", "2");
-        expect((await dispatcher.claim()).map((claim) => claim.card.id)).toEqual([second]);
-    });
-
     test("the agent blocks with its question and resumes its session once you answer", async () => {
         const id = scheduled("Fix the flow", "Find the failing flow #block");
         await dispatcher.dispatch();

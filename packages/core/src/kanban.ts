@@ -31,8 +31,6 @@ export type Verdict = z.infer<typeof Verdict>;
 export const CardFile = z.object({ id: z.number().int(), name: z.string(), bytes: z.number().int(), at: z.number() });
 export type CardFile = z.infer<typeof CardFile>;
 
-export const MaxRunning = z.number().int().min(1).max(10);
-
 export const BoardRunners = z.object({ implementer: Runner, auditor: Runner });
 export type BoardRunners = z.infer<typeof BoardRunners>;
 
@@ -41,7 +39,6 @@ export const Board = z.object({
     name: z.string(),
     folder: z.string(),
     archived: z.boolean(),
-    maxRunning: MaxRunning,
     runners: BoardRunners,
     createdAt: z.number(),
 });
@@ -50,7 +47,6 @@ export type Board = z.infer<typeof Board>;
 export const BoardDraft = z.object({
     name: z.string().trim().min(1, "The board needs a name"),
     folder: z.string().trim().min(1, "The board needs a folder"),
-    maxRunning: MaxRunning.optional(),
     runners: BoardRunners.optional(),
 });
 export type BoardDraft = z.infer<typeof BoardDraft>;
