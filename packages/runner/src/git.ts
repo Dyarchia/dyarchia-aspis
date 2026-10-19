@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
 
 export interface GitResult {
@@ -61,8 +61,19 @@ export async function checkout(folder: string, branch: string, base: string): Pr
 const ignored = ".claude/worktrees/";
 const marker = "# dyarchia kanban worktrees, written by the board that points here";
 
+/*
+ * Paths are compared as the file system spells them: git lists long names, while a temp folder may arrive in its
+ * short 8.3 form on Windows.
+ */
+const real = (path: string) => {
+    try {
+        return realpathSync.native(path);
+    } catch {
+        return resolve(path);
+    }
+};
 const same = (left: string, right: string) => {
-    const clean = (path: string) => resolve(path).replace(/[\\/]+$/, "");
+    const clean = (path: string) => real(path).replace(/[\\/]+$/, "");
     return process.platform === "win32" ? clean(left).toLowerCase() === clean(right).toLowerCase() : clean(left) === clean(right);
 };
 
@@ -137,7 +148,7 @@ export async function sweep(folder: string, busy: (path: string) => boolean): Pr
     const root = join(folder, ".claude", "worktrees");
     const swept: string[] = [];
     for (const tree of await worktrees(folder)) {
-        const step = relative(resolve(root), resolve(tree.path));
+        const step = relative(real(root), real(tree.path));
         if (!step || step.startsWith("..") || isAbsolute(step) || !tree.branch || busy(tree.path)) continue;
         if (!(await git(folder, "merge-base", "--is-ancestor", tree.branch, "HEAD")).ok) continue;
         if ((await git(tree.path, "status", "--porcelain")).out) continue;
