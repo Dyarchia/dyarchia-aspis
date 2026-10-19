@@ -17,8 +17,9 @@ const modes = [
  * One piece, three ways in. The file text is the only state: the form reads it and writes changes back
  * into it key by key, the code view edits it directly, and the tutorial walks the same fields one step at a time.
  * The editor fills the second column of Build's grid: its modes and Save on the shared first row, its body below,
- * as wide as the window allows. The list already names the piece and Save already says whether anything changed,
- * so neither is repeated here. Saving writes the files to the library working tree; publishing is done in the list.
+ * as wide as one form, so Save always ends where the fields end. The list already names the piece and Save already
+ * says whether anything changed, so neither is repeated here. Saving writes the files to the library working tree;
+ * publishing is done in the list.
  */
 export function Editor({
     kind,
@@ -135,7 +136,7 @@ export function Editor({
     const lesson = walk[at]!;
     const last = at === walk.length - 1;
     const guide = (
-        <div className="flex max-w-[720px] flex-col gap-[var(--aspis-space-5)]">
+        <div className="flex flex-col gap-[var(--aspis-space-5)]">
             <div className="flex flex-col gap-[var(--aspis-space-3)]">
                 <div className="flex items-center gap-[var(--aspis-space-3)]">
                     <span className="aspis-field__hint">{`Step ${at + 1} of ${walk.length}`}</span>
@@ -182,7 +183,7 @@ export function Editor({
 
     return (
         <>
-            <div className="col-start-2 row-start-1 flex min-h-[var(--aspis-control-h)] items-center gap-[var(--aspis-space-3)] px-[var(--aspis-space-5)] pt-[var(--aspis-space-3)]">
+            <div className="col-start-2 row-start-1 flex min-h-[var(--aspis-control-h)] w-full max-w-[calc(var(--aspis-label-w)+var(--aspis-value-w)+3*var(--aspis-space-5))] items-center gap-[var(--aspis-space-3)] px-[var(--aspis-space-5)] pt-[var(--aspis-space-3)]">
                 <Tabs label="Mode" id="editor-mode" value={active} onChange={setMode} tabs={shown} />
                 <div className="ml-auto flex items-center gap-[var(--aspis-space-3)]">
                     {confirm ? (
@@ -208,7 +209,7 @@ export function Editor({
                     </Button>
                 </div>
             </div>
-            <div className="col-start-2 row-start-2 flex min-h-0 flex-col">
+            <div className="col-start-2 row-start-2 flex min-h-0 w-full max-w-[calc(var(--aspis-label-w)+var(--aspis-value-w)+3*var(--aspis-space-5))] flex-col">
                 <TabPanel id="editor-mode" value={active} className={cx("min-h-0 flex-1 overflow-y-auto px-[var(--aspis-space-5)] pt-[var(--aspis-space-3)] pb-[var(--aspis-space-5)]", active === "code" && "flex flex-col gap-[var(--aspis-space-3)]")}>
                     {active === "tutorial" && guide}
                     {active === "form" && form}
