@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useRef } from "react";
+import { IconButton } from "./primitives.tsx";
 
 /*
  * A view in a desktop window. The sidebar already says which view this is, so the title is only spoken (and takes
@@ -37,5 +38,81 @@ export function EmptyState({ title, action }: { title: string; action?: ReactNod
             <p className="aspis-empty__title">{title}</p>
             {action && <div className="aspis-empty__action">{action}</div>}
         </div>
+    );
+}
+
+/*
+ * Holds a view's main pane and, beside it, an Inspector. The pane stays live while the inspector is open at half
+ * width; at full width the inspector covers the pane and keeps the same margin on all four sides.
+ */
+export function Stage({ children }: { children: ReactNode }) {
+    return <div className="aspis-stage">{children}</div>;
+}
+
+/*
+ * A panel that inspects one thing without taking the window: not modal, so the pane beside it still works. Focus
+ * starts on the panel when it opens and goes back to whatever opened it when it closes; Escape closes it, and the
+ * single-key shortcuts pause while focus is inside, as they do in a dialog.
+ */
+export function Inspector({
+    label,
+    title,
+    full,
+    onFull,
+    onClose,
+    children,
+}: {
+    label: string;
+    title: ReactNode;
+    full: boolean;
+    onFull: (full: boolean) => void;
+    onClose: () => void;
+    children: ReactNode;
+}) {
+    const box = useRef<HTMLElement>(null);
+    const opener = useRef<Element | null>(null);
+    useEffect(() => {
+        opener.current = document.activeElement;
+        if (!box.current?.contains(document.activeElement)) box.current?.focus();
+        return () => {
+            const from = opener.current;
+            if (from instanceof HTMLElement && from.isConnected) from.focus();
+        };
+    }, []);
+    const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+        if (event.key !== "Escape" || event.defaultPrevented) return;
+        event.preventDefault();
+        onClose();
+    };
+    return (
+        <aside ref={box} className="aspis-inspector" data-size={full ? "full" : "half"} data-keys="local" aria-label={label} tabIndex={-1} onKeyDown={onKeyDown}>
+            <header className="aspis-inspector__head">
+                <div className="aspis-inspector__title">{title}</div>
+                <div className="aspis-inspector__tools">
+                    <IconButton icon={full ? "collapse" : "expand"} label={full ? "Half width" : "Full width"} onClick={() => onFull(!full)} />
+                    <IconButton icon="close" label="Close" onClick={onClose} />
+                </div>
+            </header>
+            <div className="aspis-inspector__body">{children}</div>
+        </aside>
+    );
+}
+
+/*
+ * Labels in one column, values in the other. Fields placed inside lay themselves out as rows, so a form needs no
+ * wrapper per field; FormRow gives the same row to anything that is not a field, and wide rows span both columns.
+ */
+export function Form({ children }: { children: ReactNode }) {
+    return <div className="aspis-form">{children}</div>;
+}
+
+export function FormRow({ label, wide, children }: { label?: string; wide?: boolean; children: ReactNode }) {
+    return (
+        <>
+            {label !== undefined && <span className="aspis-form__label">{label}</span>}
+            <div className="aspis-form__value" data-wide={wide || label === undefined || undefined}>
+                {children}
+            </div>
+        </>
     );
 }

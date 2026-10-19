@@ -129,11 +129,11 @@ test("the board in both themes", async ({ page, request }) => {
         await openBoard(page, theme);
         await expect(column(page, "Review").getByText("Archive stale Quote fields")).toBeVisible();
         await page.mouse.move(0, 0);
-        await expect(page).toHaveScreenshot(`board-${theme}.png`);
+        await expect(page).toHaveScreenshot(`board-${theme}.png`, { mask: [page.locator(".aspis-tile time")] });
         await accessible(page);
         await saysEverythingOnce(page);
         await column(page, "Review").getByText("Archive stale Quote fields").click();
-        await expect(page.locator(".aspis-dialog__box")).toBeVisible();
+        await expect(page.locator(".aspis-inspector")).toBeVisible();
         await expect(page).toHaveScreenshot(`card-${theme}.png`, { mask: [page.locator(".aspis-thread__when")] });
         await accessible(page);
         await saysEverythingOnce(page);
@@ -145,11 +145,11 @@ test("the board and the card panel are one layout in both themes", async ({ page
     await openBoard(page);
     await sameLayout(page, async () => {});
     await column(page, "Review").getByText("Archive stale Quote fields").click();
-    await expect(page.locator(".aspis-dialog__box")).toBeVisible();
+    await expect(page.locator(".aspis-inspector")).toBeVisible();
     await sameLayout(page, async () => {});
     await page.keyboard.press("Escape");
     await column(page, "Triage").getByText("Map the Quote record types").click();
-    await expect(page.locator(".aspis-dialog__box")).toBeVisible();
+    await expect(page.locator(".aspis-inspector")).toBeVisible();
     await saysEverythingOnce(page);
 });
 
@@ -158,17 +158,17 @@ test("the card panel keeps focus while the board changes, and gives it back on c
     const tile = column(page, "Triage").getByRole("button", { name: "Map the Quote record types" });
     await tile.focus();
     await page.keyboard.press("Enter");
-    const brief = page.locator(".aspis-dialog__box").getByLabel("Brief");
+    const brief = page.locator(".aspis-inspector").getByLabel("Brief");
     await brief.click();
     await page.keyboard.type(" and their layouts");
     execFileSync("bun", ["e2e/support/external-write.ts", "Written while the panel is open"], { env: { ...process.env, ASPIS_HOME: process.env.ASPIS_E2E_HOME } });
     await expect(column(page, "Triage").getByText("Written while the panel is open")).toBeAttached();
     await expect(brief).toBeFocused();
-    await page.locator(".aspis-dialog__box").focus();
+    await page.locator(".aspis-inspector").focus();
     await page.keyboard.press("h");
-    await expect(page.locator(".aspis-dialog__box")).toBeVisible();
+    await expect(page.locator(".aspis-inspector")).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(page.locator(".aspis-dialog__box")).toHaveCount(0);
+    await expect(page.locator(".aspis-inspector")).toHaveCount(0);
     await expect(tile).toBeFocused();
 });
 
@@ -179,11 +179,12 @@ test("a ready card goes all the way to archived through the panel", async ({ pag
     await page.keyboard.press("Enter");
     await column(page, "Triage").getByText("Ready route card").click();
 
-    const panel = page.locator(".aspis-dialog__box");
+    const panel = page.locator(".aspis-inspector");
     await panel.getByLabel("Brief").fill("Walk the whole ready route");
     await panel.getByLabel("Folder").click();
-    await expect(panel.getByRole("button", { name: "Ready", exact: true })).toBeEnabled();
-    await panel.getByRole("button", { name: "Ready", exact: true }).click();
+    const phase = panel.getByRole("combobox", { name: "Phase" });
+    await expect(phase.locator('option[value="ready"]')).toBeEnabled();
+    await phase.selectOption("ready");
     await expect(panel.getByText("Agent picks it up")).toBeVisible();
 
     await panel.getByRole("button", { name: "Agent picks it up" }).click();
@@ -191,11 +192,11 @@ test("a ready card goes all the way to archived through the panel", async ({ pag
     await confirm(page, "Everything done");
     await panel.getByRole("button", { name: "Auditor ✓" }).click();
     await confirm(page, "Matches the brief");
-    await expect(panel.getByRole("button", { name: "Done", exact: true })).toBeDisabled();
+    await expect(phase.locator('option[value="done"]')).toBeDisabled();
     await panel.getByRole("button", { name: "Approve" }).click();
     await confirm(page, "Approved");
-    await panel.getByRole("button", { name: "Done", exact: true }).click();
-    await panel.getByRole("button", { name: "Archived", exact: true }).click();
+    await phase.selectOption("done");
+    await phase.selectOption("archived");
     await page.keyboard.press("Escape");
     await unfold(page, "Archived");
     await expect(column(page, "Archived").getByText("Ready route card")).toBeVisible();
@@ -206,7 +207,7 @@ test("a recurring scheduled card archives itself and schedules its next run", as
     await move(request, id, "scheduled");
     await openBoard(page);
     await column(page, "Scheduled").getByText("Recurring audit").click();
-    const panel = page.locator(".aspis-dialog__box");
+    const panel = page.locator(".aspis-inspector");
     await panel.getByRole("button", { name: "System starts it" }).click();
     await panel.getByRole("button", { name: "System finishes" }).click();
     await page.keyboard.press("Escape");
@@ -255,11 +256,12 @@ test("a blocked card needs your answer to go back to running", async ({ page, re
     await act(request, id, "agent", "blocked", { note: "Which sandbox?" });
     await openBoard(page);
     await column(page, "Blocked").getByText("Blocked on a question").click();
-    await page.locator(".aspis-dialog__box").getByRole("button", { name: "Running", exact: true }).click();
+    const phase = page.locator(".aspis-inspector").getByRole("combobox", { name: "Phase" });
+    await phase.selectOption("running");
     await page.keyboard.press("Escape");
     await expect(page.locator('.aspis-dialog[data-placement="center"]')).toHaveCount(0);
-    await expect(page.locator(".aspis-dialog__box")).toBeVisible();
-    await page.locator(".aspis-dialog__box").getByRole("button", { name: "Running", exact: true }).click();
+    await expect(page.locator(".aspis-inspector")).toBeVisible();
+    await phase.selectOption("running");
     await confirm(page, "Use the UAT sandbox");
     await page.keyboard.press("Escape");
     await expect(column(page, "Running").getByText("Blocked on a question")).toBeVisible();
@@ -278,7 +280,7 @@ test("a due scheduled card runs headless, streams its log and lands in archived 
     expect(await call<{ started: number[] }>(request, "/dev/dispatch", "POST")).toEqual({ started: [id] });
     await unfold(page, "Archived");
     await column(page, "Archived").getByText("Nightly release note").click({ timeout: 15_000 });
-    const panel = page.locator(".aspis-dialog__box");
+    const panel = page.locator(".aspis-inspector");
     await expect(panel.locator(".aspis-log")).toContainText("Writing the note.");
     await expect(panel.getByText(/Committed [0-9a-f]+ on feature\/develop\/card-/)).toBeVisible();
 });
@@ -289,7 +291,7 @@ test("stop ends a live run and blocks the card with the reason", async ({ page, 
     await openBoard(page);
     await call(request, "/dev/dispatch", "POST");
     await column(page, "Running").getByText("Long migration #slow").click();
-    const panel = page.locator(".aspis-dialog__box");
+    const panel = page.locator(".aspis-inspector");
     await expect(panel.locator(".aspis-log")).toContainText("Working on it");
     await panel.getByRole("button", { name: "Stop", exact: true }).click();
     await expect(panel.locator(".aspis-chip", { hasText: "Stopped by you." })).toBeVisible({ timeout: 10_000 });
@@ -311,7 +313,7 @@ test("a CLI session picks up a ready card, receives your note, and the auditor j
     await move(request, id, "ready");
     await openBoard(page);
     await column(page, "Ready").getByText("Cover the bulk path").click();
-    const panel = page.locator(".aspis-dialog__box");
+    const panel = page.locator(".aspis-inspector");
     await expect(panel.locator(".aspis-code")).toContainText("/dya-pickup");
 
     const picked = hook({ hook_event_name: "UserPromptSubmit", session_id: "e2e-session", cwd: folder, prompt: "/dya-pickup" });

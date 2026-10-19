@@ -1070,6 +1070,123 @@ a {
  * Columns share the width of the board and only scroll sideways once each would drop below its minimum. A folded
  * column keeps a narrow strip with its name and count, and stays a drop target while a card is dragged.
  */
+.aspis-stage {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.aspis-stage:has(> .aspis-inspector[data-size="half"]) > .aspis-board {
+    margin-right: calc(50% - var(--aspis-space-4));
+}
+
+/*
+ * The inspector keeps the board's own margin on every side: it opens on the columns' top line, ends where the board
+ * ends, and at half width takes the right half of the stage, so it breathes the same on all four borders.
+ */
+.aspis-inspector {
+    position: absolute;
+    top: 0;
+    right: var(--aspis-space-4);
+    bottom: var(--aspis-space-4);
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    width: calc(50% - var(--aspis-space-4) - var(--aspis-space-3));
+    min-width: 0;
+    border: var(--aspis-border-w) solid var(--aspis-line-strong);
+    border-radius: var(--aspis-radius-surface);
+    background: var(--aspis-bg);
+    box-shadow: var(--aspis-shadow-pop);
+    overflow: hidden;
+}
+
+.aspis-inspector[data-size="full"] {
+    left: var(--aspis-space-4);
+    width: auto;
+}
+
+.aspis-inspector:focus {
+    outline: none;
+}
+
+.aspis-inspector__head {
+    display: flex;
+    flex: none;
+    align-items: flex-start;
+    gap: var(--aspis-space-3);
+    padding: var(--aspis-space-4) var(--aspis-space-4) var(--aspis-space-3) var(--aspis-space-5);
+}
+
+.aspis-inspector__title {
+    flex: 1;
+    min-width: 0;
+}
+
+.aspis-inspector__tools {
+    display: flex;
+    flex: none;
+    gap: var(--aspis-space-1);
+}
+
+.aspis-inspector__body {
+    flex: 1;
+    min-height: 0;
+    padding: var(--aspis-space-3) var(--aspis-space-5) var(--aspis-space-5);
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+}
+
+.aspis-form {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: start;
+    column-gap: var(--aspis-space-5);
+    row-gap: var(--aspis-space-2);
+}
+
+.aspis-form > .aspis-field {
+    display: contents;
+}
+
+.aspis-form > .aspis-field > .aspis-field__label,
+.aspis-form__label {
+    grid-column: 1;
+    display: flex;
+    align-items: center;
+    min-height: var(--aspis-control-h);
+    font: var(--aspis-type-label);
+    text-transform: var(--aspis-case-label);
+    letter-spacing: var(--aspis-tracking-label);
+    color: var(--aspis-ink-3);
+}
+
+.aspis-form > .aspis-field > .aspis-field__control,
+.aspis-form > .aspis-field > .aspis-field__hint,
+.aspis-form__value {
+    grid-column: 2;
+    min-width: 0;
+}
+
+.aspis-form__value {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--aspis-space-2);
+    min-height: var(--aspis-control-h);
+}
+
+.aspis-form__value[data-wide] {
+    grid-column: 1 / -1;
+}
+
+.aspis-form__value:empty {
+    display: none;
+}
+
 .aspis-board {
     display: flex;
     gap: var(--aspis-space-3);
@@ -1244,7 +1361,9 @@ a {
 
 .aspis-tile__marks {
     display: inline-flex;
+    flex-wrap: wrap;
     gap: var(--aspis-space-2);
+    min-width: 0;
     margin-left: auto;
 }
 
