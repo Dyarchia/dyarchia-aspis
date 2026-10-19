@@ -59,7 +59,7 @@ function Workspace() {
         setView(next);
         writeHint("view", next);
     };
-    const chooseTheme = (theme: Theme) => void server.setTheme(theme);
+    const chooseTheme = (theme: Theme) => void server.saveSettings({ theme });
     const chooseKeys = (enabled: boolean) => {
         setSingleKeys(enabled);
         writeHint("keys.single", enabled ? "on" : "off");

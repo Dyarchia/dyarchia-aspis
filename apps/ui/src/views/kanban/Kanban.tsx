@@ -129,6 +129,8 @@ export function Kanban({ server }: { server: ServerState }) {
             request={editing}
             api={board}
             cards={cards.filter((card) => card.board === editing?.board?.id).length}
+            settings={server.settings}
+            onSettings={server.saveSettings}
             onClose={() => setEditing(undefined)}
             onSaved={saved}
         />

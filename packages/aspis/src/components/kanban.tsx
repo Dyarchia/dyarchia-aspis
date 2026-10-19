@@ -244,7 +244,7 @@ export interface ThreadEntry {
     text: ReactNode;
 }
 
-export function Thread({ entries, composer, className }: { entries: readonly ThreadEntry[]; composer?: ReactNode; className?: string }) {
+export function Thread({ entries, className }: { entries: readonly ThreadEntry[]; className?: string }) {
     return (
         <div className={cx("aspis-thread", className)}>
             <ol className="aspis-thread__list">
@@ -256,7 +256,6 @@ export function Thread({ entries, composer, className }: { entries: readonly Thr
                     </li>
                 ))}
             </ol>
-            {composer && <div className="aspis-thread__composer">{composer}</div>}
         </div>
     );
 }
