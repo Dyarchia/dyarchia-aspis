@@ -1348,7 +1348,7 @@ a {
 
 .aspis-dialog[data-placement="side"] .aspis-dialog__close {
     width: var(--aspis-caption-w);
-    margin-right: calc(-1 * var(--aspis-space-5));
+    margin-right: calc(-1 * (var(--aspis-space-5) + var(--aspis-border-w)));
 }
 
 .aspis-dialog__close:hover {
