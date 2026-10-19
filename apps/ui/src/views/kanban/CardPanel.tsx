@@ -320,7 +320,7 @@ export function CardPanel({
                     value={card.permission}
                     disabled={!editable}
                     onChange={(event) => edit({ permission: Permission.parse(event.target.value) })}
-                    options={Permission.options.map((option) => ({ value: option, label: option }))}
+                    options={Permission.options.map((option) => ({ value: option, label: option, tone: option === "bypass" ? "danger" : undefined }))}
                 />
                 <LiveField label="Folder" value={card.folder ?? ""} disabled={!editable} placeholder={"C:\\repos\\name"} onCommit={(folder) => edit({ folder: folder.trim() || null })} />
                 <LiveField label="Base branch" value={card.baseBranch ?? ""} disabled={!editable} placeholder="develop" onCommit={(branch) => edit({ baseBranch: branch.trim() || null })} />
