@@ -1,6 +1,6 @@
 {
     "name": "dyarchia-aspis",
-    "version": "0.7.2-alpha",
+    "version": "0.7.3-alpha",
     "private": true,
     "type": "module",
     "workspaces": ["packages/*", "apps/*"],
