@@ -1,10 +1,10 @@
-import type { Card, Run, RunStatus } from "@dyarchia/core";
+import { type Card, type Run, type RunStatus, worktreePath } from "@dyarchia/core";
 import { Kanban, KanbanError, Runs, type Store } from "@dyarchia/store";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { auditPrompt, auditorArgs, claudeCommand, implementerArgs, systemPrompt } from "./claude.ts";
 import { Desktop, alive, retryAfterMs } from "./desktop.ts";
-import { branchFor, checkout, commit, git, readiness, resolveBase } from "./git.ts";
+import { branchFor, commit, prepare, resolveBase, sweep } from "./git.ts";
 
 export interface DispatcherOptions {
     store: Store;
@@ -44,6 +44,7 @@ interface Launch {
     args: string[];
     prompt: string;
     header: string;
+    cwd: string;
     onInit?: () => void;
 }
 
@@ -80,8 +81,9 @@ function killTree(pid: number) {
 /*
  * Runs the headless work of the board. claim() finds the Scheduled cards that are due (and running ones a human
  * unblocked or a dead runner left behind), holds what cannot start yet with the reason, and moves the rest to
- * Running as the system, one per repository. execute() checks out the card branch, drives the harness with
- * retries, commits what it left, returns the repository to its base branch and moves the card on. audits() and
+ * Running as the system. Each card runs in its own worktree, so several cards of one repository run at once and
+ * the project's checkout is never touched. execute() drives the harness there with retries, commits what it left
+ * on the card branch and moves the card on; the worktree stays for a later resume until its branch lands. audits() and
  * audit() do the same for Ready cards that reached Review: the auditor reads the branch and gives its verdict.
  */
 export class Dispatcher {
@@ -104,8 +106,9 @@ export class Dispatcher {
     }
 
     /*
-     * Starts everything that can start now and keeps going: whenever a card finishes, its repository is free
-     * again, so the next card waiting on it starts right away. At the end Task Scheduler is set to match the board.
+     * Starts everything that can start now and keeps going: a card that finishes may let another start, so each
+     * one that ends looks again. At the end landed worktrees are tidied away and Task Scheduler is set to match
+     * the board.
      */
     async dispatch(): Promise<number[]> {
         const started: number[] = [];
@@ -116,6 +119,7 @@ export class Dispatcher {
             await Promise.all([...claims.map((claim) => this.execute(claim).then(round)), ...audits.map((audit) => this.audit(audit))]);
         };
         await round();
+        await this.tidy();
         await this.desktop.sync({ kick: false });
         return started;
     }
@@ -129,23 +133,21 @@ export class Dispatcher {
         const due = cards
             .filter((card) => card.phase === "scheduled" && card.scheduledAt !== null && card.scheduledAt <= now)
             .sort((a, b) => b.priority - a.priority || a.scheduledAt! - b.scheduledAt!);
-        const taken = new Set<string>();
         const claims: Claim[] = [];
         for (const card of [...orphans, ...due]) {
-            const ready = await this.check(card, taken, now);
+            const ready = await this.check(card, now);
             if ("held" in ready) {
                 this.kanban.hold(card.id, ready.held, now + retryAfterMs);
                 continue;
             }
             const claim = this.take(card, ready.base, now);
             if (!claim) continue;
-            taken.add(card.folder!);
             claims.push(claim);
         }
         return claims;
     }
 
-    private async check(card: Card, taken: Set<string>, now: number): Promise<{ base: string } | { held: string }> {
+    private async check(card: Card, now: number): Promise<{ base: string } | { held: string }> {
         if (card.implementer.harness !== "claude-code") return { held: `${card.implementer.harness ?? "This harness"} cannot run headless yet; Scheduled runs use claude-code` };
         if (!this.claude) return { held: "claude was not found on PATH" };
         if (!card.folder) return { held: "The card has no folder" };
@@ -153,8 +155,7 @@ export class Dispatcher {
             const reason = this.kanban.targets(card.id, "system", now).find((target) => target.to === "running")?.reason;
             if (reason) return { held: reason };
         }
-        if (taken.has(card.folder) || this.runs.busy(card.folder, now)) return { held: `Another card is running in ${basename(card.folder)}` };
-        return readiness(card.folder, card.baseBranch, card.phase === "running" ? branchFor(card.id, card.title) : undefined);
+        return prepare(card.folder, card.baseBranch, branchFor(card.id, card.title), worktreePath(card.folder, card.id));
     }
 
     private take(card: Card, base: string, now: number): Claim | undefined {
@@ -162,7 +163,7 @@ export class Dispatcher {
         try {
             return this.options.store.db
                 .transaction(() => {
-                    if (this.runs.busy(card.folder!, now) || this.runs.live(card.id, now)) return undefined;
+                    if (this.runs.live(card.id, now)) return undefined;
                     const fresh = card.phase === "scheduled";
                     const current = fresh ? this.kanban.move(card.id, { to: "running" }, "system", now) : this.kanban.get(card.id);
                     if (current.phase !== "running") return undefined;
@@ -177,14 +178,8 @@ export class Dispatcher {
         }
     }
 
-    async execute({ card, base, branch, run: first, fresh }: Claim): Promise<void> {
-        const folder = card.folder!;
-        const switched = await checkout(folder, branch, base);
-        if (!switched.ok) {
-            this.runs.finish(first.id, "failed", switched.err);
-            this.kanban.move(card.id, { to: "blocked", note: `Could not check out ${branch}: ${switched.err}` }, "system");
-            return;
-        }
+    async execute({ card, branch, run: first, fresh }: Claim): Promise<void> {
+        const folder = worktreePath(card.folder!, card.id);
         let run = first;
         let session = fresh ? undefined : (card.sessionId ?? undefined);
         let prompt = fresh || !session ? this.brief(card) : this.resumePrompt(card);
@@ -203,7 +198,6 @@ export class Dispatcher {
             this.kanban.move(card.id, { to: "blocked", note: `Could not commit on ${branch}: ${clip(saved.error, 600)}` }, "system");
             return;
         }
-        await git(folder, "switch", base);
         const committed = saved.sha ? `Committed ${saved.sha} on ${branch}.` : "Nothing to commit.";
         if (outcome.status === "done") {
             if (outcome.summary) this.kanban.note(card.id, clip(outcome.summary), "agent");
@@ -262,6 +256,7 @@ export class Dispatcher {
                 run,
                 header: `Audit ${run.attempt} of ${branch} against ${base}`,
                 prompt: auditPrompt(card, summary, base, branch),
+                cwd: card.folder!,
                 args: auditorArgs(card, { id: session, resume: false }),
             });
             const verdict = outcome.status === "done" ? lastLine(outcome.summary ?? "", /^\s*VERDICT:\s*(PASS|FAIL)\b[\s:-]*(.*)$/gim) : undefined;
@@ -280,6 +275,17 @@ export class Dispatcher {
                 return;
             }
             run = this.runs.start(card.id, branch, Date.now(), "audit");
+        }
+    }
+
+    /*
+     * Desktop's housekeeping: in every project folder, a card worktree whose branch has landed and that holds
+     * nothing uncommitted goes away with its branch, unless a run is alive in it. Anything else stays.
+     */
+    private async tidy(now = Date.now()) {
+        const live = new Set(this.kanban.list().filter((card) => this.runs.live(card.id, now)).map((card) => `card-${card.id}`));
+        for (const board of this.kanban.boards()) {
+            if (board.folder) await sweep(board.folder, (path) => live.has(basename(path))).catch(() => []);
         }
     }
 
@@ -305,6 +311,7 @@ export class Dispatcher {
 
     private async implement(card: Card, run: Run, branch: string, prompt: string, session: string | undefined): Promise<Outcome> {
         const files = join(this.kanban.filesDir, String(card.id));
+        const cwd = worktreePath(card.folder!, card.id);
         const id = session ?? crypto.randomUUID();
         this.runs.setSession(run.id, id);
         const outcome = await this.launch({
@@ -312,7 +319,8 @@ export class Dispatcher {
             run,
             header: `Attempt ${run.attempt} on ${branch}`,
             prompt,
-            args: implementerArgs(card, { id, resume: Boolean(session) }, systemPrompt(card, branch, files), card.files.length > 0 ? [files] : []),
+            cwd,
+            args: implementerArgs(card, { id, resume: Boolean(session) }, systemPrompt(card, branch, cwd, files), card.files.length > 0 ? [files] : []),
             onInit: session ? undefined : () => this.kanban.setSession(card.id, id),
         });
         const resumable = session !== undefined || outcome.started ? id : undefined;
@@ -321,14 +329,14 @@ export class Dispatcher {
         return { ...outcome, session: resumable, ...(question ? { status: "blocked", question } : {}) };
     }
 
-    private async launch({ card, run, args, prompt, header, onInit }: Launch): Promise<Outcome> {
+    private async launch({ card, run, args, prompt, header, cwd, onInit }: Launch): Promise<Outcome> {
         const log = this.runs.logPath(run);
         mkdirSync(dirname(log), { recursive: true });
         const write = (line: string) => appendFileSync(log, `${line}\n`);
         write(JSON.stringify({ type: "aspis", text: header }));
         write(JSON.stringify({ type: "aspis", kind: "prompt", text: prompt }));
         const proc = Bun.spawn([...this.claude!, ...args], {
-            cwd: card.folder!,
+            cwd,
             stdin: new TextEncoder().encode(prompt),
             stdout: "pipe",
             stderr: "pipe",

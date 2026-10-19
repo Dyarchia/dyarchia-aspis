@@ -33,12 +33,16 @@ The window keeps Windows' own title bar, so snapping and Snap Layouts stay, and 
   `dyarchia-aspis.exe --dispatch` as the signed-in user, so cards run with the app closed. Work that is due right
   now (a card past its time, one you unblocked, an audit) is started at once. Any change to the board brings Task
   Scheduler in line with it; the uninstaller removes every entry.
-- The dispatcher starts every due card with `claude -p` in its folder, one card per repository at a time. A
-  repository that is not on the base branch, or has uncommitted changes, holds the card, the board shows why and
-  the card looks again in 15 minutes. When a card finishes, the next one waiting on its repository starts.
+- The dispatcher starts every due card with `claude -p` in its own git worktree,
+  `<folder>/.claude/worktrees/card-<id>`, as dyarchia-desktop does: several cards of one repository run at once
+  and the checkout you work in is never switched or touched. `.claude/worktrees/` goes into the repository's
+  `.git/info/exclude`, so the worktrees never show in its git status. A card whose branch is checked out elsewhere
+  waits, the board shows why and the card looks again in 15 minutes.
 - Each card works on `feature/develop/card-<id>-<slug>`, branched from its base (the card's own, else
-  `develop`, else origin's default). When the run ends the runner commits there, never pushes, and returns the
-  repository to the base branch.
+  `develop`, else origin's default). When the run ends the runner commits there and never pushes. The worktree
+  stays so its session can be resumed; once the branch has landed in the checkout's HEAD and the worktree holds
+  nothing uncommitted, the next dispatch removes it and its branch. Cards that go through Ready work in the
+  project folder itself, where their CLI session runs.
 - Failures retry in the same session up to the card's retries, then block it. A final `BLOCKED: <question>` line
   blocks it for you to answer; moving it back to Running resumes the session with your answer. Stop ends a live
   run. Logs live in `~/.dyarchia-aspis/runs/` and stream into the card panel. Every run keeps its session id, so

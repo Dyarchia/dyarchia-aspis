@@ -54,14 +54,12 @@ export class Runs {
         return this.list(cardId, now).find((run) => run.live);
     }
 
-    busy(folder: string, now = Date.now()): boolean {
-        return Boolean(
-            this.db
-                .query(
-                    "SELECT 1 FROM runs JOIN cards ON cards.id = runs.card_id WHERE cards.folder = ? AND runs.status = 'running' AND runs.kind != 'audit' AND (runs.kind = 'interactive' OR runs.heartbeat_at > ?)",
-                )
-                .get(folder, now - staleAfterMs),
-        );
+    /*
+     * Only a CLI session works in the project folder itself; Scheduled runs and audits keep to their worktree or
+     * only read, so they never make the folder busy.
+     */
+    busy(folder: string): boolean {
+        return Boolean(this.db.query("SELECT 1 FROM runs JOIN cards ON cards.id = runs.card_id WHERE cards.folder = ? AND runs.status = 'running' AND runs.kind = 'interactive'").get(folder));
     }
 
     start(cardId: number, branch: string, now = Date.now(), kind: RunKind = "headless", sessionId: string | null = null): Run {

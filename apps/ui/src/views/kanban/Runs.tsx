@@ -1,5 +1,5 @@
 import { CodeBlock, GroupHeader, LiveLog, TabPanel, Tabs, type Tone } from "@dyarchia/aspis";
-import { type Card, type Run, type RunStatus, resumeCommands, runLines } from "@dyarchia/core";
+import { type Card, type Run, type RunStatus, resumeCommands, runLines, worktreePath } from "@dyarchia/core";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import type { BoardApi } from "./use-board.ts";
 
@@ -87,7 +87,7 @@ export function RunHistory({ card, board, changes, label, actions }: { card: Car
                     title={`${kindLabels[run.kind]} ${run.attempt} session`}
                     lang={(run.kind === "audit" ? card.auditor.harness : card.implementer.harness) ?? undefined}
                     lines={[
-                        { text: `cd "${card.folder}"` },
+                        { text: `cd "${run.kind === "audit" || !card.folder ? card.folder : worktreePath(card.folder, card.id)}"` },
                         { text: resumeCommands[(run.kind === "audit" ? card.auditor.harness : card.implementer.harness) ?? ""]?.(run.sessionId) ?? run.sessionId },
                     ]}
                 />

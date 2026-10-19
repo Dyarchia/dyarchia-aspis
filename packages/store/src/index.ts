@@ -31,7 +31,7 @@ function boards(db: Database) {
 /*
  * Boards gain the runners their new cards start with. Each board starts from the runners of its newest card, which
  * is what new cards inherited until now. The cap on running cards this step also added is gone again (see the next
- * step): runs are limited only to one per repository, as they always were.
+ * step).
  */
 function boardSettings(db: Database) {
     db.exec(
