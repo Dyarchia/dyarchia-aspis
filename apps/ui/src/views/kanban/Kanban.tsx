@@ -22,7 +22,8 @@ const when = (at: number) => new Date(at).toLocaleString(undefined, { day: "2-di
  *
  * Cards are born in Triage, from the + on its column. As in Desktop, Enter, the Add key and leaving the field all
  * mean a typed title is a card; the draft is closed before the card is asked for, so the blur that follows finds
- * nothing left to add, and a refusal puts the title back. Escape closes the draft and keeps what was typed.
+ * nothing left to add, and a refusal puts the title back. Escape closes the draft and keeps what was typed. Like
+ * Desktop, neither moves focus to the +, which would leave it lit with its tooltip after every card.
  */
 export function Kanban({ server }: { server: ServerState }) {
     const board = useBoard(server);
@@ -90,7 +91,6 @@ export function Kanban({ server }: { server: ServerState }) {
     };
 
     const writable = Boolean(current && !current.archived);
-    const focusNewCard = () => document.querySelector<HTMLElement>("[data-new-card]")?.focus();
     const startDraft = () => {
         drafting.current = true;
         setCreating(true);
@@ -98,15 +98,13 @@ export function Kanban({ server }: { server: ServerState }) {
     const park = () => {
         drafting.current = false;
         setCreating(false);
-        focusNewCard();
     };
-    const commit = async (refocus: boolean) => {
+    const commit = async () => {
         if (!drafting.current) return;
         drafting.current = false;
         const title = draft.trim();
         setDraft("");
         setCreating(false);
-        if (refocus) focusNewCard();
         if (!title || !current) return;
         if (await board.create(title, current.id)) return;
         setDraft(title);
@@ -181,7 +179,7 @@ export function Kanban({ server }: { server: ServerState }) {
                                 drop={dropState(phase)}
                                 folded={folded.has(phase)}
                                 onFold={() => fold(phase)}
-                                actions={phase === "triage" && writable && <IconButton icon="plus" label="New card" hotkey="N" data-new-card onClick={startDraft} />}
+                                actions={phase === "triage" && writable && <IconButton icon="plus" label="New card" hotkey="N" onClick={startDraft} />}
                                 onDragOver={(event) => {
                                     if (dropState(phase) === "allowed") event.preventDefault();
                                 }}
@@ -200,16 +198,16 @@ export function Kanban({ server }: { server: ServerState }) {
                                             placeholder="Title"
                                             value={draft}
                                             onChange={(event) => setDraft(event.target.value)}
-                                            onBlur={() => void commit(false)}
+                                            onBlur={() => void commit()}
                                             onKeyDown={(event) => {
                                                 if (event.key === "Enter") {
                                                     event.preventDefault();
-                                                    void commit(true);
+                                                    void commit();
                                                 }
                                                 if (event.key === "Escape") park();
                                             }}
                                         />
-                                        <IconButton icon="check" label="Add" onMouseDown={(event) => event.preventDefault()} onClick={() => void commit(true)} />
+                                        <IconButton icon="check" label="Add" onMouseDown={(event) => event.preventDefault()} onClick={() => void commit()} />
                                     </li>
                                 )}
                                 {column.map((card) => (

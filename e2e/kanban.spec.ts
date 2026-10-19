@@ -80,7 +80,7 @@ test("a board is a project: made from +, remembered, archived; a card is born in
     await page.keyboard.press("Enter");
     await expect(triage.getByText("Born by Enter")).toBeVisible();
     await expect(title).toHaveCount(0);
-    await expect(triage.getByRole("button", { name: "New card" })).toBeFocused();
+    await expect(triage.getByRole("button", { name: "New card" })).not.toBeFocused();
 
     await triage.getByRole("button", { name: "New card" }).click();
     await title.fill("Born by Add");

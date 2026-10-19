@@ -1316,7 +1316,7 @@ a {
 
 .aspis-dialog__head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--aspis-space-3);
     padding: var(--aspis-space-4) var(--aspis-space-5);
     border-bottom: var(--aspis-border-w) solid var(--aspis-line);
@@ -1328,18 +1328,27 @@ a {
     font: var(--aspis-type-item);
 }
 
+/*
+ * Close is a bare X on the head's first line. In a side panel, which ends at the window's edge, it is as wide as
+ * Windows' own caption buttons and flush with that edge, so it sits right under the window's X.
+ */
 .aspis-dialog__close {
     display: inline-grid;
     place-items: center;
     flex: none;
-    width: 32px;
-    height: 32px;
+    width: var(--aspis-target);
+    height: var(--aspis-target);
+    margin: calc((var(--aspis-pill-h) - var(--aspis-target)) / 2) 0;
     padding: 0;
-    border: var(--aspis-border-w) solid var(--aspis-line-strong);
-    border-radius: var(--aspis-radius-control);
+    border: 0;
     background: none;
     color: var(--aspis-ink-2);
     cursor: pointer;
+}
+
+.aspis-dialog[data-placement="side"] .aspis-dialog__close {
+    width: var(--aspis-caption-w);
+    margin-right: calc(-1 * (var(--aspis-space-5) + var(--aspis-border-w)));
 }
 
 .aspis-dialog__close:hover {
@@ -1350,7 +1359,7 @@ a {
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: var(--aspis-space-5);
+    gap: var(--aspis-space-4);
     position: relative;
     min-height: 0;
     padding: var(--aspis-space-5);

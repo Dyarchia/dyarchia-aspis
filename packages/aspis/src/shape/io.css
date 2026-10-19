@@ -187,10 +187,6 @@
     background: var(--aspis-surface);
 }
 
-[data-theme="io"] .aspis-dialog__close {
-    border-color: transparent;
-}
-
 [data-theme="io"] .aspis-thread__entry[data-kind="note"] .aspis-thread__who {
     color: var(--aspis-accent);
 }
