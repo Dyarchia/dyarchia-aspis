@@ -22,7 +22,7 @@ const windows = [
  * when the dispatcher last ran. They differ between this PC and the CI runner, and a longer path or one more line
  * would change the dialog's height, so both answers are fixed here.
  */
-const agents = { installable: false, agents: ["claude-code", "kimi-code"].map((harness) => ({ harness, cli: true, installed: false })) };
+const agents = { installable: false, agents: ["claude-code"].map((harness) => ({ harness, cli: true, installed: false })) };
 
 async function open(page: Page, theme: ThemeName) {
     await page.route(`${api}/agents`, (route) => route.fulfill({ json: agents }));

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { request } from "./server.ts";
 import type { ServerState } from "./use-server.ts";
 
-const AgentStatus = z.object({ harness: z.enum(["claude-code", "kimi-code"]), cli: z.boolean(), installed: z.boolean() });
+const AgentStatus = z.object({ harness: z.string(), cli: z.boolean(), installed: z.boolean() });
 const AgentList = z.object({ installable: z.boolean(), agents: z.array(AgentStatus) });
 export type AgentStatus = z.infer<typeof AgentStatus>;
 

@@ -274,13 +274,12 @@ export function verdict(card: Card, actor: Actor, ok = true): string | undefined
     return card.held ? "Approving needs the auditor; you can still reject it" : "The auditor speaks first";
 }
 
-export const harnesses = ["claude-code", "codex", "kimi-code", "grok-build", "antigravity", "mistral-vibe"] as const;
+export const harnesses = ["claude-code", "codex", "grok-build", "antigravity", "mistral-vibe"] as const;
 
 /* What the human types in each CLI that has the Aspis hooks, and how they reopen a card's session there. */
-export const pickupCommands: Partial<Record<string, string>> = { "claude-code": "/dya-pickup", "kimi-code": "/skill:dya-pickup" };
+export const pickupCommands: Partial<Record<string, string>> = { "claude-code": "/dya-pickup" };
 export const resumeCommands: Partial<Record<string, (session: string) => string>> = {
     "claude-code": (session) => `claude --resume ${session}`,
-    "kimi-code": (session) => `kimi --session ${session}`,
 };
 export const efforts = ["low", "medium", "high", "xhigh", "max"] as const;
 
