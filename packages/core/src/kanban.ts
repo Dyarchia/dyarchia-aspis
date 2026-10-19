@@ -291,6 +291,17 @@ export const resumeCommands: Partial<Record<string, (session: string) => string>
 };
 export const efforts = ["low", "medium", "high", "xhigh", "max"] as const;
 
+/*
+ * A Scheduled run works in its own git worktree inside the project, where Desktop keeps its runs too, so several
+ * cards of one repository run at once and the checkout you work in is never touched. A card that came through
+ * Ready works in the project folder itself, where its CLI session was opened.
+ */
+export const worktreePath = (folder: string, id: number) => {
+    const sep = folder.includes("\\") ? "\\" : "/";
+    return [folder.replace(/[\\/]+$/, ""), ".claude", "worktrees", `card-${id}`].join(sep);
+};
+export const sessionFolder = (card: Pick<Card, "id" | "folder" | "route">) => (card.folder && card.route === "scheduled" ? worktreePath(card.folder, card.id) : card.folder);
+
 export const phaseLabels: Record<Phase, string> = {
     triage: "Triage",
     scheduled: "Scheduled",

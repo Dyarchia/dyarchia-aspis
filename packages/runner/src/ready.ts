@@ -1,9 +1,9 @@
-import { type Card, type CardEvent, phaseLabels } from "@dyarchia/core";
+import { type Card, type CardEvent, phaseLabels, worktreePath } from "@dyarchia/core";
 import { Kanban, KanbanError, Runs, type Store } from "@dyarchia/store";
 import { appendFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { Desktop } from "./desktop.ts";
-import { branchFor, checkout, commit, git, readiness } from "./git.ts";
+import { branchFor, checkout, commit, git, readiness, release } from "./git.ts";
 
 /*
  * The CLIs that can hold a Ready card. Each one needs its wiring in agents.ts (where its settings live and how its
@@ -151,7 +151,9 @@ export class Ready {
                 continue;
             }
             const branch = branchFor(card.id, card.title);
-            if (this.runs.busy(card.folder!, now)) return this.refusal(`another card is running in ${basename(card.folder!)}`);
+            if (this.runs.busy(card.folder!)) return this.refusal(`another card is running in ${basename(card.folder!)}`);
+            const freed = await release(card.folder!, worktreePath(card.folder!, card.id));
+            if (freed.error) return this.refusal(freed.error);
             const ready = await readiness(card.folder!, card.baseBranch, branch);
             if ("held" in ready) return this.refusal(ready.held);
             const switched = await checkout(card.folder!, branch, ready.base);

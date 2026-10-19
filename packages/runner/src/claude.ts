@@ -55,10 +55,10 @@ export const implementerArgs = (card: Card, session: Session, system: string, di
 
 export const auditorArgs = (card: Card, session: Session) => claudeArgs({ runner: card.auditor, access: auditorAccess, session });
 
-export const systemPrompt = (card: Card, branch: string, files: string) =>
+export const systemPrompt = (card: Card, branch: string, worktree: string, files: string) =>
     [
         `You are running unattended for the Dyarchia Aspis kanban, card #${card.id} "${card.title}". Nobody can answer you during this run.`,
-        `Work in ${card.folder} on the branch ${branch}, which is already checked out. Do not switch branches, push or open pull requests: the runner commits your changes when you finish.`,
+        `Work in ${worktree}, a git worktree of ${card.folder} on the branch ${branch}, which is already checked out. Change files only there, never in ${card.folder} itself. Do not switch branches, push or open pull requests: the runner commits your changes when you finish.`,
         card.files.length > 0 ? `The files attached to the card are in ${files}.` : "",
         "If you cannot continue without information only a human has, stop and make the last line of your final message: BLOCKED: <what you need>.",
     ]

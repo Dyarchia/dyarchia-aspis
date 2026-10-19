@@ -12,6 +12,7 @@ import {
     phaseLabels,
     pickupCommands,
     resumeCommands,
+    sessionFolder,
 } from "@dyarchia/core";
 import { useEffect, useRef, useState } from "react";
 import type { ServerState } from "../../use-server.ts";
@@ -206,7 +207,7 @@ export function CardPanel({
                     <FormRow label="Session">
                         {card.phase === "running" && card.route === "scheduled" && <span className="aspis-field__hint">Resume it once this run ends.</span>}
                         {resume ? (
-                            <CodeBlock title={`Session ${card.sessionId}`} lang={harness} lines={[{ text: `cd "${card.folder}"` }, { text: resume }]} />
+                            <CodeBlock title={`Session ${card.sessionId}`} lang={harness} lines={[{ text: `cd "${sessionFolder(card)}"` }, { text: resume }]} />
                         ) : (
                             <span className="aspis-field__hint">Session {card.sessionId}</span>
                         )}

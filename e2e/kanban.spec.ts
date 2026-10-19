@@ -292,7 +292,8 @@ test("a card written by another process shows up in under a second", async ({ pa
 });
 
 test("a due scheduled card runs headless, streams its log and lands in archived with its commit", async ({ page, request }) => {
-    const id = await card(request, "Nightly release note", { folder: repository("nightly"), scheduledAt: Date.now() - 60_000 });
+    const folder = repository("nightly");
+    const id = await card(request, "Nightly release note", { folder, scheduledAt: Date.now() - 60_000 });
     await move(request, id, "scheduled");
     await openBoard(page);
     expect(await call<{ started: number[] }>(request, "/dev/dispatch", "POST")).toEqual({ started: [id] });
@@ -301,6 +302,8 @@ test("a due scheduled card runs headless, streams its log and lands in archived 
     const panel = page.locator(".aspis-inspector");
     await expect(panel.locator(".aspis-log")).toContainText("Writing the note.");
     await expect(panel.getByText(/Committed [0-9a-f]+ on feature\/develop\/card-/)).toBeVisible();
+    await expect(panel.getByText(`cd "${join(folder, ".claude", "worktrees", `card-${id}`)}"`).first()).toBeVisible();
+    expect(execFileSync("git", ["status", "--porcelain"], { cwd: folder }).toString()).toBe("");
 });
 
 test("stop ends a live run and blocks the card with the reason", async ({ page, request }) => {
