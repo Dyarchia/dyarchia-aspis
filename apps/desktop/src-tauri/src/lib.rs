@@ -40,6 +40,16 @@ async fn server_info(sidecar: tauri::State<'_, Sidecar>) -> Result<ServerInfo, S
     }
 }
 
+/* Opens a web link in the system browser; anything that is not http(s) is refused. */
+#[tauri::command]
+fn open_link(app: AppHandle, url: String) -> Result<(), String> {
+    if !(url.starts_with("https://") || url.starts_with("http://")) {
+        return Err(format!("{url} is not a web link"));
+    }
+    #[allow(deprecated)]
+    app.shell().open(url, None).map_err(|error| error.to_string())
+}
+
 fn token() -> String {
     let mut bytes = [0u8; 32];
     getrandom::fill(&mut bytes).expect("system entropy");
@@ -112,7 +122,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(update::PendingUpdate::default())
         .setup(spawn_sidecar)
-        .invoke_handler(tauri::generate_handler![server_info, frame::paint_frame, update::check_update, update::install_update])
+        .invoke_handler(tauri::generate_handler![server_info, open_link, frame::paint_frame, update::check_update, update::install_update])
         .build(tauri::generate_context!())
         .expect("failed to build the Aspis app")
         .run(|app, event| {

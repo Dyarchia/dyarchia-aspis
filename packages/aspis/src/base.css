@@ -402,7 +402,7 @@ a {
 .aspis-field__control[data-variant="quiet"] .aspis-field__input {
     width: auto;
     field-sizing: content;
-    padding-left: var(--aspis-space-2);
+    padding-left: 0;
     border-color: transparent;
     background: transparent;
 }
@@ -1166,6 +1166,7 @@ a {
 
 .aspis-form > .aspis-field > .aspis-field__control,
 .aspis-form > .aspis-field > .aspis-field__hint,
+.aspis-form > .aspis-field > .aspis-switch,
 .aspis-form__value {
     grid-column: 2;
     min-width: 0;
@@ -1185,6 +1186,28 @@ a {
 
 .aspis-form__value:empty {
     display: none;
+}
+
+.aspis-form > .aspis-field > .aspis-switch {
+    min-height: var(--aspis-control-h);
+}
+
+.aspis-progress {
+    flex: 1;
+    max-width: 240px;
+    height: 2px;
+    appearance: none;
+    border: 0;
+    background: var(--aspis-line);
+    color: var(--aspis-ink-1);
+}
+
+.aspis-progress::-webkit-progress-bar {
+    background: var(--aspis-line);
+}
+
+.aspis-progress::-webkit-progress-value {
+    background: var(--aspis-ink-1);
 }
 
 .aspis-board {

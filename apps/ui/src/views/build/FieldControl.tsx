@@ -1,4 +1,4 @@
-import { Select, Switch, TextArea, TextField, cx } from "@dyarchia/aspis";
+import { Select, Switch, TextArea, TextField } from "@dyarchia/aspis";
 import type { Field } from "@dyarchia/library";
 import { useEffect, useState } from "react";
 
@@ -10,13 +10,13 @@ const jsonText = (value: unknown) => (value === undefined ? "" : JSON.stringify(
  * keystroke; toggles and selects commit at once. A value the control cannot hold (a tag list written as a string,
  * malformed JSON) is shown as typed and only committed when it reads back cleanly.
  */
-export function FieldControl({ field, value, highlight, onCommit }: { field: Field; value: unknown; highlight?: boolean; onCommit: (value: unknown) => void }) {
+export function FieldControl({ field, value, explain, onCommit }: { field: Field; value: unknown; explain?: boolean; onCommit: (value: unknown) => void }) {
     const shown = field.control === "tags" ? listText(value) : field.control === "json" ? jsonText(value) : value === undefined || value === null ? "" : String(value);
     const [local, setLocal] = useState(shown);
     const [invalid, setInvalid] = useState<string>();
     useEffect(() => setLocal(shown), [shown]);
 
-    const hint = highlight ? field.help : undefined;
+    const hint = explain ? field.help : undefined;
     const shared = { label: field.label, hint, error: invalid, required: field.required };
 
     const commitText = () => {
@@ -75,15 +75,5 @@ export function FieldControl({ field, value, highlight, onCommit }: { field: Fie
                 onKeyDown={(event) => event.key === "Enter" && commitText()}
             />
         );
-    return (
-        <div
-            className={cx(
-                highlight && "rounded-[var(--aspis-radius-item)] outline outline-2 outline-offset-4 outline-[var(--aspis-accent)]",
-                (field.control === "textarea" || field.control === "json") && "col-span-full",
-            )}
-            data-field={field.key}
-        >
-            {control}
-        </div>
-    );
+    return control;
 }
