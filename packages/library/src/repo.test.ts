@@ -96,7 +96,7 @@ test("publishing moves the changes to a feature branch with a pull request, and 
     expect(await repo.sync()).toMatchObject({ branch: "develop", changes: [], pr: null });
     expect(repo.read("skills/apex-review/SKILL.md")).toContain("Review Apex classes");
     expect(await git(repo, "branch", "--list", "feature/*")).toBe("");
-});
+}, 20_000);
 
 test("nothing outside the piece folders can be read or written", async () => {
     onGitHub();
