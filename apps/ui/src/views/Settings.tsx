@@ -38,6 +38,8 @@ export function Settings({
     onTheme,
     singleKeys,
     onSingleKeys,
+    tutorial,
+    onTutorial,
 }: {
     open: boolean;
     onClose: () => void;
@@ -46,10 +48,12 @@ export function Settings({
     onTheme: (theme: Theme) => void;
     singleKeys: boolean;
     onSingleKeys: (enabled: boolean) => void;
+    tutorial: boolean;
+    onTutorial: (enabled: boolean) => void;
 }) {
     return (
         <Dialog open={open} onClose={onClose} title="Settings" placement="center">
-            {open && <SettingsBody server={server} updates={updates} onTheme={onTheme} singleKeys={singleKeys} onSingleKeys={onSingleKeys} />}
+            {open && <SettingsBody server={server} updates={updates} onTheme={onTheme} singleKeys={singleKeys} onSingleKeys={onSingleKeys} tutorial={tutorial} onTutorial={onTutorial} />}
         </Dialog>
     );
 }
@@ -60,12 +64,16 @@ function SettingsBody({
     onTheme,
     singleKeys,
     onSingleKeys,
+    tutorial,
+    onTutorial,
 }: {
     server: ServerState;
     updates: Updates;
     onTheme: (theme: Theme) => void;
     singleKeys: boolean;
     onSingleKeys: (enabled: boolean) => void;
+    tutorial: boolean;
+    onTutorial: (enabled: boolean) => void;
 }) {
     const agents = useAgents(server);
     const library = useLibrary(server);
@@ -128,6 +136,8 @@ function SettingsBody({
                 label="Single-key shortcuts"
                 hint="H K B open views, S Settings, T theme, N new. Ctrl K opens commands either way."
             />
+
+            <Switch checked={tutorial} onChange={onTutorial} label="Build tutorial" hint="Each new piece opens on a guided walk through what it is and how to fill it." />
 
             <div className="flex min-w-0 flex-col gap-[var(--aspis-space-1)]">
                 <span className="aspis-field__hint truncate" title={server.health?.dbPath}>

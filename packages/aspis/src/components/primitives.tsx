@@ -96,3 +96,6 @@ export function IconButton({ icon, label, hotkey, className, type = "button", ..
     );
 }
 
+export function Progress({ value, max, label }: { value: number; max: number; label: string }) {
+    return <progress className="aspis-progress" max={max} value={value} aria-label={label} />;
+}

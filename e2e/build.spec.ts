@@ -16,7 +16,8 @@ async function openBuild(page: Page, theme: "io" | "nyx" = "io") {
 }
 
 const piece = (page: Page, name: string) => page.getByRole("list", { name: "Skills" }).getByRole("button", { name: new RegExp(name) });
-const panes = [".aspis-menu__item", "section[aria-label='Skills'] .aspis-field__input", "[role='tablist'][aria-label='Mode']"];
+const panes = [".aspis-field__control[data-variant='quiet'] .aspis-field__input", "[role='tablist'][aria-label='Mode']"];
+const kind = (page: Page) => page.getByRole("combobox", { name: "Kind" });
 
 const field = (page: Page, label: string) => page.locator(".aspis-field").filter({ has: page.getByText(label, { exact: true }) }).locator("input, textarea, select").first();
 
@@ -25,7 +26,7 @@ test("Build connects its library in place", async ({ page }) => {
     await page.getByRole("textbox", { name: "Library repository" }).fill("owner/mantinea");
     await page.getByRole("button", { name: "Connect" }).click();
     await expect(page.getByText("Library owner/mantinea is ready")).toBeVisible();
-    await expect(page.getByRole("list", { name: "Kinds" })).toBeVisible();
+    await expect(kind(page)).toBeVisible();
 });
 
 test("a skill made in the form is the file in code, and the code drives the form back", async ({ page }) => {
@@ -39,7 +40,10 @@ test("a skill made in the form is the file in code, and the code drives the form
     await prompt.getByRole("textbox").fill("apex-review");
     await prompt.locator(".aspis-dialog__foot button").last().click();
     await expect(piece(page, "apex-review")).toHaveAttribute("aria-current", "true");
+    await expect(page.getByRole("heading", { name: "What is a skill?" })).toBeVisible();
+    await expect(page.getByText("Step 1 of 7")).toBeVisible();
 
+    await page.getByRole("tab", { name: "Form" }).click();
     await field(page, "Description").fill("Use this skill when the user asks to review Apex classes.");
     await field(page, "Description").blur();
     await page.getByRole("tab", { name: "Code" }).click();
@@ -54,9 +58,9 @@ test("a skill made in the form is the file in code, and the code drives the form
     await expect(page.getByText("The command will be /apex-reviewer, not /apex-review")).toBeVisible();
 
     await page.getByRole("tab", { name: "Tutorial" }).click();
-    await expect(page.getByText("Step 1 of 6")).toBeVisible();
     await page.getByRole("button", { name: "Next" }).click();
-    await expect(page.locator('[data-field="description"]')).toHaveClass(/outline/);
+    await expect(page.getByText("Step 2 of 7")).toBeVisible();
+    await expect(page.getByText("Defaults to the folder name.")).toBeVisible();
 
     await page.keyboard.press("Control+s");
     await expect(page.getByRole("button", { name: "Publish 1 change" })).toBeVisible();
@@ -99,8 +103,8 @@ test("the form leads with what a skill needs, and More options opens on its own 
     await more.click();
     await page.getByRole("combobox", { name: "Effort" }).selectOption("high");
     await page.keyboard.press("Control+s");
-    await page.getByRole("button", { name: "Agents" }).click();
-    await page.getByRole("button", { name: "Skills" }).click();
+    await kind(page).selectOption("agents");
+    await kind(page).selectOption("skills");
     await piece(page, "apex-review").click();
     await expect(page.getByRole("button", { name: "More options" })).toHaveAttribute("aria-expanded", "true");
     await expect(page.getByRole("combobox", { name: "Effort" })).toHaveValue("high");
@@ -131,4 +135,18 @@ test("Save stays beside the form on a maximized ultrawide window", async ({ page
     const save = await page.getByRole("button", { name: "Save" }).boundingBox();
     const description = await field(page, "Description").boundingBox();
     expect(save!.x + save!.width - (description!.x + description!.width)).toBeLessThanOrEqual(1);
+});
+
+test("the tutorial can be switched off in Settings: no Tutorial mode, and new pieces open in the form", async ({ page }) => {
+    await openBuild(page);
+    await page.keyboard.press("s");
+    await page.getByRole("switch", { name: "Build tutorial" }).click();
+    await page.keyboard.press("Escape");
+    await kind(page).selectOption("commands");
+    await page.getByRole("button", { name: "New command" }).click();
+    const prompt = page.locator('.aspis-dialog[data-placement="center"]');
+    await prompt.getByRole("textbox").fill("deploy");
+    await prompt.locator(".aspis-dialog__foot button").last().click();
+    await expect(page.getByRole("tab", { name: "Form" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("tab", { name: "Tutorial" })).toHaveCount(0);
 });

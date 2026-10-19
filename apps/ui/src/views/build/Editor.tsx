@@ -1,4 +1,4 @@
-import { Button, Chip, Icon, TabPanel, Tabs, TextArea, VisuallyHidden, cx, useHotkeys, useToast } from "@dyarchia/aspis";
+import { Button, Chip, Form, FormRow, Icon, IconButton, Progress, TabPanel, Tabs, TextArea, VisuallyHidden, cx, useHotkeys, useToast } from "@dyarchia/aspis";
 import { type Field, type Kind, read, validate, write } from "@dyarchia/library";
 import { useEffect, useMemo, useState } from "react";
 import type { Library } from "../../use-library.ts";
@@ -15,14 +15,28 @@ const modes = [
 
 /*
  * One piece, three ways in. The file text is the only state: the form reads it and writes changes back
- * into it key by key, the code view edits it directly, and the tutorial is the same form walked one step at a time.
- * Everything sits in one column, actions included, so Save stays beside what it saves on any window width. The
- * list already names the piece and Save already says whether anything changed, so neither is repeated here.
- * Saving writes the files to the library working tree; publishing is done under the kinds.
+ * into it key by key, the code view edits it directly, and the tutorial walks the same fields one step at a time.
+ * The editor fills the second column of Build's grid: its modes and Save on the shared first row, its body below,
+ * as wide as the window allows. The list already names the piece and Save already says whether anything changed,
+ * so neither is repeated here. Saving writes the files to the library working tree; publishing is done in the list.
  */
-export function Editor({ kind, name, library, onDeleted }: { kind: Kind; name: string; library: Library; onDeleted: () => void }) {
+export function Editor({
+    kind,
+    name,
+    library,
+    tutorial,
+    start,
+    onDeleted,
+}: {
+    kind: Kind;
+    name: string;
+    library: Library;
+    tutorial: boolean;
+    start: Mode;
+    onDeleted: () => void;
+}) {
     const toast = useToast();
-    const [mode, setMode] = useState<Mode>("form");
+    const [mode, setMode] = useState<Mode>(start);
     const [step, setStep] = useState(0);
     const [path, setPath] = useState(kind.main(name));
     const [texts, setTexts] = useState<Record<string, string>>({});
@@ -50,7 +64,6 @@ export function Editor({ kind, name, library, onDeleted }: { kind: Kind; name: s
     const reading = read(kind, text);
     const dirty = Object.keys(texts).filter((file) => texts[file] !== saved[file]);
     const issues = validate(kind, { kind: kind.id, name, path: main, text, files });
-    const current = kind.steps[Math.min(step, kind.steps.length - 1)];
 
     const change = (key: string, value: unknown) => {
         try {
@@ -72,65 +85,106 @@ export function Editor({ kind, name, library, onDeleted }: { kind: Kind; name: s
     const extrasInUse = extras.some((field) => !blank(reading.values[field.key]) || issues.some((issue) => issue.field === field.key));
     const extrasOpen = more ?? extrasInUse;
 
-    const grid = (fields: readonly Field[], highlight: boolean) => (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-x-[var(--aspis-space-5)] gap-y-[var(--aspis-space-4)]">
-            {fields.map((field) => (
-                <FieldControl key={field.key} field={field} value={reading.values[field.key]} highlight={highlight} onCommit={(value) => !reading.error && change(field.key, value)} />
-            ))}
-        </div>
-    );
+    const rows = (fields: readonly Field[], explain: boolean) =>
+        fields.map((field) => (
+            <FieldControl key={field.key} field={field} value={reading.values[field.key]} explain={explain} onCommit={(value) => !reading.error && change(field.key, value)} />
+        ));
 
-    const body = (highlight: boolean) =>
-        kind.body && (
-            <div className={cx(highlight && "rounded-[var(--aspis-radius-control)] outline outline-2 outline-offset-4 outline-[var(--aspis-accent)]")}>
-                <TextArea label={kind.body.label} hint={highlight ? kind.body.help : undefined} rows={14} value={reading.body} onChange={(event) => change("body", event.target.value)} />
-            </div>
-        );
+    const body = (explain: boolean) =>
+        kind.body && <TextArea label={kind.body.label} hint={explain ? kind.body.help : undefined} rows={14} value={reading.body} onChange={(event) => change("body", event.target.value)} />;
 
     /*
      * The form leads with the fields every piece of this kind needs and keeps the rest behind More options, open
-     * on its own when one of them already holds a value or an issue. The tutorial shows only its step's fields and
-     * is the one place their explanations appear; the form keeps to labels, values and errors.
+     * on its own when one of them already holds a value or an issue. It keeps to labels, values and errors; the
+     * explanations of each field appear in the tutorial, under the field they explain.
      */
-    const form = (keys?: readonly string[]) => (
-        <div className="flex flex-col gap-[var(--aspis-space-5)]">
-            {reading.error && <Chip tone="danger">The file does not parse: {reading.error}. Fix it in Code.</Chip>}
-            {keys ? (
-                <>
-                    {grid(
-                        kind.fields.filter((field) => keys.includes(field.key)),
+    const form = (
+        <Form>
+            {reading.error && (
+                <FormRow wide>
+                    <Chip tone="danger">The file does not parse: {reading.error}. Fix it in Code.</Chip>
+                </FormRow>
+            )}
+            {rows(
+                kind.fields.filter((field) => kind.essentials.includes(field.key)),
+                false,
+            )}
+            {kind.essentials.includes("body") && body(false)}
+            {extras.length > 0 && (
+                <FormRow wide>
+                    <Button variant="quiet" icon="chevron" className="w-fit" aria-expanded={extrasOpen} aria-controls="editor-more" onClick={() => setMore(!extrasOpen)}>
+                        More options
+                    </Button>
+                </FormRow>
+            )}
+            {extrasOpen && rows(extras, false)}
+            {reading.extra.length > 0 && (
+                <FormRow wide>
+                    <span className="aspis-field__hint">Kept as written, edit them in Code: {reading.extra.join(", ")}</span>
+                </FormRow>
+            )}
+        </Form>
+    );
+
+    /*
+     * The tutorial is a guided walk: it opens on what this kind of piece is, then takes one step per screen with the
+     * step's own fields and their explanations, and ends by handing over to the form.
+     */
+    const walk = [{ title: `What is a ${kind.singular}?`, text: kind.intro, fields: [] as readonly string[], source: kind.steps[0]?.source ?? "" }, ...kind.steps];
+    const at = Math.min(step, walk.length - 1);
+    const lesson = walk[at]!;
+    const last = at === walk.length - 1;
+    const guide = (
+        <div className="flex max-w-[720px] flex-col gap-[var(--aspis-space-5)]">
+            <div className="flex flex-col gap-[var(--aspis-space-3)]">
+                <div className="flex items-center gap-[var(--aspis-space-3)]">
+                    <span className="aspis-field__hint">{`Step ${at + 1} of ${walk.length}`}</span>
+                    <Progress max={walk.length} value={at + 1} label="Tutorial progress" />
+                </div>
+                <h2 className="m-0 [font:var(--aspis-type-item)] font-semibold">{lesson.title}</h2>
+                <p className="m-0">{lesson.text}</p>
+                {lesson.source && (
+                    <a className="aspis-field__hint inline-flex w-fit items-center gap-[var(--aspis-space-1)]" href={lesson.source} target="_blank" rel="noreferrer">
+                        Read more
+                        <Icon name="external" size={12} />
+                        <VisuallyHidden>, opens code.claude.com</VisuallyHidden>
+                    </a>
+                )}
+            </div>
+            {lesson.fields.length > 0 && (
+                <Form>
+                    {rows(
+                        kind.fields.filter((field) => lesson.fields.includes(field.key)),
                         true,
                     )}
-                    {keys.includes("body") && body(true)}
-                </>
-            ) : (
-                <>
-                    {grid(
-                        kind.fields.filter((field) => kind.essentials.includes(field.key)),
-                        false,
-                    )}
-                    {kind.essentials.includes("body") && body(false)}
-                    {extras.length > 0 && (
-                        <div className="flex flex-col gap-[var(--aspis-space-4)]">
-                            <Button variant="quiet" icon="chevron" className="w-fit" aria-expanded={extrasOpen} aria-controls="editor-more" onClick={() => setMore(!extrasOpen)}>
-                                More options
-                            </Button>
-                            <div id="editor-more" hidden={!extrasOpen}>
-                                {grid(extras, false)}
-                            </div>
-                        </div>
-                    )}
-                    {reading.extra.length > 0 && <span className="aspis-field__hint">Kept as written, edit them in Code: {reading.extra.join(", ")}</span>}
-                </>
+                    {lesson.fields.includes("body") && body(true)}
+                </Form>
             )}
+            <div className="flex items-center gap-[var(--aspis-space-3)]">
+                <Button variant="secondary" disabled={at === 0} onClick={() => setStep(at - 1)}>
+                    Back
+                </Button>
+                {last ? (
+                    <Button variant="primary" onClick={() => setMode("form")}>
+                        Finish
+                    </Button>
+                ) : (
+                    <Button variant="primary" onClick={() => setStep(at + 1)}>
+                        Next
+                    </Button>
+                )}
+            </div>
         </div>
     );
 
+    const shown = tutorial ? modes : modes.filter((entry) => entry.id !== "tutorial");
+    const active = !tutorial && mode === "tutorial" ? "form" : mode;
+
     return (
-        <div className="flex h-full min-h-0 flex-col">
-            <div className="flex max-w-[calc(880px+2*var(--aspis-space-5))] flex-none items-center gap-[var(--aspis-space-3)] px-[var(--aspis-space-5)] pt-[var(--aspis-space-3)]">
-                <Tabs label="Mode" id="editor-mode" value={mode} onChange={setMode} tabs={modes} />
-                <div className="ml-auto flex gap-[var(--aspis-space-3)]">
+        <>
+            <div className="col-start-2 row-start-1 flex min-h-[var(--aspis-control-h)] items-center gap-[var(--aspis-space-3)] px-[var(--aspis-space-5)] pt-[var(--aspis-space-3)]">
+                <Tabs label="Mode" id="editor-mode" value={active} onChange={setMode} tabs={shown} />
+                <div className="ml-auto flex items-center gap-[var(--aspis-space-3)]">
                     {confirm ? (
                         <>
                             <Button variant="quiet" autoFocus onClick={() => setConfirm(false)}>
@@ -147,44 +201,18 @@ export function Editor({ kind, name, library, onDeleted }: { kind: Kind; name: s
                             </Button>
                         </>
                     ) : (
-                        <Button variant="quiet" onClick={() => setConfirm(true)}>
-                            Delete
-                        </Button>
+                        <IconButton icon="trash" label={`Delete ${kind.singular}`} onClick={() => setConfirm(true)} />
                     )}
                     <Button variant="primary" hotkey="Ctrl S" disabled={dirty.length === 0} onClick={() => void save()}>
                         Save
                     </Button>
                 </div>
             </div>
-            <TabPanel id="editor-mode" value={mode} className="min-h-0 flex-1 overflow-y-auto p-[var(--aspis-space-5)]">
-                <div className={cx("flex max-w-[880px] flex-col gap-[var(--aspis-space-5)]", mode === "code" && "h-full")}>
-                    {mode === "tutorial" && current && (
-                        <>
-                            <div className="flex flex-col gap-[var(--aspis-space-3)]">
-                                <span className="aspis-field__hint">{`Step ${Math.min(step, kind.steps.length - 1) + 1} of ${kind.steps.length}`}</span>
-                                <h2 className="m-0 [font:var(--aspis-type-item)] font-semibold">{current.title}</h2>
-                                <p className="m-0">{current.text}</p>
-                                <div className="flex items-center gap-[var(--aspis-space-3)]">
-                                    <Button variant="secondary" disabled={step === 0} onClick={() => setStep(step - 1)}>
-                                        Back
-                                    </Button>
-                                    <Button variant="primary" disabled={step >= kind.steps.length - 1} onClick={() => setStep(step + 1)}>
-                                        Next
-                                    </Button>
-                                    <a className="aspis-field__hint ml-auto inline-flex items-center gap-[var(--aspis-space-1)]" href={current.source} target="_blank" rel="noreferrer">
-                                        Docs
-                                        <Icon name="external" size={12} />
-                                        <VisuallyHidden>, opens code.claude.com</VisuallyHidden>
-                                    </a>
-                                </div>
-                            </div>
-                            {form(current.fields)}
-                        </>
-                    )}
-
-                    {mode === "form" && form()}
-
-                    {mode === "code" && (
+            <div className="col-start-2 row-start-2 flex min-h-0 flex-col">
+                <TabPanel id="editor-mode" value={active} className={cx("min-h-0 flex-1 overflow-y-auto px-[var(--aspis-space-5)] pt-[var(--aspis-space-3)] pb-[var(--aspis-space-5)]", active === "code" && "flex flex-col gap-[var(--aspis-space-3)]")}>
+                    {active === "tutorial" && guide}
+                    {active === "form" && form}
+                    {active === "code" && (
                         <>
                             {files.length > 1 && <Tabs label="Files" value={path} onChange={setPath} tabs={files.map((file) => ({ id: file, label: file.split("/").slice(2).join("/") || file }))} />}
                             <CodeEditor
@@ -195,18 +223,18 @@ export function Editor({ kind, name, library, onDeleted }: { kind: Kind; name: s
                             />
                         </>
                     )}
-                </div>
-            </TabPanel>
+                </TabPanel>
 
-            {issues.length > 0 && (
-                <ul className="m-0 flex max-h-[30%] max-w-[calc(880px+2*var(--aspis-space-5))] flex-none list-none flex-col gap-[var(--aspis-space-2)] overflow-y-auto px-[var(--aspis-space-5)] py-[var(--aspis-space-3)]">
-                    {issues.map((issue, index) => (
-                        <li key={index}>
-                            <Chip tone={issue.level === "error" ? "danger" : "warn"}>{issue.level}</Chip> <span className="aspis-field__hint">{issue.message}</span>
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </div>
+                {issues.length > 0 && (
+                    <ul className="m-0 flex max-h-[30%] flex-none list-none flex-col gap-[var(--aspis-space-2)] overflow-y-auto px-[var(--aspis-space-5)] py-[var(--aspis-space-3)]">
+                        {issues.map((issue, index) => (
+                            <li key={index}>
+                                <Chip tone={issue.level === "error" ? "danger" : "warn"}>{issue.level}</Chip> <span className="aspis-field__hint">{issue.message}</span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        </>
     );
 }

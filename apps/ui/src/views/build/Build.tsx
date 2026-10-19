@@ -1,4 +1,4 @@
-import { Button, EmptyState, Menu, Page, TextField, VisuallyHidden, useHotkeys } from "@dyarchia/aspis";
+import { Button, EmptyState, IconButton, Menu, Page, Select, TextField, VisuallyHidden, useHotkeys } from "@dyarchia/aspis";
 import { type KindId, kindIds, kinds, pieceAt } from "@dyarchia/library";
 import { useMemo, useState } from "react";
 import { useLibrary } from "../../use-library.ts";
@@ -10,14 +10,16 @@ import { Editor } from "./Editor.tsx";
 const nameRule = /^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$|^[a-z0-9]$/;
 
 /*
- * Three panes that start on the sidebar's top line: the kinds, the pieces of the chosen kind, and the piece. The
- * publish cycle lives under the kinds and appears only when there is something to publish or a pull request to
- * follow: changes go to a feature branch and a pull request to develop that the user merges.
+ * Two columns on one grid: the pieces of the chosen kind and the piece itself. Both columns share their first row,
+ * so the kind and its + sit on the same line as the editor's modes and Save, and both columns start their content
+ * on the same line below it. The publish cycle lives at the foot of the list and appears only when there is
+ * something to publish or a pull request to follow. A piece made with the tutorial on opens in the tutorial.
  */
-export function Build({ server }: { server: ServerState }) {
+export function Build({ server, tutorial }: { server: ServerState; tutorial: boolean }) {
     const library = useLibrary(server);
     const [kind, setKind] = useState<KindId>("skills");
     const [selected, setSelected] = useState<string>();
+    const [fresh, setFresh] = useState<string>();
     const [prompt, setPrompt] = useState<PromptRequest>();
     const [filter, setFilter] = useState("");
     const [repo, setRepo] = useState("");
@@ -44,6 +46,7 @@ export function Build({ server }: { server: ServerState }) {
                 !nameRule.test(name) ? "Only lowercase letters, digits and hyphens" : pieces.get(kind)?.has(name) ? `There is already a ${current.singular} named ${name}` : undefined,
             submit: async (name) => {
                 for (const [path, content] of Object.entries(current.scaffold(name))) await library.write(path, content);
+                setFresh(name);
                 setSelected(name);
             },
         });
@@ -75,17 +78,49 @@ export function Build({ server }: { server: ServerState }) {
     const count = status.changes.length;
     return (
         <Page title="Build">
-            <div className="grid min-h-0 flex-1 grid-cols-[200px_260px_minmax(0,1fr)]">
-                <div className="flex min-h-0 flex-col border-r border-[var(--aspis-line)]">
+            <div className="grid min-h-0 flex-1 grid-cols-[280px_minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)]">
+                <div className="flex min-h-[var(--aspis-control-h)] items-center gap-[var(--aspis-space-2)] border-r border-[var(--aspis-line)] px-[var(--aspis-space-2)] pt-[var(--aspis-space-3)]">
+                    <Select
+                        label="Kind"
+                        hideLabel
+                        quiet
+                        value={kind}
+                        onChange={(event) => {
+                            setKind(event.target.value as KindId);
+                            setSelected(undefined);
+                            setFilter("");
+                        }}
+                        options={kindIds.map((id) => ({ value: id, label: pieces.get(id)?.size ? `${kinds[id].label} · ${pieces.get(id)!.size}` : kinds[id].label }))}
+                    />
+                    <IconButton icon="plus" label={`New ${current.singular}`} hotkey="N" className="ml-auto" onClick={create} />
+                </div>
+                {selected ? (
+                    <Editor
+                        key={`${kind}/${selected}`}
+                        kind={current}
+                        name={selected}
+                        library={library}
+                        tutorial={tutorial}
+                        start={tutorial && fresh === selected ? "tutorial" : "form"}
+                        onDeleted={() => setSelected(undefined)}
+                    />
+                ) : (
+                    <div className="col-start-2 row-start-2 min-h-0">
+                        <EmptyState title={current.summary} />
+                    </div>
+                )}
+                <section aria-label={current.label} className="col-start-1 row-start-2 flex min-h-0 flex-col border-r border-[var(--aspis-line)]">
+                    <div className="px-[var(--aspis-space-2)] pt-[var(--aspis-space-3)]">
+                        <TextField label={`Filter ${current.label.toLowerCase()}`} hideLabel placeholder="Filter" value={filter} onChange={(event) => setFilter(event.target.value)} />
+                    </div>
                     <div className="min-h-0 flex-1 overflow-y-auto">
                         <Menu
-                            label="Kinds"
-                            value={kind}
-                            items={kindIds.map((id) => ({ id, label: kinds[id].label, count: pieces.get(id)?.size || undefined }))}
-                            onSelect={(id) => {
-                                setKind(id);
-                                setSelected(undefined);
-                                setFilter("");
+                            label={current.label}
+                            value={selected}
+                            items={names.map((name) => ({ id: name, label: name, changed: changed.has(`${kind}/${name}`) }))}
+                            onSelect={(name) => {
+                                setFresh(undefined);
+                                setSelected(name);
                             }}
                         />
                     </div>
@@ -109,32 +144,7 @@ export function Build({ server }: { server: ServerState }) {
                             )}
                         </section>
                     )}
-                </div>
-                <section aria-label={current.label} className="flex min-h-0 flex-col border-r border-[var(--aspis-line)]">
-                    <div className="flex items-center gap-[var(--aspis-space-2)] px-[var(--aspis-space-2)] pt-[var(--aspis-space-3)]">
-                        <div className="flex-1">
-                            <TextField label={`Filter ${current.label.toLowerCase()}`} hideLabel placeholder="Filter" value={filter} onChange={(event) => setFilter(event.target.value)} />
-                        </div>
-                        <Button variant="secondary" icon="plus" hotkey="N" onClick={create}>
-                            New
-                        </Button>
-                    </div>
-                    <div className="min-h-0 flex-1 overflow-y-auto">
-                        <Menu
-                            label={current.label}
-                            value={selected}
-                            items={names.map((name) => ({ id: name, label: name, changed: changed.has(`${kind}/${name}`) }))}
-                            onSelect={setSelected}
-                        />
-                    </div>
                 </section>
-                <div className="min-h-0">
-                    {selected ? (
-                        <Editor key={`${kind}/${selected}`} kind={current} name={selected} library={library} onDeleted={() => setSelected(undefined)} />
-                    ) : (
-                        <EmptyState title={current.summary} />
-                    )}
-                </div>
             </div>
             <Prompt request={prompt} onClose={() => setPrompt(undefined)} />
         </Page>
