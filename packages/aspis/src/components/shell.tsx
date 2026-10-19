@@ -89,7 +89,8 @@ export function useHotkeys(bindings: Record<string, () => void>) {
             const key = `${mod ? "mod+" : ""}${event.key.toLowerCase()}`;
             const action = ref.current[key];
             if (!action || event.altKey) return;
-            if (!mod && (!singleKeys || typing(event.target) || document.querySelector("dialog[open]"))) return;
+            const local = event.target instanceof Element && event.target.closest("[data-keys='local']");
+            if (!mod && (!singleKeys || typing(event.target) || local || document.querySelector("dialog[open]"))) return;
             event.preventDefault();
             action();
         };

@@ -131,7 +131,7 @@ test("the palette stacks over a dialog, and Escape closes only the palette", asy
     await page.getByRole("combobox", { name: "Board" }).selectOption({ label: "ivirma-crm" });
     const tile = page.getByRole("button", { name: "Palette over a panel" });
     await tile.click();
-    const panel = page.getByRole("dialog", { name: `#${id} Palette over a panel` });
+    const panel = page.getByRole("complementary", { name: `#${id} Palette over a panel` });
     await expect(panel).toBeVisible();
     await page.keyboard.press("Control+k");
     await expect(page.getByRole("combobox", { name: "Command" })).toBeFocused();

@@ -67,6 +67,7 @@ export interface SelectOption {
     value: string;
     label: string;
     group?: string;
+    disabled?: boolean;
 }
 
 /* A quiet select is only its value and chevron, sized to the value: a switch in a toolbar rather than a form field. */
@@ -84,7 +85,7 @@ export function Select({
     const field = useField(id, { label, hint, error });
     const groups = [...new Set(options.flatMap((option) => (option.group ? [option.group] : [])))];
     const render = (option: SelectOption) => (
-        <option key={option.value} value={option.value}>
+        <option key={option.value} value={option.value} disabled={option.disabled}>
             {option.label}
         </option>
     );

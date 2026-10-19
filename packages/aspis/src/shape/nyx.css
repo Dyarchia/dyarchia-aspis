@@ -203,6 +203,11 @@
     backdrop-filter: blur(24px);
 }
 
+[data-theme="nyx"] .aspis-inspector {
+    background: var(--aspis-glow), var(--aspis-glass);
+    backdrop-filter: blur(24px);
+}
+
 [data-theme="nyx"] .aspis-dialog[data-placement="side"] .aspis-dialog__box {
     border-radius: var(--aspis-radius-surface) 0 0 var(--aspis-radius-surface);
 }
