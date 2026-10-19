@@ -39,10 +39,9 @@ function readyCard(title: string, extra: Record<string, unknown> = {}) {
     return kanban().move(card.id, { to: "ready" }, "human").id;
 }
 
-const prompt = (session: string, text: string, harness: "claude-code" | "kimi-code" = "claude-code") =>
-    ready.hook({ hook_event_name: "UserPromptSubmit", session_id: session, cwd: repo, prompt: text }, harness);
-const tool = (session: string, name: string, input: Record<string, unknown> = {}, harness: "claude-code" | "kimi-code" = "claude-code") =>
-    ready.hook({ hook_event_name: "PreToolUse", session_id: session, cwd: repo, tool_name: name, tool_input: input }, harness);
+const prompt = (session: string, text: string) => ready.hook({ hook_event_name: "UserPromptSubmit", session_id: session, cwd: repo, prompt: text }, "claude-code");
+const tool = (session: string, name: string, input: Record<string, unknown> = {}) =>
+    ready.hook({ hook_event_name: "PreToolUse", session_id: session, cwd: repo, tool_name: name, tool_input: input }, "claude-code");
 const context = (stdout = "") => JSON.parse(stdout).hookSpecificOutput;
 const auditors = () => new Dispatcher({ store, claude: [process.execPath, fakeClaude], pollMs: 20 });
 
@@ -57,7 +56,7 @@ describe("the ready route", () => {
     test("dya-pickup claims the best Ready card for this folder and harness and puts the repository on its branch", async () => {
         readyCard("Low priority");
         const best = readyCard("Fix the trigger", { priority: 3 });
-        readyCard("Kimi job", { implementer: { ...claude, harness: "kimi-code" } });
+        readyCard("Codex job", { implementer: { ...claude, harness: "codex" } });
         kanban().note(best, "Mind the bulk path", "human");
 
         const reply = await prompt("s-1", "/dya-pickup");
@@ -77,8 +76,7 @@ describe("the ready route", () => {
         readyCard("Anything");
         writeFileSync(join(repo, "scratch.txt"), "x");
         expect(context((await prompt("s-1", "/dya-pickup")).stdout).additionalContext).toContain("repo has uncommitted changes");
-        const kimi = await prompt("s-2", "/skill:dya-pickup", "kimi-code");
-        expect(kimi.stdout).toContain("there is no Ready card for kimi-code");
+        expect(await ready.pickup(repo, "codex", "s-2")).toContain("there is no Ready card for codex");
     });
 
     test("a session without a card goes untouched, and a session only acts on its own card", async () => {
@@ -91,7 +89,7 @@ describe("the ready route", () => {
         expect(await tool("s-1", "mcp__aspis__card_deliver", { card: id, summary: "x" })).toEqual({ exit: 0 });
     });
 
-    test("what you write reaches the agent once, at its next tool call, in each CLI's way", async () => {
+    test("what you write reaches the agent once, at its next tool call", async () => {
         const id = readyCard("Talk to me");
         await prompt("s-1", "/dya-pickup");
         kanban().note(id, "Use the UAT org", "human");
@@ -100,9 +98,6 @@ describe("the ready route", () => {
         expect(delivered.permissionDecision).toBeUndefined();
         expect(await tool("s-1", "Bash", { command: "git diff" })).toEqual({ exit: 0 });
 
-        kanban().note(id, "And keep the tests", "human");
-        const kimi = context((await tool("s-1", "Shell", { command: "ls" }, "kimi-code")).stdout);
-        expect(kimi).toMatchObject({ permissionDecision: "deny", permissionDecisionReason: expect.stringContaining("And keep the tests") });
 
         const log = runLines(readFileSync(ready.runs.logPath(ready.runs.session(id)!), "utf8"));
         expect(log).toContainEqual({ kind: "tool", text: "Bash git status" });
@@ -115,8 +110,6 @@ describe("the ready route", () => {
         const stop = { hook_event_name: "Stop", session_id: "s-1", cwd: repo, last_assistant_message: "Done for now" };
         expect(await ready.hook({ ...stop, stop_hook_active: true }, "claude-code")).toEqual({ exit: 0 });
         expect(JSON.parse((await ready.hook(stop, "claude-code")).stdout!)).toMatchObject({ decision: "block", reason: expect.stringContaining("One more thing") });
-        kanban().note(id, "Last one", "human");
-        expect(await ready.hook(stop, "kimi-code")).toMatchObject({ exit: 2, stderr: expect.stringContaining("Last one") });
         expect(await ready.hook(stop, "claude-code")).toEqual({ exit: 0 });
     });
 

@@ -285,7 +285,7 @@ export function CardPanel({
                     {pickup ? (
                         <CodeBlock title={card.folder ?? "folder"} lang={harness} lines={[{ text: pickup }]} />
                     ) : (
-                        <span className="aspis-field__hint">{harness || "This harness"} has no Aspis hooks. Wire claude-code or kimi-code in Settings.</span>
+                        <span className="aspis-field__hint">{harness || "This harness"} has no Aspis hooks. Wire claude-code in Settings.</span>
                     )}
                     {card.auditor.harness !== "claude-code" && (
                         <span className="aspis-field__hint">The auditor ({card.auditor.harness ?? "not set"}) cannot run headless: retry or reject in Review.</span>

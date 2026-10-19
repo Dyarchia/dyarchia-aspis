@@ -45,10 +45,10 @@ The window keeps Windows' own title bar, so snapping and Snap Layouts stay, and 
 
 ## Ready runs
 
-- Settings, Agent CLIs wires Claude Code or Kimi Code with one click: hooks that call `dyarchia-aspis.exe --hook`,
+- Settings, Agent CLIs wires Claude Code with one click: hooks that call `dyarchia-aspis.exe --hook`,
   the `dya-pickup` skill and the `aspis` MCP server, all in that CLI's user settings. Remove takes them back out,
   and so does the uninstaller.
-- In the card folder, typing `/dya-pickup` (Kimi: `/skill:dya-pickup`) hands that session the highest-priority
+- In the card folder, typing `/dya-pickup` hands that session the highest-priority
   Ready card for the folder and the CLI, moves it to Running with the session id and puts the repository on the
   card branch. Only a prompt the human types can claim a card.
 - Every tool call goes through the guard: a session acts only on its own card, a Blocked or in-Review card stops

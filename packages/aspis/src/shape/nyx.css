@@ -81,11 +81,13 @@
 }
 
 [data-theme="nyx"] .aspis-field__input {
-    border-color: var(--aspis-line-control);
+    border-color: transparent transparent var(--aspis-line-control);
+    border-radius: 0;
+    background: transparent;
 }
 
 [data-theme="nyx"] .aspis-field__input:focus {
-    border-color: var(--aspis-ink-1);
+    border-bottom-color: var(--aspis-ink-1);
 }
 
 [data-theme="nyx"] .aspis-switch__track {
