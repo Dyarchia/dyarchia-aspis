@@ -1,22 +1,46 @@
-import { Button, Dialog, TextField } from "@dyarchia/aspis";
-import type { Board } from "@dyarchia/core";
+import { Button, Dialog, Form, FormRow, IconButton, TextField } from "@dyarchia/aspis";
+import { type Board, type BoardRunners, MaxRunning, type Settings, emptyRunner } from "@dyarchia/core";
 import { isTauri } from "@tauri-apps/api/core";
 import { open as pickFolder } from "@tauri-apps/plugin-dialog";
 import { useEffect, useId, useState } from "react";
+import { RunnerFields, RunnerHeads } from "./fields.tsx";
 import type { BoardApi } from "./use-board.ts";
 
 export type BoardRequest = { board?: Board };
 
+const blank: BoardRunners = { implementer: emptyRunner, auditor: emptyRunner };
+const cap = (text: string) => MaxRunning.catch(1).parse(Math.round(Number(text)));
+
 /*
- * One dialog makes a board and edits one. A board is a project: its name and the folder its cards run in. Folder
- * says where the project goes, and the line under it names the folder that saving will use or create, so the
- * result is never a surprise. Deleting takes a second press and removes the board and its cards from Aspis; the
- * folder on disk is never touched.
+ * One dialog makes a board and edits one, as Desktop does: the project's name and folder, how many of its cards run
+ * at once (and how many all boards run together), and the runners every new card on it starts with. Folder says
+ * where the project goes, and the line under it names the folder that saving will use or create, so the result is
+ * never a surprise. Deleting takes a second press and removes the board and its cards from Aspis; the folder on disk
+ * is never touched.
  */
-export function BoardDialog({ request, api, cards, onClose, onSaved }: { request?: BoardRequest; api: BoardApi; cards: number; onClose: () => void; onSaved: (board?: Board) => void }) {
+export function BoardDialog({
+    request,
+    api,
+    cards,
+    settings,
+    onSettings,
+    onClose,
+    onSaved,
+}: {
+    request?: BoardRequest;
+    api: BoardApi;
+    cards: number;
+    settings: Settings;
+    onSettings: (patch: Partial<Settings>) => Promise<void>;
+    onClose: () => void;
+    onSaved: (board?: Board) => void;
+}) {
     const board = request?.board;
     const [name, setName] = useState("");
     const [folder, setFolder] = useState("");
+    const [mine, setMine] = useState("1");
+    const [all, setAll] = useState("1");
+    const [runners, setRunners] = useState(blank);
     const [confirm, setConfirm] = useState(false);
     const [target, setTarget] = useState<{ folder: string; exists: boolean }>();
     const hintId = useId();
@@ -24,6 +48,9 @@ export function BoardDialog({ request, api, cards, onClose, onSaved }: { request
     useEffect(() => {
         setName(board?.name ?? "");
         setFolder(board?.folder ?? "");
+        setMine(String(board?.maxRunning ?? 1));
+        setAll(String(settings.maxRunning));
+        setRunners(board?.runners ?? blank);
         setConfirm(false);
     }, [request, board]);
 
@@ -41,11 +68,13 @@ export function BoardDialog({ request, api, cards, onClose, onSaved }: { request
     }, [request, moved, name, folder]);
 
     const ready = name.trim() && folder.trim();
-    const changed = !board || name.trim() !== board.name || moved;
+    const across = cap(all) !== settings.maxRunning;
+    const changed = !board || name.trim() !== board.name || moved || cap(mine) !== board.maxRunning || JSON.stringify(runners) !== JSON.stringify(board.runners) || across;
     const save = async () => {
         if (!ready || !changed) return;
-        const draft = { name: name.trim(), ...(moved ? { folder: folder.trim() } : {}) };
-        const saved = board ? await api.editBoard(board.id, draft) : await api.createBoard({ name: draft.name, folder: folder.trim() });
+        if (across) await onSettings({ maxRunning: cap(all) });
+        const draft = { name: name.trim(), maxRunning: cap(mine), runners };
+        const saved = board ? await api.editBoard(board.id, { ...draft, ...(moved ? { folder: folder.trim() } : {}) }) : await api.createBoard({ ...draft, folder: folder.trim() });
         if (saved) onSaved(saved);
     };
     const hint = target && (target.folder !== folder.trim() || !target.exists) ? `${target.exists ? "Uses" : "Creates"} ${target.folder}` : undefined;
@@ -59,66 +88,84 @@ export function BoardDialog({ request, api, cards, onClose, onSaved }: { request
             open={Boolean(request)}
             onClose={onClose}
             placement="center"
-            title={board ? board.name : "New board"}
+            title={board ? "Board settings" : "New board"}
             footer={
                 <>
-                    {board &&
-                        (confirm ? (
-                            <>
-                                <Button variant="quiet" autoFocus onClick={() => setConfirm(false)}>
-                                    Keep it
-                                </Button>
-                                <Button variant="secondary" onClick={() => void api.removeBoard(board.id).then((done) => done !== undefined && onSaved())}>
-                                    {cards > 0 ? `Delete it and its ${cards} card${cards > 1 ? "s" : ""}` : "Delete for good"}
-                                </Button>
-                            </>
-                        ) : (
-                            <>
-                                <Button variant="quiet" onClick={() => setConfirm(true)}>
-                                    Delete
-                                </Button>
-                                <Button variant="quiet" onClick={() => void api.editBoard(board.id, { archived: !board.archived }).then((saved) => saved && onSaved(saved))}>
-                                    {board.archived ? "Restore" : "Archive"}
-                                </Button>
-                            </>
-                        ))}
                     <Button variant="primary" disabled={!ready || !changed} onClick={() => void save()}>
                         {board ? "Save" : "Create"}
                     </Button>
+                    {board && (
+                        <div className="ml-auto flex items-center gap-[var(--aspis-space-1)]">
+                            {confirm ? (
+                                <>
+                                    <Button variant="quiet" autoFocus onClick={() => setConfirm(false)}>
+                                        Keep it
+                                    </Button>
+                                    <Button variant="secondary" onClick={() => void api.removeBoard(board.id).then((done) => done !== undefined && onSaved())}>
+                                        {cards > 0 ? `Delete it and its ${cards} card${cards > 1 ? "s" : ""}` : "Delete for good"}
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <IconButton
+                                        icon="archive"
+                                        label={board.archived ? "Restore board" : "Archive board"}
+                                        onClick={() => void api.editBoard(board.id, { archived: !board.archived }).then((saved) => saved && onSaved(saved))}
+                                    />
+                                    <IconButton icon="trash" label="Delete board" onClick={() => setConfirm(true)} />
+                                </>
+                            )}
+                        </div>
+                    )}
                 </>
             }
         >
             <form
-                className="flex flex-col gap-[var(--aspis-space-4)]"
                 onSubmit={(event) => {
                     event.preventDefault();
                     void save();
                 }}
             >
-                <TextField label="Name" autoFocus required value={name} onChange={(event) => setName(event.target.value)} />
-                <div className="flex flex-col gap-[var(--aspis-space-2)]">
-                    <div className="flex items-end gap-[var(--aspis-space-3)]">
-                        <TextField
-                            label="Folder"
-                            className="flex-1"
-                            required
-                            placeholder={"C:\\repos"}
-                            aria-describedby={hint ? hintId : undefined}
-                            value={folder}
-                            onChange={(event) => setFolder(event.target.value)}
-                        />
-                        {isTauri() && (
-                            <Button variant="secondary" onClick={() => void browse()}>
-                                Browse
-                            </Button>
+                <Form>
+                    <TextField label="Name" autoFocus required value={name} onChange={(event) => setName(event.target.value)} />
+                    <FormRow label="Folder">
+                        <div className="flex items-center gap-[var(--aspis-space-2)]">
+                            <TextField
+                                label="Folder"
+                                hideLabel
+                                className="flex-1"
+                                required
+                                placeholder={"C:\\repos"}
+                                aria-describedby={hint ? hintId : undefined}
+                                value={folder}
+                                onChange={(event) => setFolder(event.target.value)}
+                            />
+                            {isTauri() && <IconButton icon="folder" label="Browse" onClick={() => void browse()} />}
+                        </div>
+                        {hint && (
+                            <p id={hintId} className="aspis-field__hint m-0">
+                                {hint}
+                            </p>
                         )}
-                    </div>
-                    {hint && (
-                        <p id={hintId} className="aspis-field__hint">
-                            {hint}
-                        </p>
-                    )}
-                </div>
+                    </FormRow>
+                    <FormRow label="Max running">
+                        <div className="flex items-center gap-[var(--aspis-space-3)]">
+                            <TextField label="Max running on this board" hideLabel className="flex-none" type="number" min={1} max={10} value={mine} onChange={(event) => setMine(event.target.value)} />
+                            <span className="aspis-field__hint mr-[var(--aspis-space-3)] whitespace-nowrap">This board</span>
+                            <TextField label="Max running on all boards" hideLabel className="flex-none" type="number" min={1} max={10} value={all} onChange={(event) => setAll(event.target.value)} />
+                            <span className="aspis-field__hint whitespace-nowrap">All boards</span>
+                        </div>
+                    </FormRow>
+                    <FormRow label="Runners">
+                        <RunnerHeads />
+                    </FormRow>
+                    <FormRow label="Implementer">
+                        <RunnerFields label="Implementer" runner={runners.implementer} disabled={false} onCommit={(implementer) => setRunners({ ...runners, implementer })} />
+                    </FormRow>
+                    <FormRow label="Auditor">
+                        <RunnerFields label="Auditor" runner={runners.auditor} disabled={false} onCommit={(auditor) => setRunners({ ...runners, auditor })} />
+                    </FormRow>
+                </Form>
                 <button type="submit" hidden />
             </form>
         </Dialog>

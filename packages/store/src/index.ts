@@ -28,6 +28,23 @@ function boards(db: Database) {
     }
 }
 
+/*
+ * Boards gain a cap on how many of their cards run at once and the runners their new cards start with. Each board
+ * starts from the runners of its newest card, which is what new cards inherited until now.
+ */
+function boardSettings(db: Database) {
+    db.exec(
+        `ALTER TABLE boards ADD COLUMN max_running INTEGER NOT NULL DEFAULT 1;
+         ALTER TABLE boards ADD COLUMN implementer TEXT NOT NULL DEFAULT '{"harness":null,"model":null,"effort":null}';
+         ALTER TABLE boards ADD COLUMN auditor TEXT NOT NULL DEFAULT '{"harness":null,"model":null,"effort":null}';`,
+    );
+    db.exec(
+        `UPDATE boards SET
+             implementer = coalesce((SELECT implementer FROM cards WHERE board_id = boards.id ORDER BY id DESC LIMIT 1), implementer),
+             auditor = coalesce((SELECT auditor FROM cards WHERE board_id = boards.id ORDER BY id DESC LIMIT 1), auditor)`,
+    );
+}
+
 export const migrations: (string | ((db: Database) => void))[] = [
     `CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
      CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL);
@@ -100,6 +117,7 @@ export const migrations: (string | ((db: Database) => void))[] = [
     `ALTER TABLE runs ADD COLUMN session_id TEXT;
      ALTER TABLE cards ADD COLUMN wake_at INTEGER;`,
     boards,
+    boardSettings,
 ];
 
 export const aspisHome = () => process.env.ASPIS_HOME ?? join(homedir(), ".dyarchia-aspis");

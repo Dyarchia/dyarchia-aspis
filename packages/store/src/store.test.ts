@@ -19,11 +19,11 @@ afterEach(() => {
 test("creates the database in WAL mode and migrates once", () => {
     const path = tempDb();
     const store = new Store(path);
-    expect(store.schemaVersion).toBe(6);
+    expect(store.schemaVersion).toBe(7);
     expect(store.db.query<{ journal_mode: string }, []>("PRAGMA journal_mode").get()!.journal_mode).toBe("wal");
     store.close();
     const reopened = new Store(path);
-    expect(reopened.schemaVersion).toBe(6);
+    expect(reopened.schemaVersion).toBe(7);
     reopened.close();
 });
 
@@ -50,6 +50,29 @@ test("cards written before boards get one board per folder, and the folderless o
     ]);
     const boardOf = (title: string) => kanban.boards().find((board) => board.id === store.db.query<{ board_id: number }, [string]>("SELECT board_id FROM cards WHERE title = ?").get(title)!.board_id)!.name;
     expect(["One", "Two", "Three", "Four"].map(boardOf)).toEqual(["crm", "crm", "site", "Unsorted"]);
+    store.close();
+});
+
+test("each board starts from the runners of its newest card and runs one card at a time", () => {
+    const path = tempDb();
+    const legacy = new Database(path, { create: true, strict: true });
+    for (const [version, step] of migrations.slice(0, 6).entries()) {
+        if (typeof step === "string") legacy.exec(step);
+        else step(legacy);
+        legacy.exec(`PRAGMA user_version = ${version + 1}`);
+    }
+    const old = { harness: "claude-code", model: "claude-sonnet-5-5", effort: null };
+    const latest = { harness: "claude-code", model: "claude-opus-5-5", effort: "high" };
+    legacy.query("INSERT INTO boards (name, folder, created_at) VALUES ('crm', 'C:/repos/crm', 1), ('empty', 'C:/repos/empty', 1)").run();
+    const insert = legacy.query("INSERT INTO cards (board_id, title, phase, implementer, auditor, created_at, updated_at) VALUES (1, ?, 'triage', ?, ?, 1, 1)");
+    insert.run("Old", JSON.stringify(old), JSON.stringify(old));
+    insert.run("Latest", JSON.stringify(latest), JSON.stringify(old));
+    legacy.close();
+
+    const store = new Store(path);
+    const [crm, empty] = new Kanban(store).boards();
+    expect(crm).toMatchObject({ maxRunning: 1, runners: { implementer: latest, auditor: old } });
+    expect(empty!.runners.implementer).toEqual({ harness: null, model: null, effort: null });
     store.close();
 });
 

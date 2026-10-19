@@ -1,4 +1,4 @@
-import type { Card, Run, RunStatus } from "@dyarchia/core";
+import { type Card, type Run, type RunStatus, readSettings } from "@dyarchia/core";
 import { Kanban, KanbanError, Runs, type Store } from "@dyarchia/store";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
@@ -132,7 +132,8 @@ export class Dispatcher {
         const taken = new Set<string>();
         const claims: Claim[] = [];
         for (const card of [...orphans, ...due]) {
-            const ready = await this.check(card, taken, now);
+            const checked = await this.check(card, taken, now);
+            const ready = ("base" in checked && card.phase === "scheduled" && this.capped(card, now)) || checked;
             if ("held" in ready) {
                 this.kanban.hold(card.id, ready.held, now + retryAfterMs);
                 continue;
@@ -143,6 +144,20 @@ export class Dispatcher {
             claims.push(claim);
         }
         return claims;
+    }
+
+    /*
+     * A card waits while its board, or every board together, already runs as many cards as it allows. Claims made
+     * earlier in the same round already started their run, so they are counted too. A card whose run was left
+     * behind is not counted again: it already holds its place.
+     */
+    private capped(card: Card, now: number): { held: string } | undefined {
+        const { name, maxRunning } = this.kanban.board(card.board);
+        const all = readSettings((key) => this.options.store.getSetting(key)).maxRunning;
+        const cards = (count: number) => `${count} card${count > 1 ? "s" : ""}`;
+        if (this.runs.running(card.board, now) >= maxRunning) return { held: `${name} already runs ${cards(maxRunning)} at once` };
+        if (this.runs.running(undefined, now) >= all) return { held: `All boards already run ${cards(all)} at once` };
+        return undefined;
     }
 
     private async check(card: Card, taken: Set<string>, now: number): Promise<{ base: string } | { held: string }> {

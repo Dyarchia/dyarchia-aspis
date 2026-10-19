@@ -1,4 +1,4 @@
-import { type Health, type ServerEvent, Settings, Theme, defaultSettings } from "@dyarchia/core";
+import { type Health, type ServerEvent, Settings, readSettings } from "@dyarchia/core";
 import { Desktop } from "@dyarchia/runner";
 import { Kanban, KanbanError, Runs, type Store } from "@dyarchia/store";
 import { Hono } from "hono";
@@ -33,9 +33,7 @@ export function startServer({ store, token, hostname, port, actors }: ServerOpti
     const authorized = (req: Request) =>
         req.headers.get("authorization") === `Bearer ${token}` || new URL(req.url).searchParams.get("token") === token;
     const publish = (event: ServerEvent) => server.publish("events", JSON.stringify(event));
-    const readSettings = (): Settings => ({
-        theme: Theme.catch(defaultSettings.theme).parse(store.getSetting("theme")),
-    });
+    const settings = () => readSettings((key) => store.getSetting(key));
     /*
      * Every change to the board, made here or by any other process, may move a Scheduled card's time or leave work
      * due now, so Task Scheduler is brought in line with the board shortly after things settle.
@@ -72,14 +70,15 @@ export function startServer({ store, token, hostname, port, actors }: ServerOpti
                 lastDispatch: Number(store.getMeta("dispatch.last")) || null,
             }),
         )
-        .get("/settings", (c) => c.json(readSettings()))
+        .get("/settings", (c) => c.json(settings()))
         .put("/settings", async (c) => {
             const patch = Settings.partial().safeParse(await c.req.json().catch(() => undefined));
             if (!patch.success) return c.json({ error: "invalid settings" }, 400);
             if (patch.data.theme) store.setSetting("theme", patch.data.theme);
-            const settings = readSettings();
-            publish({ type: "settings", settings });
-            return c.json(settings);
+            if (patch.data.maxRunning) store.setSetting("maxRunning", String(patch.data.maxRunning));
+            const next = settings();
+            publish({ type: "settings", settings: next });
+            return c.json(next);
         })
         .route("/boards", boardRoutes(kanban, changed))
         .route("/cards", cardRoutes(kanban, changed))
@@ -107,7 +106,7 @@ export function startServer({ store, token, hostname, port, actors }: ServerOpti
         websocket: {
             open(ws) {
                 ws.subscribe("events");
-                ws.send(JSON.stringify({ type: "hello", dataVersion: store.dataVersion, settings: readSettings() } satisfies ServerEvent));
+                ws.send(JSON.stringify({ type: "hello", dataVersion: store.dataVersion, settings: settings() } satisfies ServerEvent));
             },
             message() {},
         },
