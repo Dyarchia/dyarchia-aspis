@@ -1,7 +1,7 @@
-import { runLines } from "@dyarchia/core";
+import { runLines, worktreePath } from "@dyarchia/core";
 import { Store } from "@dyarchia/store";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Dispatcher } from "./dispatch.ts";
 import { git } from "./git.ts";
@@ -69,16 +69,25 @@ describe("the scheduled route", () => {
         expect(lines).toContainEqual({ kind: "tool", text: "Write note.md" });
     });
 
-    test("a card waits with its reason while the repository is not ready", async () => {
-        const id = scheduled("Dirty", "Anything");
+    test("a card runs in its own worktree whatever the checkout holds, and leaves the checkout as it was", async () => {
         writeFileSync(join(repo, "scratch.txt"), "work in progress");
-        expect(await dispatcher.dispatch()).toEqual([]);
-        expect(kanban().get(id)).toMatchObject({ phase: "scheduled", held: "repo has uncommitted changes" });
-        expect(kanban().get(id).wakeAt! - Date.now()).toBeGreaterThan(14 * 60_000);
-        rmSync(join(repo, "scratch.txt"));
         await git(repo, "switch", "-q", "-c", "other");
-        await dispatcher.dispatch();
-        expect(kanban().get(id).held).toBe("repo is on other, not develop");
+        const id = scheduled("Beside your work", "Anything");
+        expect(await dispatcher.dispatch()).toEqual([id]);
+        expect(kanban().get(id).phase).toBe("archived");
+        expect((await git(repo, "branch", "--show-current")).out).toBe("other");
+        expect((await git(repo, "status", "--porcelain")).out).toBe("?? scratch.txt");
+        expect((await git(worktreePath(repo, id), "log", "-1", "--format=%s")).out).toBe(`card #${id}: Beside your work`);
+        expect((await git(repo, "log", "-1", "--format=%s")).out).toBe("init");
+    });
+
+    test("a card waits with its reason while its folder is no repository or its branch is checked out elsewhere", async () => {
+        const id = scheduled("Busy branch", "Anything");
+        const branch = `feature/develop/card-${id}-busy-branch`;
+        await git(repo, "switch", "-q", "-c", branch);
+        expect(await dispatcher.dispatch()).toEqual([]);
+        expect(kanban().get(id).held).toContain(`${branch} is checked out in`);
+        expect(kanban().get(id).wakeAt! - Date.now()).toBeGreaterThan(14 * 60_000);
         await git(repo, "switch", "-q", "develop");
         expect(await dispatcher.dispatch()).toEqual([id]);
         expect(kanban().get(id)).toMatchObject({ phase: "archived", held: null, wakeAt: null });
@@ -116,14 +125,25 @@ describe("the scheduled route", () => {
         expect(kanban().get(later)).toMatchObject({ phase: "scheduled", held: null });
     });
 
-    test("one card per repository at a time, the next waits for it", async () => {
+    test("cards of one repository run at the same time, each in its worktree", async () => {
         const first = scheduled("First", "Anything", { priority: 2 });
         const second = scheduled("Second", "Anything");
         const claims = await dispatcher.claim();
-        expect(claims.map((claim) => claim.card.id)).toEqual([first]);
-        expect(kanban().get(second).held).toBe("Another card is running in repo");
+        expect(claims.map((claim) => claim.card.id)).toEqual([first, second]);
         await Promise.all(claims.map((claim) => dispatcher.execute(claim)));
-        expect(await dispatcher.dispatch()).toEqual([second]);
+        expect([first, second].map((id) => kanban().get(id).phase)).toEqual(["archived", "archived"]);
+        expect(new Set(claims.map((claim) => claim.run.id)).size).toBe(2);
+    });
+
+    test("worktrees whose branch landed go away with it; the rest stay", async () => {
+        const landed = scheduled("Landed", "Anything");
+        const pending = scheduled("Pending", "Anything");
+        await dispatcher.dispatch();
+        await git(repo, "merge", "-q", "--no-edit", `feature/develop/card-${landed}-landed`);
+        await dispatcher.dispatch();
+        expect(existsSync(worktreePath(repo, landed))).toBe(false);
+        expect((await git(repo, "branch", "--list", `feature/develop/card-${landed}-landed`)).out).toBe("");
+        expect(existsSync(worktreePath(repo, pending))).toBe(true);
     });
 
     test("the agent blocks with its question and resumes its session once you answer", async () => {
@@ -175,8 +195,7 @@ describe("the scheduled route", () => {
     test("a run whose runner died is failed and picked up again on the branch it left", async () => {
         const id = scheduled("Crashed", "Anything", { retries: 1 });
         const [claim] = await dispatcher.claim();
-        await git(repo, "switch", "-q", "-c", claim!.branch);
-        writeFileSync(join(repo, "half.md"), "half done");
+        writeFileSync(join(worktreePath(repo, id), "half.md"), "half done");
         store.db.query("UPDATE runs SET heartbeat_at = 0 WHERE id = ?").run(claim!.run.id);
         kanban().setSession(id, crypto.randomUUID());
         expect(await dispatcher.dispatch()).toEqual([id]);

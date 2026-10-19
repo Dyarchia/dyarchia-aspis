@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
-import { basename } from "node:path";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
+import { basename, isAbsolute, join, relative, resolve } from "node:path";
 
 export interface GitResult {
     ok: boolean;
@@ -56,6 +56,109 @@ export async function readiness(folder: string, base: string | null, own?: strin
 
 export async function checkout(folder: string, branch: string, base: string): Promise<GitResult> {
     return (await hasBranch(folder, branch)) ? git(folder, "switch", branch) : git(folder, "switch", "-c", branch, base);
+}
+
+const ignored = ".claude/worktrees/";
+const marker = "# dyarchia kanban worktrees, written by the board that points here";
+
+/*
+ * Paths are compared as the file system spells them: git lists long names, while a temp folder may arrive in its
+ * short 8.3 form on Windows.
+ */
+const real = (path: string) => {
+    try {
+        return realpathSync.native(path);
+    } catch {
+        return resolve(path);
+    }
+};
+const same = (left: string, right: string) => {
+    const clean = (path: string) => real(path).replace(/[\\/]+$/, "");
+    return process.platform === "win32" ? clean(left).toLowerCase() === clean(right).toLowerCase() : clean(left) === clean(right);
+};
+
+async function worktrees(folder: string): Promise<{ path: string; branch?: string; locked: boolean }[]> {
+    const listed = await git(folder, "worktree", "list", "--porcelain");
+    if (!listed.ok) return [];
+    return listed.out
+        .split(/\r?\n\r?\n/)
+        .map((block) => {
+            const lines = block.split(/\r?\n/);
+            const value = (key: string) => lines.find((line) => line === key || line.startsWith(`${key} `))?.slice(key.length + 1);
+            return { path: value("worktree") ?? "", branch: value("branch")?.replace(/^refs\/heads\//, ""), locked: value("locked") !== undefined };
+        })
+        .filter((tree) => tree.path);
+}
+
+/*
+ * Keeps the runs' worktrees out of the project's own git status the way Desktop does: one line in the repository's
+ * info/exclude, which is never committed, written once and recognised by Desktop and Aspis alike.
+ */
+async function exclude(folder: string): Promise<void> {
+    if ((await git(folder, "check-ignore", "-q", ignored)).ok) return;
+    const common = await git(folder, "rev-parse", "--git-common-dir");
+    if (!common.ok) return;
+    const info = join(isAbsolute(common.out) ? common.out : resolve(folder, common.out), "info");
+    mkdirSync(info, { recursive: true });
+    const path = join(info, "exclude");
+    const held = existsSync(path) ? readFileSync(path, "utf8") : "";
+    if (held.split(/\r?\n/).some((line) => line.trim() === ignored)) return;
+    appendFileSync(path, `${held && !held.endsWith("\n") ? "\n" : ""}${marker}\n${ignored}\n`);
+}
+
+/*
+ * Gives a Scheduled run its worktree: the one it left behind when it comes back to the card, else a new one on the
+ * card's branch, made from the base the first time. The project's own checkout is never switched or checked, so
+ * whatever you have open there stays as it is. A branch that is checked out somewhere else holds the card.
+ */
+export async function prepare(folder: string, base: string | null, branch: string, path: string): Promise<{ base: string } | { held: string }> {
+    if (!existsSync(folder)) return { held: `The folder ${folder} does not exist` };
+    const name = basename(folder);
+    if (!(await git(folder, "rev-parse", "--show-toplevel")).ok) return { held: `${name} is not a git repository` };
+    const resolved = await resolveBase(folder, base);
+    if ("held" in resolved) return resolved;
+    await exclude(folder);
+    await git(folder, "worktree", "prune");
+    const trees = await worktrees(folder);
+    if (trees.some((tree) => same(tree.path, path))) return resolved;
+    const elsewhere = trees.find((tree) => tree.branch === branch);
+    if (elsewhere) return { held: `${branch} is checked out in ${elsewhere.path}; switch that checkout to another branch` };
+    const added = (await hasBranch(folder, branch)) ? await git(folder, "worktree", "add", path, branch) : await git(folder, "worktree", "add", "-b", branch, path, resolved.base);
+    return added.ok ? resolved : { held: `Could not make the worktree for ${branch}: ${added.err || added.out}` };
+}
+
+/*
+ * Takes a card's worktree away while keeping its branch, so the branch can be checked out elsewhere. A worktree
+ * holding changes nobody committed is never removed.
+ */
+export async function release(folder: string, path: string): Promise<{ error?: string }> {
+    if (!existsSync(path)) return {};
+    if ((await git(path, "status", "--porcelain")).out) return { error: `${path} holds changes nobody committed` };
+    const removed = await git(folder, "worktree", "remove", path);
+    await git(folder, "worktree", "prune");
+    return removed.ok ? {} : { error: removed.err || `git would not remove ${path}` };
+}
+
+/*
+ * Tidies a repository with Desktop's rules: a card worktree whose branch has landed in the checkout's HEAD, with
+ * nothing uncommitted and no run alive in it, goes away with its branch. Anything else stays where it is.
+ */
+export async function sweep(folder: string, busy: (path: string) => boolean): Promise<string[]> {
+    if (!existsSync(folder)) return [];
+    const root = join(folder, ".claude", "worktrees");
+    const swept: string[] = [];
+    for (const tree of await worktrees(folder)) {
+        const step = relative(real(root), real(tree.path));
+        if (!step || step.startsWith("..") || isAbsolute(step) || !tree.branch || busy(tree.path)) continue;
+        if (!(await git(folder, "merge-base", "--is-ancestor", tree.branch, "HEAD")).ok) continue;
+        if ((await git(tree.path, "status", "--porcelain")).out) continue;
+        if (tree.locked) await git(folder, "worktree", "unlock", tree.path);
+        if (!(await git(folder, "worktree", "remove", tree.path)).ok) continue;
+        await git(folder, "branch", "-d", tree.branch);
+        swept.push(tree.path);
+    }
+    await git(folder, "worktree", "prune");
+    return swept;
 }
 
 /* Commits whatever the run left on its branch. Hooks run as usual; a failing hook is reported, never skipped. */
