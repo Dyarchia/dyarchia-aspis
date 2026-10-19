@@ -20,6 +20,8 @@ const paths = {
     close: "M4 4l8 8M12 4l-8 8",
     arrow: "M3 8h10M9 4l4 4-4 4",
     external: "M6 3.5H3.5v9h9V10M9 3h4v4M13 3L7.5 8.5",
+    folder: "M2.5 3.5H6L7.5 5h6v7.5h-11z",
+    archive: "M2.5 3.5h11V6h-11zM3.5 6v6.5h9V6M6.5 8.5h3",
 } as const;
 
 export type IconName = keyof typeof paths;

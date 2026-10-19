@@ -488,6 +488,16 @@ a {
     resize: vertical;
 }
 
+/*
+ * A one-row area starts as tall as any other field, so a button beside it lines up with it, and grows with what is
+ * written instead of being dragged.
+ */
+.aspis-field__control[data-kind="area"] .aspis-field__input[rows="1"] {
+    min-height: var(--aspis-control-h);
+    field-sizing: content;
+    resize: none;
+}
+
 .aspis-field__chevron {
     position: absolute;
     right: 10px;
@@ -1286,8 +1296,17 @@ a {
     min-height: var(--aspis-control-h);
 }
 
-.aspis-form > .aspis-field > .aspis-field__control:has(> input[type="number"]) {
+.aspis-form .aspis-field__control:has(> input[type="number"]) {
     width: 96px;
+}
+
+/*
+ * An icon button that leads a value gives up its own padding on the left, so its glyph starts on the line where
+ * the text of every other value starts.
+ */
+.aspis-form__value > .aspis-icon-button:first-child,
+.aspis-form__value > :first-child > .aspis-icon-button:first-child {
+    margin-left: calc((16px - var(--aspis-row-h)) / 2);
 }
 
 .aspis-progress {
@@ -1555,6 +1574,10 @@ a {
     animation: aspis-rise var(--aspis-dur-base) var(--aspis-ease-out);
 }
 
+.aspis-dialog[data-placement="center"] .aspis-dialog__box:has(.aspis-form) {
+    width: min(calc(var(--aspis-label-w) + 480px + 3 * var(--aspis-space-5)), 92vw);
+}
+
 .aspis-dialog__head {
     display: flex;
     align-items: flex-start;
@@ -1667,12 +1690,6 @@ a {
 .aspis-thread__entry[data-kind="note"] .aspis-thread__text,
 .aspis-thread__entry[data-kind="verdict"] .aspis-thread__text {
     color: var(--aspis-ink-1);
-}
-
-.aspis-thread__composer {
-    display: flex;
-    align-items: flex-end;
-    gap: var(--aspis-space-3);
 }
 
 .aspis-menu {

@@ -50,11 +50,17 @@ describe("boards", () => {
 });
 
 describe("kanban service", () => {
-    test("a new card starts in triage, works in its board's folder and inherits the runners of the board's last card", () => {
+    test("a new card starts in triage, works in its board's folder and takes the board's runners", () => {
         const first = prepared();
         expect(first.phase).toBe("triage");
+        expect(kanban.create("Before the board says", board, now).implementer).toEqual({ harness: null, model: null, effort: null });
+        kanban.editBoard(board, { runners: { implementer: runner, auditor: { ...runner, effort: null } }, maxRunning: 3 });
+        expect(kanban.board(board).maxRunning).toBe(3);
         const second = kanban.create("Write callout tests", board, now);
         expect(second.implementer).toEqual(runner);
+        expect(second.auditor).toEqual({ ...runner, effort: null });
+        kanban.editBoard(board, { runners: { implementer: { ...runner, model: "claude-sonnet-5-5" }, auditor: runner } });
+        expect(kanban.get(second.id).implementer).toEqual(runner);
         expect(second.folder).toBe(join(dir, "repo"));
         expect(second.board).toBe(board);
         expect(second.brief).toBe("");

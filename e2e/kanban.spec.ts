@@ -94,14 +94,29 @@ test("a board is a project: made from +, remembered, archived; a card is born in
     await expect(title).toHaveCount(0);
     await expect(triage.getByRole("button")).toHaveCount(5);
 
-    await page.keyboard.press("Escape");
+    await page.getByRole("searchbox", { name: "Search cards" }).blur();
     await page.keyboard.press("h");
     await page.keyboard.press("k");
     await expect(picker.locator("option:checked")).toHaveText("site");
     await expect(picker.locator("option")).toHaveText(["ivirma-crm", "site"]);
 
     await page.getByRole("button", { name: "Board settings" }).click();
-    await page.getByRole("dialog", { name: "site" }).getByRole("button", { name: "Archive" }).click();
+    const settings = page.getByRole("dialog", { name: "Board settings" });
+    await settings.getByLabel("Max running on all boards").fill("3");
+    await settings.getByLabel("Implementer harness").selectOption("claude-code");
+    await settings.getByLabel("Implementer model").fill("claude-opus-5-5");
+    await settings.getByRole("button", { name: "Save" }).click();
+    await expect(settings).toHaveCount(0);
+    await triage.getByRole("button", { name: "New card" }).click();
+    await title.fill("Born with the board's runners");
+    await page.keyboard.press("Enter");
+    await triage.getByText("Born with the board's runners").click();
+    await expect(page.getByLabel("Implementer model")).toHaveValue("claude-opus-5-5");
+    await page.keyboard.press("Escape");
+
+    await page.getByRole("button", { name: "Board settings" }).click();
+    await expect(settings.getByLabel("Max running on all boards")).toHaveValue("3");
+    await settings.getByRole("button", { name: "Archive board" }).click();
     await expect(picker.locator("option:checked")).toHaveText("ivirma-crm");
     await expect(picker.locator('optgroup[label="Archived"] option')).toHaveText(["site"]);
 });
@@ -181,6 +196,10 @@ test("a ready card goes all the way to archived through the panel", async ({ pag
 
     const panel = page.locator(".aspis-inspector");
     await panel.getByLabel("Brief").fill("Walk the whole ready route");
+    for (const role of ["Implementer", "Auditor"]) {
+        await panel.getByLabel(`${role} harness`).selectOption("claude-code");
+        await panel.getByLabel(`${role} model`).fill("claude-opus-5-5");
+    }
     await panel.getByLabel("Folder").click();
     const phase = panel.getByRole("combobox", { name: "Phase" });
     await expect(phase.locator('option[value="ready"]')).toBeEnabled();

@@ -52,11 +52,13 @@ export function Stage({ children }: { children: ReactNode }) {
 /*
  * A panel that inspects one thing without taking the window: not modal, so the pane beside it still works. Focus
  * starts on the panel when it opens and goes back to whatever opened it when it closes; Escape closes it, and the
- * single-key shortcuts pause while focus is inside, as they do in a dialog.
+ * single-key shortcuts pause while focus is inside, as they do in a dialog. Tools of the inspected thing (delete)
+ * sit before the panel's own expand and close, on the title's line.
  */
 export function Inspector({
     label,
     title,
+    tools,
     full,
     onFull,
     onClose,
@@ -64,6 +66,7 @@ export function Inspector({
 }: {
     label: string;
     title: ReactNode;
+    tools?: ReactNode;
     full: boolean;
     onFull: (full: boolean) => void;
     onClose: () => void;
@@ -89,6 +92,7 @@ export function Inspector({
             <header className="aspis-inspector__head">
                 <div className="aspis-inspector__title">{title}</div>
                 <div className="aspis-inspector__tools">
+                    {tools}
                     <IconButton icon={full ? "collapse" : "expand"} label={full ? "Half width" : "Full width"} onClick={() => onFull(!full)} />
                     <IconButton icon="close" label="Close" onClick={onClose} />
                 </div>

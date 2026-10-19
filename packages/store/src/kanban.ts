@@ -35,6 +35,9 @@ interface BoardRow {
     name: string;
     folder: string;
     archived: number;
+    max_running: number;
+    implementer: string;
+    auditor: string;
     created_at: number;
 }
 
@@ -89,10 +92,11 @@ const columns: Record<string, string> = {
     wakeAt: "wake_at",
 };
 
+const boardRunner = (text: string) => Runner.catch(emptyRunner).parse(JSON.parse(text));
 const json = new Set(["implementer", "auditor", "auditorVerdict", "humanVerdict"]);
 const verdictOf = (value: string | null) => (value === null ? null : Verdict.parse(JSON.parse(value)));
 const modelPhases: readonly Phase[] = ["ready", "running", "blocked", "review"];
-const inherited = ["baseBranch", "permission", "retries", "implementer", "auditor"] as const;
+const inherited = ["baseBranch", "permission", "retries"] as const;
 
 export class Kanban {
     readonly filesDir: string;
@@ -109,7 +113,15 @@ export class Kanban {
         return this.db
             .query<BoardRow, []>("SELECT * FROM boards ORDER BY name COLLATE NOCASE, id")
             .all()
-            .map((row) => ({ id: row.id, name: row.name, folder: row.folder, archived: row.archived === 1, createdAt: row.created_at }));
+            .map((row) => ({
+                id: row.id,
+                name: row.name,
+                folder: row.folder,
+                archived: row.archived === 1,
+                maxRunning: row.max_running,
+                runners: { implementer: boardRunner(row.implementer), auditor: boardRunner(row.auditor) },
+                createdAt: row.created_at,
+            }));
     }
 
     board(id: number): Board {
@@ -135,9 +147,11 @@ export class Kanban {
     }
 
     createBoard(draft: BoardDraft, now = Date.now()): Board {
-        const { name, folder } = BoardDraft.parse(draft);
+        const { name, folder, maxRunning = 1, runners = { implementer: emptyRunner, auditor: emptyRunner } } = BoardDraft.parse(draft);
         const path = this.projectFolder(this.projectPath(name, folder).folder);
-        const id = this.db.query("INSERT INTO boards (name, folder, created_at) VALUES (?, ?, ?)").run(name, path, now).lastInsertRowid;
+        const id = this.db
+            .query("INSERT INTO boards (name, folder, max_running, implementer, auditor, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+            .run(name, path, maxRunning, JSON.stringify(runners.implementer), JSON.stringify(runners.auditor), now).lastInsertRowid;
         return this.board(Number(id));
     }
 
@@ -147,10 +161,13 @@ export class Kanban {
      */
     editBoard(id: number, edit: BoardEdit, now = Date.now()): Board {
         const board = this.board(id);
-        const { name, folder, archived } = BoardEdit.parse(edit);
+        const { name, folder, archived, maxRunning, runners } = BoardEdit.parse(edit);
         const moved = folder === undefined || folder === board.folder ? undefined : this.projectFolder(this.projectPath(name ?? board.name, folder).folder, id);
         this.db.transaction(() => {
-            this.db.query("UPDATE boards SET name = ?, folder = ?, archived = ? WHERE id = ?").run(name ?? board.name, moved ?? board.folder, (archived ?? board.archived) ? 1 : 0, id);
+            const next = runners ?? board.runners;
+            this.db
+                .query("UPDATE boards SET name = ?, folder = ?, archived = ?, max_running = ?, implementer = ?, auditor = ? WHERE id = ?")
+                .run(name ?? board.name, moved ?? board.folder, (archived ?? board.archived) ? 1 : 0, maxRunning ?? board.maxRunning, JSON.stringify(next.implementer), JSON.stringify(next.auditor), id);
             if (moved !== undefined && moved !== board.folder) {
                 this.db.query("UPDATE cards SET folder = ?, updated_at = ? WHERE board_id = ? AND phase IN ('triage', 'scheduled', 'ready')").run(moved, now, id);
             }
@@ -213,7 +230,7 @@ export class Kanban {
     create(title: string, board: number, now = Date.now()): Card {
         const name = title.trim();
         if (!name) throw new KanbanError("A card needs a title", 400);
-        const { folder, archived } = this.board(board);
+        const { folder, archived, runners } = this.board(board);
         if (archived) throw new KanbanError("The board is archived", 409);
         const last = this.db.query<CardRow, [number]>("SELECT * FROM cards WHERE board_id = ? ORDER BY id DESC LIMIT 1").get(board);
         const base = last ? this.hydrate(last) : undefined;
@@ -230,8 +247,8 @@ export class Kanban {
                     defaults.baseBranch ?? null,
                     defaults.permission ?? "auto",
                     defaults.retries ?? 2,
-                    JSON.stringify(defaults.implementer ?? emptyRunner),
-                    JSON.stringify(defaults.auditor ?? emptyRunner),
+                    JSON.stringify(runners.implementer),
+                    JSON.stringify(runners.auditor),
                     now,
                     now,
                 );

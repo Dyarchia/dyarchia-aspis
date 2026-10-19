@@ -1,4 +1,4 @@
-import { Button, Chip, CodeBlock, Form, FormRow, IconButton, Inspector, Mark, Select, TextArea, TextField, Thread, type ThreadEntry } from "@dyarchia/aspis";
+import { Button, Chip, CodeBlock, Form, FormRow, IconButton, Inspector, Mark, Select, TextArea, Thread, type ThreadEntry } from "@dyarchia/aspis";
 import {
     type Actor,
     type Card,
@@ -7,11 +7,8 @@ import {
     type CardEvent,
     Permission,
     Recurrence,
-    type Runner,
     type Target,
     canEdit,
-    efforts,
-    harnesses,
     phaseLabels,
     pickupCommands,
     resumeCommands,
@@ -20,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ServerState } from "../../use-server.ts";
 import type { PromptRequest } from "./Prompt.tsx";
 import { RunHistory } from "./Runs.tsx";
+import { LiveField, RunnerFields, RunnerHeads } from "./fields.tsx";
 import type { BoardApi } from "./use-board.ts";
 
 const actorLabels: Record<Actor, string> = { human: "You", agent: "Agent", system: "System", auditor: "Auditor" };
@@ -36,73 +34,6 @@ function describe(event: CardEvent): string {
     if (event.kind === "created") return event.text ?? `Created in ${phaseLabels[event.to ?? "triage"]}`;
     if (event.kind === "edited") return `Edited ${event.text}`;
     return event.text ?? "";
-}
-
-function LiveField({
-    label,
-    value,
-    onCommit,
-    disabled,
-    type = "text",
-    multiline,
-    placeholder,
-    hideLabel,
-}: {
-    label: string;
-    value: string;
-    onCommit: (value: string) => void;
-    disabled: boolean;
-    type?: string;
-    multiline?: boolean;
-    placeholder?: string;
-    hideLabel?: boolean;
-}) {
-    const [local, setLocal] = useState(value);
-    const editing = useRef(false);
-    useEffect(() => {
-        if (!editing.current) setLocal(value);
-    }, [value]);
-    const shared = {
-        label,
-        hideLabel,
-        value: local,
-        disabled,
-        placeholder,
-        onFocus: () => (editing.current = true),
-        onBlur: () => {
-            editing.current = false;
-            if (local !== value) onCommit(local);
-        },
-    };
-    return multiline ? (
-        <TextArea {...shared} onChange={(event) => setLocal(event.target.value)} />
-    ) : (
-        <TextField {...shared} type={type} onChange={(event) => setLocal(event.target.value)} />
-    );
-}
-
-function RunnerFields({ label, runner, disabled, onCommit }: { label: string; runner: Runner; disabled: boolean; onCommit: (runner: Runner) => void }) {
-    return (
-        <div className="grid grid-cols-3 gap-[var(--aspis-space-4)]">
-            <Select
-                label={`${label} harness`}
-                hideLabel
-                value={runner.harness ?? ""}
-                disabled={disabled}
-                onChange={(event) => onCommit({ ...runner, harness: event.target.value || null })}
-                options={[{ value: "", label: "Not set" }, ...harnesses.map((harness) => ({ value: harness, label: harness }))]}
-            />
-            <LiveField label={`${label} model`} hideLabel value={runner.model ?? ""} disabled={disabled} onCommit={(model) => onCommit({ ...runner, model: model.trim() || null })} />
-            <Select
-                label={`${label} effort`}
-                hideLabel
-                value={runner.effort ?? ""}
-                disabled={disabled}
-                onChange={(event) => onCommit({ ...runner, effort: event.target.value || null })}
-                options={[{ value: "", label: "Default" }, ...efforts.map((effort) => ({ value: effort, label: effort }))]}
-            />
-        </div>
-    );
 }
 
 export function CardPanel({
@@ -211,8 +142,23 @@ export function CardPanel({
         </div>
     );
 
+    const tools =
+        card.phase === "triage" &&
+        (confirmDelete ? (
+            <>
+                <Button variant="quiet" autoFocus onClick={() => setConfirmDelete(false)}>
+                    Keep it
+                </Button>
+                <Button variant="quiet" onClick={() => void board.remove(card.id).then(onClose)}>
+                    Delete for good
+                </Button>
+            </>
+        ) : (
+            <IconButton icon="trash" label="Delete card" onClick={() => setConfirmDelete(true)} />
+        ));
+
     return (
-        <Inspector label={`#${card.id} ${card.title}`} title={head} full={full} onFull={onFull} onClose={onClose}>
+        <Inspector label={`#${card.id} ${card.title}`} title={head} tools={tools} full={full} onFull={onFull} onClose={onClose}>
             <Form>
                 {card.phase === "review" && (
                     <FormRow label="Checks">
@@ -289,6 +235,18 @@ export function CardPanel({
 
                 {(editable || card.files.length > 0) && (
                     <FormRow label="Files">
+                        <div className="flex flex-wrap items-center gap-[var(--aspis-space-3)]">
+                            {editable && <IconButton icon="clip" label="Attach" onClick={() => upload.current?.click()} />}
+                            {card.files.map((file) => (
+                                <span key={file.id} className="inline-flex items-center gap-[var(--aspis-space-2)]">
+                                    <a className="aspis-field__hint" href={board.fileUrl(card.id, file.id)} download={file.name}>
+                                        {file.name}
+                                    </a>
+                                    <span className="aspis-field__hint">{bytes(file.bytes)}</span>
+                                    {editable && <IconButton icon="close" label={`Remove ${file.name}`} onClick={() => void board.removeFile(card.id, file.id)} />}
+                                </span>
+                            ))}
+                        </div>
                         <input
                             ref={upload}
                             type="file"
@@ -299,18 +257,6 @@ export function CardPanel({
                                 event.target.value = "";
                             }}
                         />
-                        <div className="flex flex-wrap items-center gap-[var(--aspis-space-3)]">
-                            {card.files.map((file) => (
-                                <span key={file.id} className="inline-flex items-center gap-[var(--aspis-space-2)]">
-                                    <a className="aspis-field__hint" href={board.fileUrl(card.id, file.id)} download={file.name}>
-                                        {file.name}
-                                    </a>
-                                    <span className="aspis-field__hint">{bytes(file.bytes)}</span>
-                                    {editable && <IconButton icon="close" label={`Remove ${file.name}`} onClick={() => void board.removeFile(card.id, file.id)} />}
-                                </span>
-                            ))}
-                            {editable && <IconButton icon="clip" label="Attach" onClick={() => upload.current?.click()} />}
-                        </div>
                     </FormRow>
                 )}
 
@@ -335,11 +281,7 @@ export function CardPanel({
                 <LiveField label="Retries on failure" type="number" value={String(card.retries)} disabled={!editable} onCommit={(retries) => edit({ retries: Math.max(0, Math.round(Number(retries) || 0)) })} />
 
                 <FormRow label="Runners">
-                    <div className="grid grid-cols-3 gap-[var(--aspis-space-4)]" aria-hidden="true">
-                        <span className="aspis-field__hint">Harness</span>
-                        <span className="aspis-field__hint">Model</span>
-                        <span className="aspis-field__hint">Effort</span>
-                    </div>
+                    <RunnerHeads />
                 </FormRow>
                 <FormRow label="Implementer">
                     <RunnerFields label="Implementer" runner={card.implementer} disabled={!editable} onCommit={(implementer) => edit({ implementer })} />
@@ -405,45 +347,24 @@ export function CardPanel({
                 )}
 
                 <FormRow label="Thread">
-                    <Thread
-                        entries={entries}
-                        composer={
-                            <>
-                                <div className="flex-1">
-                                    <TextArea label="Note" hideLabel rows={2} value={note} placeholder="Note for the agent" onChange={(event) => setNote(event.target.value)} />
-                                </div>
-                                <Button
-                                    variant="secondary"
-                                    disabled={!note.trim()}
-                                    onClick={async () => {
-                                        if (await board.note(card.id, note)) setNote("");
-                                    }}
-                                >
-                                    Add note
-                                </Button>
-                            </>
-                        }
-                    />
+                    <Thread entries={entries} />
                 </FormRow>
-
-                {card.phase === "triage" && (
-                    <FormRow>
-                        <div className="flex justify-end gap-[var(--aspis-space-2)]">
-                            {confirmDelete ? (
-                                <>
-                                    <Button variant="quiet" autoFocus onClick={() => setConfirmDelete(false)}>
-                                        Keep it
-                                    </Button>
-                                    <Button variant="quiet" onClick={() => void board.remove(card.id).then(onClose)}>
-                                        Delete for good
-                                    </Button>
-                                </>
-                            ) : (
-                                <IconButton icon="trash" label="Delete card" onClick={() => setConfirmDelete(true)} />
-                            )}
+                <FormRow label="Note">
+                    <div className="flex items-start gap-[var(--aspis-space-3)]">
+                        <div className="min-w-0 flex-1">
+                            <TextArea label="Note" hideLabel rows={1} value={note} placeholder="Note for the agent" onChange={(event) => setNote(event.target.value)} />
                         </div>
-                    </FormRow>
-                )}
+                        <Button
+                            variant="secondary"
+                            disabled={!note.trim()}
+                            onClick={async () => {
+                                if (await board.note(card.id, note)) setNote("");
+                            }}
+                        >
+                            Add note
+                        </Button>
+                    </div>
+                </FormRow>
             </Form>
         </Inspector>
     );

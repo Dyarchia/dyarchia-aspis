@@ -1,5 +1,5 @@
 import { applyTheme } from "@dyarchia/aspis";
-import { Health, Settings, Theme } from "@dyarchia/core";
+import { Health, Settings, Theme, defaultSettings } from "@dyarchia/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { paintFrame } from "./frame.ts";
 import { readHint, writeHint } from "./hints.ts";
@@ -13,13 +13,13 @@ export interface ServerState {
     live: boolean;
     dataVersion?: number;
     error?: string;
-    setTheme: (theme: Theme) => Promise<void>;
+    saveSettings: (patch: Partial<Settings>) => Promise<void>;
 }
 
 export function useServer(): ServerState {
     const [conn, setConn] = useState<Connection>();
     const [health, setHealth] = useState<Health>();
-    const [settings, setSettings] = useState<Settings>(() => ({ theme: Theme.catch("io").parse(readHint("theme")) }));
+    const [settings, setSettings] = useState<Settings>(() => ({ ...defaultSettings, theme: Theme.catch(defaultSettings.theme).parse(readHint("theme")) }));
     const [live, setLive] = useState(false);
     const [dataVersion, setDataVersion] = useState<number>();
     const [error, setError] = useState<string>();
@@ -75,16 +75,16 @@ export function useServer(): ServerState {
         writeHint("theme", settings.theme);
     }, [settings.theme]);
 
-    const setTheme = useCallback(
-        async (theme: Theme) => {
-            accept({ ...settings, theme });
+    const saveSettings = useCallback(
+        async (patch: Partial<Settings>) => {
+            accept({ ...settings, ...patch });
             if (!conn) return;
             const at = revision.current;
-            const saved = await request(conn, "/settings", Settings, { method: "PUT", body: JSON.stringify({ theme }) });
+            const saved = await request(conn, "/settings", Settings, { method: "PUT", body: JSON.stringify(patch) });
             if (revision.current === at) accept(saved);
         },
         [conn, settings, accept],
     );
 
-    return { conn, changes, health, settings, live, dataVersion, error, setTheme };
+    return { conn, changes, health, settings, live, dataVersion, error, saveSettings };
 }
