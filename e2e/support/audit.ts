@@ -1,14 +1,44 @@
 import AxeBuilder from "@axe-core/playwright";
-import { type Page, expect } from "@playwright/test";
+import { type APIRequestContext, type Page, expect } from "@playwright/test";
+import { join } from "node:path";
 
 export const api = "http://127.0.0.1:4319";
 export const headers = { authorization: "Bearer dev", "content-type": "application/json" };
 export type ThemeName = "io" | "nyx";
 
+/* The project every e2e card lives on unless a test makes its own, made the first time a spec asks for it. */
+export async function project(request: APIRequestContext): Promise<number> {
+    const boards = (await (await request.get(`${api}/boards`, { headers })).json()) as { id: number; name: string }[];
+    const found = boards.find((board) => board.name === "ivirma-crm");
+    if (found) return found.id;
+    const folder = join(process.env.ASPIS_E2E_HOME!, "repos", "ivirma-crm");
+    const created = await request.post(`${api}/boards`, { headers, data: { name: "ivirma-crm", folder } });
+    expect(created.ok(), await created.text()).toBe(true);
+    return ((await created.json()) as { id: number }).id;
+}
+
 export async function useTheme(page: Page, theme: ThemeName) {
     await page.request.put(`${api}/settings`, { headers, data: { theme } });
     await expect(page.locator(`html[data-theme="${theme}"]`)).toBeAttached();
     await page.evaluate(() => document.fonts.ready);
+}
+
+/*
+ * Only the panes scroll, and only down: no element may scroll sideways, and a dialog never scrolls itself beside its
+ * body. A second scrollbar or a horizontal one is always something leaking out of its box. The board is the one
+ * exception: its columns scroll sideways when the window is too narrow for all of them.
+ */
+export async function scrollsOnlyDown(page: Page) {
+    const leaks = await page.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>("*")].flatMap((element) => {
+            const style = getComputedStyle(element);
+            const scrolls = (axis: string) => ["auto", "scroll"].includes(axis);
+            const sideways = scrolls(style.overflowX) && element.scrollWidth > element.clientWidth && !element.matches(".aspis-board");
+            const dialog = element.matches("dialog") && element.scrollHeight > element.clientHeight;
+            return sideways || dialog ? [`${element.tagName.toLowerCase()}.${[...element.classList].join(".")}`] : [];
+        }),
+    );
+    expect(leaks).toEqual([]);
 }
 
 export const live = (page: Page) => expect(page.locator('.aspis-shell[data-state="live"]')).toBeAttached();

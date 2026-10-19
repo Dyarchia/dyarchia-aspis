@@ -107,7 +107,7 @@ function RunnerFields({ label, runner, disabled, onCommit }: { label: string; ru
 
 function Block({ label, actions, children }: { label?: string; actions?: ReactNode; children: ReactNode }) {
     return (
-        <div className="flex flex-col gap-[var(--aspis-space-4)]">
+        <div className="flex flex-col gap-[var(--aspis-space-3)]">
             {label && <GroupHeader label={label} actions={actions} />}
             {children}
         </div>
@@ -201,14 +201,17 @@ export function CardPanel({
                     <LiveField label="Title" hideLabel value={card.title} disabled={!editable} onCommit={(title) => title.trim() && edit({ title })} />
                 </div>
             }
-            footer={
-                card.phase === "triage" ? (
-                    confirmDelete ? (
+        >
+            <Block
+                label="Move"
+                actions={
+                    card.phase === "triage" &&
+                    (confirmDelete ? (
                         <>
                             <Button variant="quiet" autoFocus onClick={() => setConfirmDelete(false)}>
                                 Keep it
                             </Button>
-                            <Button variant="primary" onClick={() => void board.remove(card.id).then(onClose)}>
+                            <Button variant="quiet" onClick={() => void board.remove(card.id).then(onClose)}>
                                 Delete for good
                             </Button>
                         </>
@@ -216,11 +219,9 @@ export function CardPanel({
                         <Button variant="quiet" onClick={() => setConfirmDelete(true)}>
                             Delete card
                         </Button>
-                    )
-                ) : undefined
-            }
-        >
-            <Block label="Move">
+                    ))
+                }
+            >
                 <div className="flex flex-wrap gap-[var(--aspis-space-3)]">
                     {detail.targets.map((target) => (
                         <Button key={target.to} variant="secondary" disabled={Boolean(target.reason)} onClick={() => onMove(card, target)}>
@@ -368,31 +369,33 @@ export function CardPanel({
                 </div>
             </Block>
 
-            <Block label="Depends on">
-                <div className="flex flex-wrap items-center gap-[var(--aspis-space-3)]">
-                    {card.dependsOn.map((dependency) => {
-                        const other = cards.find((candidate) => candidate.id === dependency);
-                        return (
-                            <span key={dependency} className="inline-flex items-center gap-[var(--aspis-space-2)]">
-                                <Mark ok={other?.phase === "done" || other?.phase === "archived" ? true : null} label={`#${dependency} ${other?.title ?? ""}`} />
-                                {editable && (
-                                    <Button variant="quiet" aria-label={`Remove dependency ${dependency}`} onClick={() => edit({ dependsOn: card.dependsOn.filter((value) => value !== dependency) })}>
-                                        Remove
-                                    </Button>
-                                )}
-                            </span>
-                        );
-                    })}
-                </div>
-                {editable && others.length > 0 && (
-                    <Select
-                        label="Add a dependency"
-                        value=""
-                        onChange={(event) => event.target.value && edit({ dependsOn: [...card.dependsOn, Number(event.target.value)] })}
-                        options={[{ value: "", label: "Choose a card" }, ...others.map((other) => ({ value: String(other.id), label: `#${other.id} ${other.title}` }))]}
-                    />
-                )}
-            </Block>
+            {(card.dependsOn.length > 0 || (editable && others.length > 0)) && (
+                <Block label="Depends on">
+                    <div className="flex flex-wrap items-center gap-[var(--aspis-space-3)]">
+                        {card.dependsOn.map((dependency) => {
+                            const other = cards.find((candidate) => candidate.id === dependency);
+                            return (
+                                <span key={dependency} className="inline-flex items-center gap-[var(--aspis-space-2)]">
+                                    <Mark ok={other?.phase === "done" || other?.phase === "archived" ? true : null} label={`#${dependency} ${other?.title ?? ""}`} />
+                                    {editable && (
+                                        <Button variant="quiet" aria-label={`Remove dependency ${dependency}`} onClick={() => edit({ dependsOn: card.dependsOn.filter((value) => value !== dependency) })}>
+                                            Remove
+                                        </Button>
+                                    )}
+                                </span>
+                            );
+                        })}
+                    </div>
+                    {editable && others.length > 0 && (
+                        <Select
+                            label="Add a dependency"
+                            value=""
+                            onChange={(event) => event.target.value && edit({ dependsOn: [...card.dependsOn, Number(event.target.value)] })}
+                            options={[{ value: "", label: "Choose a card" }, ...others.map((other) => ({ value: String(other.id), label: `#${other.id} ${other.title}` }))]}
+                        />
+                    )}
+                </Block>
+            )}
 
             <Block
                 label="Files"

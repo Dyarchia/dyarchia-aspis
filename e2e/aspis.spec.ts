@@ -1,5 +1,5 @@
 import { type Page, expect, test } from "@playwright/test";
-import { type ThemeName, accessible, api, headers, live, sameLayout, saysEverythingOnce, startOnOneLine, useTheme } from "./support/audit.ts";
+import { type ThemeName, accessible, api, headers, live, project, sameLayout, saysEverythingOnce, scrollsOnlyDown, startOnOneLine, useTheme } from "./support/audit.ts";
 
 const themes = ["io", "nyx"] as const;
 const views = [
@@ -41,6 +41,8 @@ const fits = (page: Page) =>
 
 const settings = (page: Page) => page.getByRole("dialog", { name: "Settings" });
 
+test.beforeAll(async ({ request }) => void (await project(request)));
+
 for (const view of views) {
     test(`${view.name} is one layout in both themes`, async ({ page }) => {
         await open(page, "io");
@@ -56,6 +58,7 @@ for (const view of views) {
             await fits(page);
             await saysEverythingOnce(page);
             await startOnOneLine(page, [...view.panes]);
+            await scrollsOnlyDown(page);
         }
     });
 
@@ -122,9 +125,10 @@ for (const theme of themes) {
 }
 
 test("the palette stacks over a dialog, and Escape closes only the palette", async ({ page }) => {
-    const { id } = await (await page.request.post(`${api}/cards`, { headers, data: { title: "Palette over a panel" } })).json();
+    const { id } = await (await page.request.post(`${api}/cards`, { headers, data: { title: "Palette over a panel", board: await project(page.request) } })).json();
     await open(page, "io");
     await page.keyboard.press("k");
+    await page.getByRole("combobox", { name: "Board" }).selectOption({ label: "ivirma-crm" });
     const tile = page.getByRole("button", { name: "Palette over a panel" });
     await tile.click();
     const panel = page.getByRole("dialog", { name: `#${id} Palette over a panel` });

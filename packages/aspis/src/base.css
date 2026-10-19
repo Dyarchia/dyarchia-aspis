@@ -282,6 +282,10 @@ a {
     color: var(--aspis-ink-2);
 }
 
+.aspis-button[data-variant="quiet"] .aspis-button__glint {
+    display: none;
+}
+
 .aspis-button[data-variant="quiet"]:hover {
     color: var(--aspis-ink-1);
 }
@@ -367,8 +371,12 @@ a {
         box-shadow var(--aspis-dur-fast) ease;
 }
 
+/*
+ * A field shows focus on its own line (the theme lights it up), so the ring every other control gets would only
+ * draw a second, heavier box around it. Contrast themes get the ring back below.
+ */
 .aspis-field__input:focus-visible {
-    outline-offset: 0;
+    outline: none;
 }
 
 .aspis-field__input::placeholder {
@@ -388,6 +396,14 @@ a {
 .aspis-field__control[data-kind="select"] .aspis-field__input {
     padding-right: 32px;
     cursor: pointer;
+}
+
+.aspis-field__control[data-variant="quiet"] .aspis-field__input {
+    width: auto;
+    field-sizing: content;
+    padding-left: var(--aspis-space-2);
+    border-color: transparent;
+    background: transparent;
 }
 
 .aspis-field__control[data-kind="area"] .aspis-field__input {
@@ -1268,7 +1284,12 @@ a {
     padding: 14vh var(--aspis-space-4) var(--aspis-space-6);
 }
 
+/*
+ * The box and its scrolling body hold their own absolutely placed pieces (screen-reader text, glints), so nothing
+ * inside can stretch the dialog and give it a second scrollbar beside the body's.
+ */
 .aspis-dialog__box {
+    position: relative;
     display: flex;
     flex-direction: column;
     max-height: 100%;
@@ -1295,7 +1316,7 @@ a {
 
 .aspis-dialog__head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--aspis-space-3);
     padding: var(--aspis-space-4) var(--aspis-space-5);
     border-bottom: var(--aspis-border-w) solid var(--aspis-line);
@@ -1307,18 +1328,27 @@ a {
     font: var(--aspis-type-item);
 }
 
+/*
+ * Close is a bare X on the head's first line. In a side panel, which ends at the window's edge, it is as wide as
+ * Windows' own caption buttons and flush with that edge, so it sits right under the window's X.
+ */
 .aspis-dialog__close {
     display: inline-grid;
     place-items: center;
     flex: none;
-    width: 32px;
-    height: 32px;
+    width: var(--aspis-target);
+    height: var(--aspis-target);
+    margin: calc((var(--aspis-pill-h) - var(--aspis-target)) / 2) 0;
     padding: 0;
-    border: var(--aspis-border-w) solid var(--aspis-line-strong);
-    border-radius: var(--aspis-radius-control);
+    border: 0;
     background: none;
     color: var(--aspis-ink-2);
     cursor: pointer;
+}
+
+.aspis-dialog[data-placement="side"] .aspis-dialog__close {
+    width: var(--aspis-caption-w);
+    margin-right: calc(-1 * (var(--aspis-space-5) + var(--aspis-border-w)));
 }
 
 .aspis-dialog__close:hover {
@@ -1329,9 +1359,11 @@ a {
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: var(--aspis-space-5);
+    gap: var(--aspis-space-4);
+    position: relative;
     min-height: 0;
     padding: var(--aspis-space-5);
+    overflow-x: hidden;
     overflow-y: auto;
 }
 
@@ -1479,8 +1511,9 @@ a {
  * Highlight, and focus as a solid outline, since shadows and backgrounds are dropped in that mode.
  */
 @media (forced-colors: active) {
-    :focus-visible {
-        outline-color: Highlight;
+    :focus-visible,
+    .aspis-field__input:focus-visible {
+        outline: var(--aspis-focus-w) solid Highlight;
     }
 
     .aspis-button,

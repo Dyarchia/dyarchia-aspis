@@ -85,7 +85,7 @@
 }
 
 [data-theme="nyx"] .aspis-field__input:focus {
-    border-color: var(--aspis-ink-3);
+    border-color: var(--aspis-ink-1);
 }
 
 [data-theme="nyx"] .aspis-switch__track {
@@ -203,10 +203,6 @@
 
 [data-theme="nyx"] .aspis-dialog[data-placement="side"] .aspis-dialog__box {
     border-radius: var(--aspis-radius-surface) 0 0 var(--aspis-radius-surface);
-}
-
-[data-theme="nyx"] .aspis-dialog__close {
-    border-radius: 50%;
 }
 
 [data-theme="nyx"] .aspis-thread__text {

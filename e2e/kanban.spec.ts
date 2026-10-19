@@ -2,13 +2,12 @@ import { type APIRequestContext, type Page, expect, test } from "@playwright/tes
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { accessible, live, sameLayout, saysEverythingOnce } from "./support/audit.ts";
+import { accessible, live, project, sameLayout, saysEverythingOnce, scrollsOnlyDown } from "./support/audit.ts";
 
 const api = "http://127.0.0.1:4319";
 const headers = { authorization: "Bearer dev", "content-type": "application/json" };
 const runner = { harness: "claude-code", model: "claude-opus-5-5", effort: "high" };
 const auditor = { harness: "codex", model: "gpt-5.5", effort: "high" };
-const folder = "C:/repos/ivirma-crm";
 const later = new Date(2030, 0, 15, 8, 30).getTime();
 
 async function call<T = { id: number }>(request: APIRequestContext, path: string, method = "GET", data?: unknown): Promise<T> {
@@ -18,8 +17,8 @@ async function call<T = { id: number }>(request: APIRequestContext, path: string
 }
 
 async function card(request: APIRequestContext, title: string, extra: Record<string, unknown> = {}) {
-    const { id } = await call(request, "/cards", "POST", { title });
-    await call(request, `/cards/${id}`, "PATCH", { brief: `Brief for ${title}`, implementer: runner, auditor, folder, baseBranch: "develop", ...extra });
+    const { id } = await call(request, "/cards", "POST", { title, board: await project(request) });
+    await call(request, `/cards/${id}`, "PATCH", { brief: `Brief for ${title}`, implementer: runner, auditor, folder: "C:/repos/ivirma-crm", baseBranch: "develop", ...extra });
     return id;
 }
 
@@ -37,6 +36,7 @@ async function openBoard(page: Page, theme: "io" | "nyx" = "io") {
     await page.goto("/");
     await live(page);
     await page.keyboard.press("k");
+    await page.getByRole("combobox", { name: "Board" }).selectOption({ label: "ivirma-crm" });
     await expect(column(page, "Triage")).toBeVisible();
 }
 
@@ -61,6 +61,50 @@ async function confirm(page: Page, text: string) {
 }
 
 test.describe.configure({ mode: "serial" });
+
+test("a board is a project: made from +, remembered, archived; a card is born in Triage by Enter, Add or leaving the field", async ({ page, request }) => {
+    await project(request);
+    await openBoard(page);
+    const picker = page.getByRole("combobox", { name: "Board" });
+    await page.getByRole("button", { name: "New board" }).click();
+    const dialog = page.getByRole("dialog", { name: "New board" });
+    await dialog.getByLabel("Name").fill("site");
+    await dialog.getByLabel("Folder").fill(join(process.env.ASPIS_E2E_HOME!, "repos", "site"));
+    await dialog.getByRole("button", { name: "Create" }).click();
+    await expect(picker.locator("option:checked")).toHaveText("site");
+
+    const triage = column(page, "Triage");
+    const title = page.getByLabel("New card title");
+    await page.keyboard.press("n");
+    await title.fill("Born by Enter");
+    await page.keyboard.press("Enter");
+    await expect(triage.getByText("Born by Enter")).toBeVisible();
+    await expect(title).toHaveCount(0);
+    await expect(triage.getByRole("button", { name: "New card" })).not.toBeFocused();
+
+    await triage.getByRole("button", { name: "New card" }).click();
+    await title.fill("Born by Add");
+    await triage.getByRole("button", { name: "Add" }).click();
+    await expect(triage.getByText("Born by Add")).toBeVisible();
+
+    await triage.getByRole("button", { name: "New card" }).click();
+    await title.fill("Born by leaving");
+    await page.getByRole("combobox", { name: "Search cards" }).or(page.getByRole("searchbox", { name: "Search cards" })).click();
+    await expect(triage.getByText("Born by leaving")).toBeVisible();
+    await expect(title).toHaveCount(0);
+    await expect(triage.getByRole("button")).toHaveCount(5);
+
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("h");
+    await page.keyboard.press("k");
+    await expect(picker.locator("option:checked")).toHaveText("site");
+    await expect(picker.locator("option")).toHaveText(["ivirma-crm", "site"]);
+
+    await page.getByRole("button", { name: "Board settings" }).click();
+    await page.getByRole("dialog", { name: "site" }).getByRole("button", { name: "Archive" }).click();
+    await expect(picker.locator("option:checked")).toHaveText("ivirma-crm");
+    await expect(picker.locator('optgroup[label="Archived"] option')).toHaveText(["site"]);
+});
 
 test("the board in both themes", async ({ page, request }) => {
     await card(request, "Map the Quote record types", { priority: 2 });
@@ -93,6 +137,7 @@ test("the board in both themes", async ({ page, request }) => {
         await expect(page).toHaveScreenshot(`card-${theme}.png`, { mask: [page.locator(".aspis-thread__when")] });
         await accessible(page);
         await saysEverythingOnce(page);
+        await scrollsOnlyDown(page);
     }
 });
 

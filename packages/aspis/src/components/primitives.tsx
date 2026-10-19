@@ -12,6 +12,7 @@ const paths = {
     search: "M7 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM10 10l3 3",
     chevron: "M5 6.5l3 3 3-3",
     plus: "M8 3v10M3 8h10",
+    sliders: "M2.5 5h5M10.5 5h3M9 3.5v3M2.5 11h2M7.5 11h6M6 9.5v3",
     close: "M4 4l8 8M12 4l-8 8",
     arrow: "M3 8h10M9 4l4 4-4 4",
     external: "M6 3.5H3.5v9h9V10M9 3h4v4M13 3L7.5 8.5",

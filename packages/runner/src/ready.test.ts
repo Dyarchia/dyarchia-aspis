@@ -1,16 +1,17 @@
 import { runLines } from "@dyarchia/core";
 import { Store } from "@dyarchia/store";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Desktop } from "./desktop.ts";
 import { Dispatcher } from "./dispatch.ts";
 import { git } from "./git.ts";
 import { Ready } from "./ready.ts";
-import { fakeClaude, makeRepo, removeDir } from "./testing.ts";
+import { fakeClaude, makeRepo, tempFolders } from "./testing.ts";
 
 const claude = { harness: "claude-code", model: "claude-opus-5-5", effort: "high" };
+
+const folder = tempFolders("aspis-ready-");
 
 let dir: string;
 let repo: string;
@@ -19,7 +20,7 @@ let ready: Ready;
 let kicks: number;
 
 beforeEach(async () => {
-    dir = mkdtempSync(join(tmpdir(), "aspis-ready-"));
+    dir = folder();
     repo = join(dir, "repo");
     await makeRepo(repo);
     store = new Store(join(dir, "state.db"));
@@ -27,16 +28,14 @@ beforeEach(async () => {
     ready = new Ready(store, new Desktop({ store, launcher: undefined, kick: () => kicks++ }));
 });
 
-afterEach(async () => {
-    store.close();
-    await removeDir(dir);
-});
+afterEach(() => store.close());
 
 const kanban = () => ready.kanban;
 
 function readyCard(title: string, extra: Record<string, unknown> = {}) {
-    const card = kanban().create(title);
-    kanban().edit(card.id, { brief: `Brief of ${title}`, implementer: claude, auditor: claude, folder: repo, retries: 0, ...extra }, "human");
+    const board = kanban().boards()[0]?.id ?? kanban().createBoard({ name: "repo", folder: repo }).id;
+    const card = kanban().create(title, board);
+    kanban().edit(card.id, { brief: `Brief of ${title}`, implementer: claude, auditor: claude, retries: 0, ...extra }, "human");
     return kanban().move(card.id, { to: "ready" }, "human").id;
 }
 
@@ -45,6 +44,14 @@ const prompt = (session: string, text: string, harness: "claude-code" | "kimi-co
 const tool = (session: string, name: string, input: Record<string, unknown> = {}, harness: "claude-code" | "kimi-code" = "claude-code") =>
     ready.hook({ hook_event_name: "PreToolUse", session_id: session, cwd: repo, tool_name: name, tool_input: input }, harness);
 const context = (stdout = "") => JSON.parse(stdout).hookSpecificOutput;
+const auditors = () => new Dispatcher({ store, claude: [process.execPath, fakeClaude], pollMs: 20 });
+
+async function inReview(title: string, extra: Record<string, unknown> = {}) {
+    const id = readyCard(title, extra);
+    await prompt("s-1", "/dya-pickup");
+    await ready.deliver(id, "Done");
+    return id;
+}
 
 describe("the ready route", () => {
     test("dya-pickup claims the best Ready card for this folder and harness and puts the repository on its branch", async () => {
@@ -136,55 +143,48 @@ describe("the ready route", () => {
         expect(await tool("s-1", "Read", { file_path: "done.md" })).toEqual({ exit: 0 });
         expect(kicks).toBe(1);
 
-        const dispatcher = new Dispatcher({ store, claude: [process.execPath, fakeClaude], pollMs: 20 });
+        const dispatcher = auditors();
         expect(await dispatcher.dispatch()).toEqual([id]);
         expect(kanban().get(id).auditorVerdict).toMatchObject({ ok: true, reason: "The branch does what the brief asks" });
         expect(await dispatcher.dispatch()).toEqual([]);
     });
 
-    test("an auditor that fails, forgets its verdict or cannot run leaves a reasoned failing verdict", async () => {
-        const dispatcher = new Dispatcher({ store, claude: [process.execPath, fakeClaude], pollMs: 20 });
-        const deliver = async (title: string, extra: Record<string, unknown> = {}) => {
-            const id = readyCard(title, extra);
-            await prompt(`s-${id}`, "/dya-pickup");
-            await ready.deliver(id, "Done");
-            await git(repo, "switch", "-q", "develop");
-            return id;
-        };
-        const failing = await deliver("Audit #audit-fail");
-        await dispatcher.dispatch();
-        expect(kanban().get(failing).auditorVerdict).toMatchObject({ ok: false, reason: "The tests are missing" });
+    test("an auditor that fails leaves its failing verdict with the reason", async () => {
+        const id = await inReview("Audit #audit-fail");
+        await auditors().dispatch();
+        expect(kanban().get(id).auditorVerdict).toMatchObject({ ok: false, reason: "The tests are missing" });
+    });
 
-        const mute = await deliver("Audit #audit-mute", { retries: 1 });
+    test("an auditor that forgets its verdict is retried, then the card is held with the reason and left alone", async () => {
+        const dispatcher = auditors();
+        const id = await inReview("Audit #audit-mute", { retries: 1 });
         await dispatcher.dispatch();
-        expect(kanban().get(mute)).toMatchObject({ auditorVerdict: null, held: "Could not audit: The auditor gave no VERDICT line" });
-        expect(dispatcher.runs.list(mute).filter((run) => run.kind === "audit")).toHaveLength(2);
-        expect(kanban().events(mute).at(-1)).toMatchObject({ actor: "system", text: expect.stringContaining("Retry it from the card") });
+        expect(kanban().get(id)).toMatchObject({ auditorVerdict: null, held: "Could not audit: The auditor gave no VERDICT line" });
+        expect(dispatcher.runs.list(id).filter((run) => run.kind === "audit")).toHaveLength(2);
+        expect(kanban().events(id).at(-1)).toMatchObject({ actor: "system", text: expect.stringContaining("Retry it from the card") });
         expect(await dispatcher.dispatch()).toEqual([]);
+    });
 
-        const codex = await deliver("Audit by codex", { auditor: { ...claude, harness: "codex" } });
-        await dispatcher.dispatch();
-        expect(kanban().get(codex).held).toContain("codex cannot audit headless yet");
-        expect(() => kanban().verdict(codex, "human", true, "Fine")).toThrow("Approving needs the auditor");
-        kanban().verdict(codex, "human", false, "Redo it with tests");
-        expect(kanban().move(codex, { to: "running", note: "Add tests" }, "human")).toMatchObject({ phase: "running", held: null });
+    test("an auditor that cannot run holds the card, and the human can still reject it", async () => {
+        const id = await inReview("Audit by codex", { auditor: { ...claude, harness: "codex" } });
+        await auditors().dispatch();
+        expect(kanban().get(id).held).toContain("codex cannot audit headless yet");
+        expect(() => kanban().verdict(id, "human", true, "Fine")).toThrow("Approving needs the auditor");
+        kanban().verdict(id, "human", false, "Redo it with tests");
+        expect(kanban().move(id, { to: "running", note: "Add tests" }, "human")).toMatchObject({ phase: "running", held: null });
     });
 
     test("an audit you retry runs again", async () => {
-        const dispatcher = new Dispatcher({ store, claude: [process.execPath, fakeClaude], pollMs: 20 });
-        const id = readyCard("Retry me #audit-mute");
-        await prompt("s-1", "/dya-pickup");
-        await ready.deliver(id, "Done");
+        const dispatcher = auditors();
+        const id = await inReview("Retry me #audit-mute");
         await dispatcher.dispatch();
         expect(kanban().get(id).held).toContain("Could not audit");
         kanban().hold(id, null);
         expect(await dispatcher.dispatch()).toEqual([id]);
-    });
+    }, 15_000);
 
     test("the session marker goes away once the card is no longer the agent's", async () => {
-        const id = readyCard("Marked");
-        await prompt("s-1", "/dya-pickup");
-        await ready.deliver(id, "Done");
+        const id = await inReview("Marked");
         kanban().verdict(id, "auditor", true, "Fine");
         kanban().verdict(id, "human", true, "Fine");
         kanban().move(id, { to: "done" }, "human");

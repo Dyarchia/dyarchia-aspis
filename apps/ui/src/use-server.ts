@@ -1,6 +1,7 @@
 import { applyTheme } from "@dyarchia/aspis";
 import { Health, Settings, Theme } from "@dyarchia/core";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { paintFrame } from "./frame.ts";
 import { readHint, writeHint } from "./hints.ts";
 import { type Connection, connect, request, subscribe } from "./server.ts";
 
@@ -70,6 +71,7 @@ export function useServer(): ServerState {
 
     useEffect(() => {
         applyTheme(settings.theme);
+        paintFrame();
         writeHint("theme", settings.theme);
     }, [settings.theme]);
 
