@@ -29,8 +29,9 @@ function boards(db: Database) {
 }
 
 /*
- * Boards gain a cap on how many of their cards run at once and the runners their new cards start with. Each board
- * starts from the runners of its newest card, which is what new cards inherited until now.
+ * Boards gain the runners their new cards start with. Each board starts from the runners of its newest card, which
+ * is what new cards inherited until now. The cap on running cards this step also added is gone again (see the next
+ * step): runs are limited only to one per repository, as they always were.
  */
 function boardSettings(db: Database) {
     db.exec(
@@ -118,6 +119,8 @@ export const migrations: (string | ((db: Database) => void))[] = [
      ALTER TABLE cards ADD COLUMN wake_at INTEGER;`,
     boards,
     boardSettings,
+    `ALTER TABLE boards DROP COLUMN max_running;
+     DELETE FROM settings WHERE key = 'maxRunning';`,
 ];
 
 export const aspisHome = () => process.env.ASPIS_HOME ?? join(homedir(), ".dyarchia-aspis");

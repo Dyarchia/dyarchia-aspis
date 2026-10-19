@@ -102,7 +102,6 @@ test("a board is a project: made from +, remembered, archived; a card is born in
 
     await page.getByRole("button", { name: "Board settings" }).click();
     const settings = page.getByRole("dialog", { name: "Board settings" });
-    await settings.getByLabel("Max running on all boards").fill("3");
     await settings.getByLabel("Implementer harness").selectOption("claude-code");
     await settings.getByLabel("Implementer model").fill("claude-opus-5-5");
     await settings.getByRole("button", { name: "Save" }).click();
@@ -115,7 +114,7 @@ test("a board is a project: made from +, remembered, archived; a card is born in
     await page.keyboard.press("Escape");
 
     await page.getByRole("button", { name: "Board settings" }).click();
-    await expect(settings.getByLabel("Max running on all boards")).toHaveValue("3");
+    await expect(settings.getByLabel("Implementer model")).toHaveValue("claude-opus-5-5");
     await settings.getByRole("button", { name: "Archive board" }).click();
     await expect(picker.locator("option:checked")).toHaveText("ivirma-crm");
     await expect(picker.locator('optgroup[label="Archived"] option')).toHaveText(["site"]);

@@ -54,8 +54,7 @@ describe("kanban service", () => {
         const first = prepared();
         expect(first.phase).toBe("triage");
         expect(kanban.create("Before the board says", board, now).implementer).toEqual({ harness: null, model: null, effort: null });
-        kanban.editBoard(board, { runners: { implementer: runner, auditor: { ...runner, effort: null } }, maxRunning: 3 });
-        expect(kanban.board(board).maxRunning).toBe(3);
+        kanban.editBoard(board, { runners: { implementer: runner, auditor: { ...runner, effort: null } } });
         const second = kanban.create("Write callout tests", board, now);
         expect(second.implementer).toEqual(runner);
         expect(second.auditor).toEqual({ ...runner, effort: null });

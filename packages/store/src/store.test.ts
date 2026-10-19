@@ -19,11 +19,11 @@ afterEach(() => {
 test("creates the database in WAL mode and migrates once", () => {
     const path = tempDb();
     const store = new Store(path);
-    expect(store.schemaVersion).toBe(7);
+    expect(store.schemaVersion).toBe(8);
     expect(store.db.query<{ journal_mode: string }, []>("PRAGMA journal_mode").get()!.journal_mode).toBe("wal");
     store.close();
     const reopened = new Store(path);
-    expect(reopened.schemaVersion).toBe(7);
+    expect(reopened.schemaVersion).toBe(8);
     reopened.close();
 });
 
@@ -53,7 +53,7 @@ test("cards written before boards get one board per folder, and the folderless o
     store.close();
 });
 
-test("each board starts from the runners of its newest card and runs one card at a time", () => {
+test("each board starts from the runners of its newest card", () => {
     const path = tempDb();
     const legacy = new Database(path, { create: true, strict: true });
     for (const [version, step] of migrations.slice(0, 6).entries()) {
@@ -71,7 +71,7 @@ test("each board starts from the runners of its newest card and runs one card at
 
     const store = new Store(path);
     const [crm, empty] = new Kanban(store).boards();
-    expect(crm).toMatchObject({ maxRunning: 1, runners: { implementer: latest, auditor: old } });
+    expect(crm!.runners).toEqual({ implementer: latest, auditor: old });
     expect(empty!.runners.implementer).toEqual({ harness: null, model: null, effort: null });
     store.close();
 });

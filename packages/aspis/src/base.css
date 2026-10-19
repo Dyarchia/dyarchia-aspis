@@ -494,6 +494,7 @@ a {
  */
 .aspis-field__control[data-kind="area"] .aspis-field__input[rows="1"] {
     min-height: var(--aspis-control-h);
+    padding-bottom: calc(var(--aspis-space-2) - var(--aspis-border-w));
     field-sizing: content;
     resize: none;
 }
