@@ -172,7 +172,6 @@
 
 [data-theme="nyx"] .aspis-tile:hover {
     border-color: var(--aspis-line-strong);
-    transform: translateY(-2px);
 }
 
 [data-theme="nyx"] .aspis-tile__title {

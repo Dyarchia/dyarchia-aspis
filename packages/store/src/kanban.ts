@@ -35,7 +35,6 @@ interface BoardRow {
     name: string;
     folder: string;
     archived: number;
-    max_running: number;
     implementer: string;
     auditor: string;
     created_at: number;
@@ -118,7 +117,6 @@ export class Kanban {
                 name: row.name,
                 folder: row.folder,
                 archived: row.archived === 1,
-                maxRunning: row.max_running,
                 runners: { implementer: boardRunner(row.implementer), auditor: boardRunner(row.auditor) },
                 createdAt: row.created_at,
             }));
@@ -147,11 +145,11 @@ export class Kanban {
     }
 
     createBoard(draft: BoardDraft, now = Date.now()): Board {
-        const { name, folder, maxRunning = 1, runners = { implementer: emptyRunner, auditor: emptyRunner } } = BoardDraft.parse(draft);
+        const { name, folder, runners = { implementer: emptyRunner, auditor: emptyRunner } } = BoardDraft.parse(draft);
         const path = this.projectFolder(this.projectPath(name, folder).folder);
         const id = this.db
-            .query("INSERT INTO boards (name, folder, max_running, implementer, auditor, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-            .run(name, path, maxRunning, JSON.stringify(runners.implementer), JSON.stringify(runners.auditor), now).lastInsertRowid;
+            .query("INSERT INTO boards (name, folder, implementer, auditor, created_at) VALUES (?, ?, ?, ?, ?)")
+            .run(name, path, JSON.stringify(runners.implementer), JSON.stringify(runners.auditor), now).lastInsertRowid;
         return this.board(Number(id));
     }
 
@@ -161,13 +159,13 @@ export class Kanban {
      */
     editBoard(id: number, edit: BoardEdit, now = Date.now()): Board {
         const board = this.board(id);
-        const { name, folder, archived, maxRunning, runners } = BoardEdit.parse(edit);
+        const { name, folder, archived, runners } = BoardEdit.parse(edit);
         const moved = folder === undefined || folder === board.folder ? undefined : this.projectFolder(this.projectPath(name ?? board.name, folder).folder, id);
         this.db.transaction(() => {
             const next = runners ?? board.runners;
             this.db
-                .query("UPDATE boards SET name = ?, folder = ?, archived = ?, max_running = ?, implementer = ?, auditor = ? WHERE id = ?")
-                .run(name ?? board.name, moved ?? board.folder, (archived ?? board.archived) ? 1 : 0, maxRunning ?? board.maxRunning, JSON.stringify(next.implementer), JSON.stringify(next.auditor), id);
+                .query("UPDATE boards SET name = ?, folder = ?, archived = ?, implementer = ?, auditor = ? WHERE id = ?")
+                .run(name ?? board.name, moved ?? board.folder, (archived ?? board.archived) ? 1 : 0, JSON.stringify(next.implementer), JSON.stringify(next.auditor), id);
             if (moved !== undefined && moved !== board.folder) {
                 this.db.query("UPDATE cards SET folder = ?, updated_at = ? WHERE board_id = ? AND phase IN ('triage', 'scheduled', 'ready')").run(moved, now, id);
             }
