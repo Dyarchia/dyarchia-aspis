@@ -32,12 +32,14 @@ async function newestManifest() {
 }
 
 const checkEvery = 6 * 60 * 60 * 1000;
+const recheck = 10 * 60 * 1000;
 
 export function useUpdates(onAvailable: (info: UpdateInfo) => void) {
     const supported = isTauri();
     const [state, setState] = useState<UpdateState>(supported ? { kind: "idle" } : { kind: "unsupported" });
     const notify = useRef(onAvailable);
     notify.current = onAvailable;
+    const told = useRef<string | undefined>(undefined);
 
     const check = useCallback(async () => {
         if (!supported) return;
@@ -45,7 +47,10 @@ export function useUpdates(onAvailable: (info: UpdateInfo) => void) {
         try {
             const info = UpdateInfo.nullable().parse(await invoke("check_update", { manifest: await newestManifest() }));
             setState(info ? { kind: "available", info } : { kind: "current" });
-            if (info) notify.current(info);
+            if (info && info.version !== told.current) {
+                told.current = info.version;
+                notify.current(info);
+            }
         } catch (reason) {
             setState({ kind: "error", message: String(reason) });
         }
@@ -61,13 +66,25 @@ export function useUpdates(onAvailable: (info: UpdateInfo) => void) {
         }
     }, [state]);
 
+    /*
+     * A release lands minutes after its merge, so the app looks again whenever the window comes back to the front, at
+     * most every ten minutes, besides once at start and every six hours; each version is announced once.
+     */
     useEffect(() => {
         if (!supported) return;
-        const first = setTimeout(check, 4000);
-        const later = setInterval(check, checkEvery);
+        let last = 0;
+        const look = () => {
+            if (Date.now() - last < recheck) return;
+            last = Date.now();
+            void check();
+        };
+        const first = setTimeout(look, 4000);
+        const later = setInterval(look, checkEvery);
+        window.addEventListener("focus", look);
         return () => {
             clearTimeout(first);
             clearInterval(later);
+            window.removeEventListener("focus", look);
         };
     }, [supported, check]);
 

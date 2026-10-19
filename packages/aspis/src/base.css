@@ -359,9 +359,10 @@ a {
 .aspis-field__input {
     width: 100%;
     height: var(--aspis-control-h);
-    padding: 0 var(--aspis-space-3);
+    padding: 0;
     appearance: none;
-    border: var(--aspis-border-w) solid var(--aspis-line-control);
+    border: 0 solid var(--aspis-line-control);
+    border-bottom-width: var(--aspis-border-w);
     border-radius: var(--aspis-radius-item);
     background: var(--aspis-bg);
     color: var(--aspis-ink-1);
@@ -409,7 +410,7 @@ a {
 .aspis-field__control[data-kind="area"] .aspis-field__input {
     height: auto;
     min-height: 88px;
-    padding: var(--aspis-space-2) var(--aspis-space-3);
+    padding: var(--aspis-space-2) 0;
     resize: vertical;
 }
 
