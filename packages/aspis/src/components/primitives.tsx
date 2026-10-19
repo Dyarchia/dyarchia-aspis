@@ -12,6 +12,10 @@ const paths = {
     search: "M7 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM10 10l3 3",
     chevron: "M5 6.5l3 3 3-3",
     plus: "M8 3v10M3 8h10",
+    expand: "M9.5 2.5h4v4M13.5 2.5L9 7M6.5 13.5h-4v-4M2.5 13.5L7 9",
+    collapse: "M13.5 2.5L9.5 6.5M9.5 3v3.5H13M2.5 13.5l4-4M6.5 13V9.5H3",
+    trash: "M2.5 4.5h11M6.5 4.5v-2h3v2M4 4.5l.6 9h6.8l.6-9",
+    clip: "M11 5.5l-5 5a1.4 1.4 0 0 0 2 2l5.5-5.5a2.8 2.8 0 0 0-4-4L4 8.5a4.2 4.2 0 0 0 6 6l4-4",
     sliders: "M2.5 5h5M10.5 5h3M9 3.5v3M2.5 11h2M7.5 11h6M6 9.5v3",
     close: "M4 4l8 8M12 4l-8 8",
     arrow: "M3 8h10M9 4l4 4-4 4",
@@ -92,3 +96,6 @@ export function IconButton({ icon, label, hotkey, className, type = "button", ..
     );
 }
 
+export function Progress({ value, max, label }: { value: number; max: number; label: string }) {
+    return <progress className="aspis-progress" max={max} value={value} aria-label={label} />;
+}

@@ -5,8 +5,26 @@ import { basename, dirname, join, resolve } from "node:path";
 import { Desktop } from "./desktop.ts";
 import { branchFor, checkout, commit, git, readiness } from "./git.ts";
 
-export const hookHarnesses = ["claude-code", "kimi-code"] as const;
+/*
+ * The CLIs that can hold a Ready card. Each one needs its wiring in agents.ts (where its settings live and how its
+ * hooks and MCP server are written) and its reply format in replies below; nothing else knows a CLI by name.
+ */
+export const hookHarnesses = ["claude-code"] as const;
 export type HookHarness = (typeof hookHarnesses)[number];
+
+interface Replies {
+    context(event: "UserPromptSubmit" | "PreToolUse", text: string): HookReply;
+    deny(reason: string): HookReply;
+    stop(reason: string): HookReply;
+}
+
+const replies: Record<HookHarness, Replies> = {
+    "claude-code": {
+        context: (event, text) => ({ exit: 0, stdout: JSON.stringify({ hookSpecificOutput: { hookEventName: event, additionalContext: text } }) }),
+        deny: (reason) => ({ exit: 0, stdout: JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason } }) }),
+        stop: (reason) => ({ exit: 0, stdout: JSON.stringify({ decision: "block", reason }) }),
+    },
+};
 
 export interface HookEvent {
     hook_event_name?: string;
@@ -112,7 +130,7 @@ export class Ready {
             if (event.stop_hook_active) return allow;
             const pending = this.take(card);
             if (!pending) return allow;
-            return harness === "claude-code" ? { exit: 0, stdout: JSON.stringify({ decision: "block", reason: pending }) } : { exit: 2, stderr: pending };
+            return replies[harness].stop(pending);
         }
         return allow;
     }
@@ -183,13 +201,11 @@ export class Ready {
     }
 
     private context(harness: HookHarness, event: "UserPromptSubmit" | "PreToolUse", text: string): HookReply {
-        if (harness === "claude-code") return { exit: 0, stdout: JSON.stringify({ hookSpecificOutput: { hookEventName: event, additionalContext: text } }) };
-        if (event === "UserPromptSubmit") return { exit: 0, stdout: text };
-        return this.deny(text);
+        return replies[harness].context(event, text);
     }
 
-    private deny(reason: string): HookReply {
-        return { exit: 0, stdout: JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason } }) };
+    private deny(reason: string, harness: HookHarness): HookReply {
+        return replies[harness].deny(reason);
     }
 
     private guard(event: HookEvent, harness: HookHarness, session: string): HookReply {
@@ -197,12 +213,12 @@ export class Ready {
         const own = aspisTool.test(tool);
         const card = this.kanban.bySession(session);
         if (!card || !["running", "blocked", "review"].includes(card.phase)) rmSync(this.marker(session), { force: true });
-        if (!card) return own ? this.deny("[Aspis] This session holds no card. Ask the human to run dya-pickup in this folder.") : allow;
+        if (!card) return own ? this.deny("[Aspis] This session holds no card. Ask the human to run dya-pickup in this folder.", harness) : allow;
         const target = Number(event.tool_input?.card);
-        if (own && target !== card.id) return this.deny(`[Aspis] This session holds card #${card.id}; it cannot act on card #${event.tool_input?.card}.`);
+        if (own && target !== card.id) return this.deny(`[Aspis] This session holds card #${card.id}; it cannot act on card #${event.tool_input?.card}.`, harness);
         const noting = (own && /card_(note|get)$/.test(tool)) || readOnly.has(tool);
-        if (card.phase === "blocked" && !noting) return this.deny(`[Aspis] Card #${card.id} is Blocked: ${card.blockedReason ?? "waiting for the human"}. Stop and wait; the human answers in the thread and resumes this session.`);
-        if (card.phase === "review" && !noting) return this.deny(`[Aspis] Card #${card.id} is in Review. Do not change anything until the human sends it back.`);
+        if (card.phase === "blocked" && !noting) return this.deny(`[Aspis] Card #${card.id} is Blocked: ${card.blockedReason ?? "waiting for the human"}. Stop and wait; the human answers in the thread and resumes this session.`, harness);
+        if (card.phase === "review" && !noting) return this.deny(`[Aspis] Card #${card.id} is in Review. Do not change anything until the human sends it back.`, harness);
         if (card.phase !== "running") return allow;
         this.record(card, { type: "aspis-tool", name: tool, text: toolSummary(event.tool_input) });
         const pending = this.take(card);

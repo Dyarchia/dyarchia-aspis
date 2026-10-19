@@ -1,4 +1,4 @@
-import { Board, Button, Column, type DropState, EmptyState, IconButton, Mark, Page, Select, TextField, Tile, useHotkeys } from "@dyarchia/aspis";
+import { Board, Button, Column, type DropState, EmptyState, IconButton, Mark, Page, Select, Stage, TextField, Tile, useHotkeys } from "@dyarchia/aspis";
 import { type Board as Project, type Card, type Phase, type Target, phaseLabels, phases, targets } from "@dyarchia/core";
 import { useMemo, useRef, useState } from "react";
 import { readHint, writeHint } from "../../hints.ts";
@@ -12,6 +12,12 @@ const foldedByDefault: Phase[] = ["done", "archived"];
 const readFolded = () => {
     const hint = readHint("kanban.folded");
     return new Set<Phase>(hint === undefined ? foldedByDefault : (hint.split(",").filter((phase) => phases.includes(phase as Phase)) as Phase[]));
+};
+const ago = (at: number) => {
+    const minutes = Math.max(0, Math.round((Date.now() - at) / 60_000));
+    if (minutes < 60) return `${minutes}m ago`;
+    if (minutes < 48 * 60) return `${Math.round(minutes / 60)}h ago`;
+    return `${Math.round(minutes / 1440)}d ago`;
 };
 const when = (at: number) => new Date(at).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -37,6 +43,11 @@ export function Kanban({ server }: { server: ServerState }) {
     const [dragged, setDragged] = useState<Card>();
     const [prompt, setPrompt] = useState<PromptRequest>();
     const [folded, setFolded] = useState(readFolded);
+    const [full, setFull] = useState(readHint("kanban.inspector") === "full");
+    const widen = (next: boolean) => {
+        setFull(next);
+        writeHint("kanban.inspector", next ? "full" : "half");
+    };
 
     const fold = (phase: Phase) =>
         setFolded((current) => {
@@ -167,95 +178,102 @@ export function Kanban({ server }: { server: ServerState }) {
                 </>
             }
         >
-            <div className="min-h-0 flex-1 pt-[var(--aspis-space-3)]">
-                <Board label="Kanban">
-                    {phases.map((phase) => {
-                        const column = visible.filter((card) => card.phase === phase);
-                        return (
-                            <Column
-                                key={phase}
-                                title={phaseLabels[phase]}
-                                count={column.length}
-                                drop={dropState(phase)}
-                                folded={folded.has(phase)}
-                                onFold={() => fold(phase)}
-                                actions={phase === "triage" && writable && <IconButton icon="plus" label="New card" hotkey="N" onClick={startDraft} />}
-                                onDragOver={(event) => {
-                                    if (dropState(phase) === "allowed") event.preventDefault();
-                                }}
-                                onDrop={(event) => {
-                                    event.preventDefault();
-                                    drop(phase);
-                                }}
-                            >
-                                {phase === "triage" && creating && (
-                                    <li className="aspis-column__item flex items-center gap-[var(--aspis-space-1)]">
-                                        <TextField
-                                            label="New card title"
-                                            hideLabel
-                                            autoFocus
-                                            className="flex-1"
-                                            placeholder="Title"
-                                            value={draft}
-                                            onChange={(event) => setDraft(event.target.value)}
-                                            onBlur={() => void commit()}
-                                            onKeyDown={(event) => {
-                                                if (event.key === "Enter") {
-                                                    event.preventDefault();
-                                                    void commit();
-                                                }
-                                                if (event.key === "Escape") park();
+            <div className="flex min-h-0 flex-1 flex-col pt-[var(--aspis-space-3)]">
+                <Stage>
+                    <Board label="Kanban">
+                        {phases.map((phase) => {
+                            const column = visible.filter((card) => card.phase === phase);
+                            return (
+                                <Column
+                                    key={phase}
+                                    title={phaseLabels[phase]}
+                                    count={column.length}
+                                    drop={dropState(phase)}
+                                    folded={folded.has(phase)}
+                                    onFold={() => fold(phase)}
+                                    actions={phase === "triage" && writable && <IconButton icon="plus" label="New card" hotkey="N" onClick={startDraft} />}
+                                    onDragOver={(event) => {
+                                        if (dropState(phase) === "allowed") event.preventDefault();
+                                    }}
+                                    onDrop={(event) => {
+                                        event.preventDefault();
+                                        drop(phase);
+                                    }}
+                                >
+                                    {phase === "triage" && creating && (
+                                        <li className="aspis-column__item flex items-center gap-[var(--aspis-space-1)]">
+                                            <TextField
+                                                label="New card title"
+                                                hideLabel
+                                                autoFocus
+                                                className="flex-1"
+                                                placeholder="Title"
+                                                value={draft}
+                                                onChange={(event) => setDraft(event.target.value)}
+                                                onBlur={() => void commit()}
+                                                onKeyDown={(event) => {
+                                                    if (event.key === "Enter") {
+                                                        event.preventDefault();
+                                                        void commit();
+                                                    }
+                                                    if (event.key === "Escape") park();
+                                                }}
+                                            />
+                                            <IconButton icon="check" label="Add" onMouseDown={(event) => event.preventDefault()} onClick={() => void commit()} />
+                                        </li>
+                                    )}
+                                    {column.map((card) => (
+                                        <Tile
+                                            key={card.id}
+                                            reference={`#${card.id}`}
+                                            title={card.title}
+                                            note={card.phase === "blocked" ? (card.blockedReason ?? undefined) : card.phase === "scheduled" && card.held ? `Waiting: ${card.held}` : undefined}
+                                            active={card.id === open}
+                                            draggable={humanTargets(card).length > 0}
+                                            onOpen={() => setOpen(card.id)}
+                                            onDragStart={(event) => {
+                                                event.dataTransfer.setData("text/plain", String(card.id));
+                                                event.dataTransfer.effectAllowed = "move";
+                                                setDragged(card);
                                             }}
+                                            onDragEnd={() => setDragged(undefined)}
+                                            meta={[
+                                                card.priority > 0 && `P${card.priority}`,
+                                                card.phase === "scheduled" && card.scheduledAt !== null && when(card.scheduledAt),
+                                                card.recurrence,
+                                                card.dependsOn.length > 0 && `${card.dependsOn.length} dep`,
+                                                card.files.length > 0 && `${card.files.length} file${card.files.length > 1 ? "s" : ""}`,
+                                                <time dateTime={new Date(card.updatedAt).toISOString()}>{ago(card.updatedAt)}</time>,
+                                            ].filter(Boolean)}
+                                            marks={
+                                                card.phase === "review" ? (
+                                                    <>
+                                                        <Mark ok={card.auditorVerdict?.ok ?? null} label="Auditor" title={card.auditorVerdict?.reason} />
+                                                        <Mark ok={card.humanVerdict?.ok ?? null} label="You" title={card.humanVerdict?.reason} />
+                                                    </>
+                                                ) : undefined
+                                            }
                                         />
-                                        <IconButton icon="check" label="Add" onMouseDown={(event) => event.preventDefault()} onClick={() => void commit()} />
-                                    </li>
-                                )}
-                                {column.map((card) => (
-                                    <Tile
-                                        key={card.id}
-                                        reference={`#${card.id}`}
-                                        title={card.title}
-                                        note={card.phase === "blocked" ? (card.blockedReason ?? undefined) : card.phase === "scheduled" && card.held ? `Waiting: ${card.held}` : undefined}
-                                        active={card.id === open}
-                                        draggable={humanTargets(card).length > 0}
-                                        onOpen={() => setOpen(card.id)}
-                                        onDragStart={(event) => {
-                                            event.dataTransfer.setData("text/plain", String(card.id));
-                                            event.dataTransfer.effectAllowed = "move";
-                                            setDragged(card);
-                                        }}
-                                        onDragEnd={() => setDragged(undefined)}
-                                        meta={[
-                                            card.priority > 0 && `P${card.priority}`,
-                                            card.phase === "scheduled" && card.scheduledAt !== null && when(card.scheduledAt),
-                                            card.recurrence,
-                                            card.dependsOn.length > 0 && `${card.dependsOn.length} dep`,
-                                            card.files.length > 0 && `${card.files.length} file${card.files.length > 1 ? "s" : ""}`,
-                                        ].filter(Boolean)}
-                                        marks={
-                                            card.phase === "review" ? (
-                                                <>
-                                                    <Mark ok={card.auditorVerdict?.ok ?? null} label="Auditor" title={card.auditorVerdict?.reason} />
-                                                    <Mark ok={card.humanVerdict?.ok ?? null} label="You" title={card.humanVerdict?.reason} />
-                                                </>
-                                            ) : undefined
-                                        }
-                                    />
-                                ))}
-                            </Column>
-                        );
-                    })}
-                </Board>
+                                    ))}
+                                </Column>
+                            );
+                        })}
+                    </Board>
+                    {open !== undefined && (
+                        <CardPanel
+                            id={open}
+                            board={board}
+                            server={server}
+                            cards={cards}
+                            onClose={() => setOpen(undefined)}
+                            onMove={moveCard}
+                            onPrompt={setPrompt}
+                            full={full}
+                            onFull={widen}
+                        />
+                    )}
+                </Stage>
             </div>
-            <CardPanel
-                id={open}
-                board={board}
-                server={server}
-                cards={cards}
-                onClose={() => setOpen(undefined)}
-                onMove={moveCard}
-                onPrompt={setPrompt}
-            />
             <Prompt request={prompt} onClose={() => setPrompt(undefined)} />
             {dialog}
         </Page>

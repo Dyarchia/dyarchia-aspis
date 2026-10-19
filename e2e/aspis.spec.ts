@@ -22,7 +22,7 @@ const windows = [
  * when the dispatcher last ran. They differ between this PC and the CI runner, and a longer path or one more line
  * would change the dialog's height, so both answers are fixed here.
  */
-const agents = { installable: false, agents: ["claude-code", "kimi-code"].map((harness) => ({ harness, cli: true, installed: false })) };
+const agents = { installable: false, agents: ["claude-code"].map((harness) => ({ harness, cli: true, installed: false })) };
 
 async function open(page: Page, theme: ThemeName) {
     await page.route(`${api}/agents`, (route) => route.fulfill({ json: agents }));
@@ -131,7 +131,7 @@ test("the palette stacks over a dialog, and Escape closes only the palette", asy
     await page.getByRole("combobox", { name: "Board" }).selectOption({ label: "ivirma-crm" });
     const tile = page.getByRole("button", { name: "Palette over a panel" });
     await tile.click();
-    const panel = page.getByRole("dialog", { name: `#${id} Palette over a panel` });
+    const panel = page.getByRole("complementary", { name: `#${id} Palette over a panel` });
     await expect(panel).toBeVisible();
     await page.keyboard.press("Control+k");
     await expect(page.getByRole("combobox", { name: "Command" })).toBeFocused();

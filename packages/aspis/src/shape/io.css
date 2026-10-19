@@ -183,6 +183,10 @@
     border-color: var(--aspis-line-strong);
 }
 
+[data-theme="io"] .aspis-inspector {
+    box-shadow: none;
+}
+
 [data-theme="io"] .aspis-dialog__head {
     background: var(--aspis-surface);
 }

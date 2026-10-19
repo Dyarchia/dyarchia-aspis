@@ -81,11 +81,13 @@
 }
 
 [data-theme="nyx"] .aspis-field__input {
-    border-color: var(--aspis-line-control);
+    border-color: transparent transparent var(--aspis-line-control);
+    border-radius: 0;
+    background: transparent;
 }
 
 [data-theme="nyx"] .aspis-field__input:focus {
-    border-color: var(--aspis-ink-1);
+    border-bottom-color: var(--aspis-ink-1);
 }
 
 [data-theme="nyx"] .aspis-switch__track {
@@ -197,6 +199,11 @@
 
 [data-theme="nyx"] .aspis-dialog__box {
     border-color: var(--aspis-line-strong);
+    background: var(--aspis-glow), var(--aspis-glass);
+    backdrop-filter: blur(24px);
+}
+
+[data-theme="nyx"] .aspis-inspector {
     background: var(--aspis-glow), var(--aspis-glass);
     backdrop-filter: blur(24px);
 }

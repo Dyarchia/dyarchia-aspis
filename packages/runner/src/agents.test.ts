@@ -42,25 +42,3 @@ test("claude code gets its hooks, skill and MCP server next to what was there, a
     expect(existsSync(join(home, ".claude", "skills", "dya-pickup"))).toBe(false);
     expect(calls.at(-1)).toEqual(["claude", "mcp", "remove", "--scope", "user", "aspis"]);
 });
-
-test("kimi gets a marked block of hooks, its MCP entry and the skill, and removing restores the files", async () => {
-    const config = join(home, ".kimi-code", "config.toml");
-    const mcp = join(home, ".kimi-code", "mcp.json");
-    mkdirSync(join(home, ".kimi-code"), { recursive: true });
-    const toml = '[providers."managed:kimi-code"]\ntype = "kimi"\n';
-    writeFileSync(config, toml);
-    writeFileSync(mcp, JSON.stringify({ mcpServers: { other: { command: "x" } } }, null, 2));
-
-    await agents.install("kimi-code");
-    const text = readFileSync(config, "utf8");
-    expect(text.startsWith(toml.trimEnd())).toBe(true);
-    expect(text.match(/\[\[hooks\]\]/g)).toHaveLength(3);
-    expect(text).toContain(`command = '"${launcher}" --hook kimi-code'`);
-    expect(JSON.parse(readFileSync(mcp, "utf8")).mcpServers).toEqual({ other: { command: "x" }, aspis: { command: exe, args: ["mcp"] } });
-    expect(agents.status().find((status) => status.harness === "kimi-code")?.installed).toBe(true);
-
-    await agents.remove("kimi-code");
-    expect(readFileSync(config, "utf8")).toBe(toml);
-    expect(JSON.parse(readFileSync(mcp, "utf8")).mcpServers).toEqual({ other: { command: "x" } });
-    expect(agents.status().find((status) => status.harness === "kimi-code")?.installed).toBe(false);
-});

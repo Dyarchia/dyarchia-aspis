@@ -19,9 +19,11 @@ export interface AgentsOptions {
     which?: (name: string) => string | null;
 }
 
-const marker = { open: "# >>> dyarchia-aspis: managed by Dyarchia Aspis, remove it from the app", close: "# <<< dyarchia-aspis" };
 const hookEvents = ["UserPromptSubmit", "PreToolUse", "Stop"] as const;
-const clis: Record<HookHarness, string> = { "claude-code": "claude", "kimi-code": "kimi" };
+/* Where each CLI keeps its user settings and which command it answers to. */
+const wirings: Record<HookHarness, { cli: string; dir: string; settings: string }> = {
+    "claude-code": { cli: "claude", dir: ".claude", settings: "settings.json" },
+};
 
 const skill = `---
 name: dya-pickup
@@ -74,78 +76,50 @@ export class Agents {
     }
 
     private paths(harness: HookHarness) {
-        const root = join(this.home, harness === "claude-code" ? ".claude" : ".kimi-code");
-        return {
-            config: join(root, harness === "claude-code" ? "settings.json" : "config.toml"),
-            skill: join(root, "skills", "dya-pickup", "SKILL.md"),
-            mcp: join(root, "mcp.json"),
-        };
+        const { dir, settings } = wirings[harness];
+        const root = join(this.home, dir);
+        return { config: join(root, settings), skill: join(root, "skills", "dya-pickup", "SKILL.md") };
     }
 
     status(): AgentStatus[] {
         return hookHarnesses.map((harness) => {
             const { config, skill } = this.paths(harness);
             const text = existsSync(config) ? readFileSync(config, "utf8") : "";
-            const hooked = harness === "claude-code" ? this.ours(text, harness) : text.includes(marker.open);
-            return { harness, cli: Boolean(this.which(clis[harness])), installed: hooked && existsSync(skill) };
+            return { harness, cli: Boolean(this.which(wirings[harness].cli)), installed: this.ours(text, harness) && existsSync(skill) };
         });
     }
 
     async install(harness: HookHarness): Promise<void> {
         await this.remove(harness);
-        const { config, skill: skillPath, mcp } = this.paths(harness);
+        const { config, skill: skillPath } = this.paths(harness);
+        const { cli } = wirings[harness];
         mkdirSync(dirname(skillPath), { recursive: true });
         writeFileSync(skillPath, skill);
-        if (harness === "claude-code") {
-            const settings = readJson(config);
-            settings.hooks ??= {};
-            for (const event of hookEvents) {
-                settings.hooks[event] ??= [];
-                settings.hooks[event].push({ ...(event === "PreToolUse" ? { matcher: "*" } : {}), hooks: [{ type: "command", command: this.command(harness), timeout: 15 }] });
-            }
-            writeJson(config, settings);
-            if (!(await this.exec(["claude", "mcp", "add", "--scope", "user", "aspis", "--", this.options.exe, "mcp"]))) throw new Error("claude mcp add refused the aspis server");
-            return;
+        const settings = readJson(config);
+        settings.hooks ??= {};
+        for (const event of hookEvents) {
+            settings.hooks[event] ??= [];
+            settings.hooks[event].push({ ...(event === "PreToolUse" ? { matcher: "*" } : {}), hooks: [{ type: "command", command: this.command(harness), timeout: 15 }] });
         }
-        const blocks = hookEvents.map((event) => `[[hooks]]\nevent = "${event}"\ncommand = '${this.command(harness)}'\ntimeout = 15`);
-        const before = existsSync(config) ? readFileSync(config, "utf8").trimEnd() : "";
-        mkdirSync(dirname(config), { recursive: true });
-        writeFileSync(config, `${before}\n\n${marker.open}\n${blocks.join("\n\n")}\n${marker.close}\n`);
-        const servers = readJson(mcp);
-        servers.mcpServers = { ...servers.mcpServers, aspis: { command: this.options.exe, args: ["mcp"] } };
-        writeJson(mcp, servers);
+        writeJson(config, settings);
+        if (!(await this.exec([cli, "mcp", "add", "--scope", "user", "aspis", "--", this.options.exe, "mcp"]))) throw new Error(`${cli} mcp add refused the aspis server`);
     }
 
     async remove(harness: HookHarness): Promise<void> {
-        const { config, skill: skillPath, mcp } = this.paths(harness);
+        const { config, skill: skillPath } = this.paths(harness);
+        const { cli } = wirings[harness];
         rmSync(dirname(skillPath), { recursive: true, force: true });
-        if (harness === "claude-code") {
-            if (existsSync(config)) {
-                const settings = readJson(config);
-                for (const event of hookEvents) {
-                    const entries: any[] | undefined = settings.hooks?.[event];
-                    if (!entries) continue;
-                    settings.hooks[event] = entries.filter((entry) => !entry.hooks?.some((hook: { command?: string }) => this.ours(hook.command, harness)));
-                    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-                }
-                if (settings.hooks && Object.keys(settings.hooks).length === 0) delete settings.hooks;
-                writeJson(config, settings);
-            }
-            if (this.which("claude")) await this.exec(["claude", "mcp", "remove", "--scope", "user", "aspis"]);
-            return;
-        }
         if (existsSync(config)) {
-            const text = readFileSync(config, "utf8");
-            const start = text.indexOf(marker.open);
-            const end = text.indexOf(marker.close);
-            if (start >= 0 && end > start) writeFileSync(config, `${text.slice(0, start).trimEnd()}\n${text.slice(end + marker.close.length).replace(/^\n+/, "")}`);
-        }
-        if (existsSync(mcp)) {
-            const servers = readJson(mcp);
-            if (servers.mcpServers?.aspis) {
-                delete servers.mcpServers.aspis;
-                writeJson(mcp, servers);
+            const settings = readJson(config);
+            for (const event of hookEvents) {
+                const entries: any[] | undefined = settings.hooks?.[event];
+                if (!entries) continue;
+                settings.hooks[event] = entries.filter((entry) => !entry.hooks?.some((hook: { command?: string }) => this.ours(hook.command, harness)));
+                if (settings.hooks[event].length === 0) delete settings.hooks[event];
             }
+            if (settings.hooks && Object.keys(settings.hooks).length === 0) delete settings.hooks;
+            writeJson(config, settings);
         }
+        if (this.which(cli)) await this.exec([cli, "mcp", "remove", "--scope", "user", "aspis"]);
     }
 }

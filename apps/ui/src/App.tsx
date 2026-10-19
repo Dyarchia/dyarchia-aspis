@@ -41,6 +41,7 @@ function Workspace() {
     const [palette, setPalette] = useState(false);
     const [settings, setSettings] = useState(false);
     const [singleKeys, setSingleKeys] = useState(readHint("keys.single") !== "off");
+    const [tutorial, setTutorial] = useState(readHint("build.tutorial") !== "off");
     const moved = useRef(false);
     const updates = useUpdates((info) => toast({ text: `Version ${info.version} is available. Install it from Settings`, tone: "info" }));
 
@@ -62,6 +63,10 @@ function Workspace() {
     const chooseKeys = (enabled: boolean) => {
         setSingleKeys(enabled);
         writeHint("keys.single", enabled ? "on" : "off");
+    };
+    const chooseTutorial = (enabled: boolean) => {
+        setTutorial(enabled);
+        writeHint("build.tutorial", enabled ? "on" : "off");
     };
     const otherTheme: Theme = server.settings.theme === "io" ? "nyx" : "io";
 
@@ -95,9 +100,9 @@ function Workspace() {
             >
                 {view === "home" && <Home />}
                 {view === "kanban" && <Kanban server={server} />}
-                {view === "build" && <Build server={server} />}
+                {view === "build" && <Build server={server} tutorial={tutorial} />}
             </AppShell>
-            <Settings open={settings} onClose={() => setSettings(false)} server={server} updates={updates} onTheme={chooseTheme} singleKeys={singleKeys} onSingleKeys={chooseKeys} />
+            <Settings open={settings} onClose={() => setSettings(false)} server={server} updates={updates} onTheme={chooseTheme} singleKeys={singleKeys} onSingleKeys={chooseKeys} tutorial={tutorial} onTutorial={chooseTutorial} />
             <CommandPalette open={palette} onClose={() => setPalette(false)} commands={commands} />
         </>
     );

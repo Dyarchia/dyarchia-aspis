@@ -44,6 +44,7 @@ export interface Kind {
     folder: string;
     format: "markdown" | "json";
     summary: string;
+    intro: string;
     main: (name: string) => string;
     root: (name: string) => string;
     owns: (path: string) => string | undefined;

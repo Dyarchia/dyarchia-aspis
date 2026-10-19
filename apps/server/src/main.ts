@@ -54,7 +54,7 @@ const dispatch = defineCommand({
  */
 const hook = defineCommand({
     meta: { name: "hook", description: "Handle a CLI hook event read from stdin" },
-    args: { harness: { type: "string", required: true, description: "The CLI calling: claude-code or kimi-code" } },
+    args: { harness: { type: "string", required: true, description: `The CLI calling: ${hookHarnesses.join(", ")}` } },
     async run({ args }) {
         let exit = 0;
         try {
