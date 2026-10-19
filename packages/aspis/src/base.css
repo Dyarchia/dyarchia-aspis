@@ -389,14 +389,88 @@ a {
     cursor: not-allowed;
 }
 
-.aspis-field__input option {
-    background: var(--aspis-surface-deep);
-    color: var(--aspis-ink-1);
+/*
+ * A choice from a list is a key that opens a menu, not a field: nothing is typed into it, so it has no line. The
+ * select is the platform's own in its customisable form, so the list it opens is drawn here and not by Windows: the
+ * raised ground and a hairline, rows with room on both sides, and the chosen one marked with a check instead of a
+ * filled bar. A dangerous option says so in the danger colour.
+ */
+.aspis-field__control[data-kind="select"] .aspis-field__input,
+.aspis-field__control[data-kind="select"] .aspis-field__input::picker(select) {
+    appearance: base-select;
 }
 
 .aspis-field__control[data-kind="select"] .aspis-field__input {
+    display: flex;
+    align-items: center;
     padding-right: 32px;
+    border-bottom-color: transparent;
     cursor: pointer;
+}
+
+.aspis-field__control[data-kind="select"] .aspis-field__input:hover:not(:disabled) {
+    color: var(--aspis-ink-1);
+}
+
+.aspis-field__control[data-kind="select"] .aspis-field__input::picker-icon {
+    display: none;
+}
+
+.aspis-field__control[data-kind="select"] .aspis-field__input::picker(select) {
+    min-width: max(anchor-size(width), 200px);
+    margin-block: var(--aspis-space-1);
+    padding: var(--aspis-space-1);
+    border: var(--aspis-border-w) solid var(--aspis-line-strong);
+    border-radius: var(--aspis-radius-item);
+    background: var(--aspis-bg-raised);
+    color: var(--aspis-ink-2);
+    box-shadow: var(--aspis-shadow-pop);
+}
+
+.aspis-field__input option {
+    display: flex;
+    align-items: center;
+    gap: var(--aspis-space-2);
+    min-height: var(--aspis-row-h);
+    padding: 0 var(--aspis-space-3) 0 var(--aspis-space-2);
+    border-radius: var(--aspis-radius-item);
+    background: transparent;
+    color: var(--aspis-ink-2);
+    font: var(--aspis-type-ui);
+    cursor: pointer;
+}
+
+.aspis-field__input option:hover,
+.aspis-field__input option:focus-visible {
+    outline: none;
+    background: var(--aspis-hover);
+    color: var(--aspis-ink-1);
+}
+
+.aspis-field__input option:checked {
+    background: transparent;
+    color: var(--aspis-ink-1);
+}
+
+.aspis-field__input option::checkmark {
+    color: var(--aspis-ink-1);
+}
+
+.aspis-field__input option:disabled {
+    color: var(--aspis-ink-3);
+    cursor: not-allowed;
+}
+
+.aspis-field__input option[data-tone="danger"] {
+    color: var(--aspis-signal-danger);
+}
+
+.aspis-field__input optgroup {
+    padding-top: var(--aspis-space-2);
+    font: var(--aspis-type-label);
+    text-transform: var(--aspis-case-label);
+    letter-spacing: var(--aspis-tracking-label);
+    color: var(--aspis-ink-3);
 }
 
 .aspis-field__control[data-variant="quiet"] .aspis-field__input {
@@ -419,6 +493,11 @@ a {
     right: 10px;
     color: var(--aspis-ink-3);
     pointer-events: none;
+    transition: transform var(--aspis-dur-fast) var(--aspis-ease-out);
+}
+
+.aspis-field__control:has(.aspis-field__input:open) .aspis-field__chevron {
+    transform: rotate(180deg);
 }
 
 .aspis-field__hint {
@@ -1125,6 +1204,17 @@ a {
     min-width: 0;
 }
 
+/* The inspected thing's name reads as a title and becomes a field only under the pointer or the caret. */
+.aspis-inspector__title .aspis-field__input:not(:hover, :focus) {
+    border-bottom-color: transparent;
+}
+
+.aspis-inspector__title .aspis-field__input {
+    max-width: calc(var(--aspis-label-w) + var(--aspis-space-5) + var(--aspis-value-w));
+    font: var(--aspis-type-body);
+    font-weight: 600;
+}
+
 .aspis-inspector__tools {
     display: flex;
     flex: none;
@@ -1140,9 +1230,13 @@ a {
     scrollbar-gutter: stable;
 }
 
+/*
+ * Values never run the width of a wide window: a line across a whole screen reads as a rule, not a field. Numbers
+ * take the width of a number.
+ */
 .aspis-form {
     display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
+    grid-template-columns: minmax(var(--aspis-label-w), max-content) minmax(0, var(--aspis-value-w));
     align-items: start;
     column-gap: var(--aspis-space-5);
     row-gap: var(--aspis-space-2);
@@ -1190,6 +1284,10 @@ a {
 
 .aspis-form > .aspis-field > .aspis-switch {
     min-height: var(--aspis-control-h);
+}
+
+.aspis-form > .aspis-field > .aspis-field__control:has(> input[type="number"]) {
+    width: 96px;
 }
 
 .aspis-progress {
