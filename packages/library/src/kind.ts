@@ -16,9 +16,26 @@ export interface Field {
     path?: string;
 }
 
+export const docs = (page: string) => `https://code.claude.com/docs/en/${page}`;
+
+export interface Example {
+    file: string;
+    lang: "markdown" | "json" | "yaml" | "bash" | "text";
+    code: string;
+    note?: string;
+}
+
+/*
+ * One screen of a tutorial. The title is the question the screen answers, text is its one-sentence lead and body
+ * the lesson itself, a few short paragraphs. An example shows the idea as a real file; pitfalls are the mistakes
+ * people actually make with it. Fields are the ones the reader fills in on this screen.
+ */
 export interface Step {
     title: string;
     text: string;
+    body: readonly string[];
+    example?: Example;
+    pitfalls?: readonly string[];
     fields: readonly string[];
     source: string;
 }
@@ -44,7 +61,6 @@ export interface Kind {
     folder: string;
     format: "markdown" | "json";
     summary: string;
-    intro: string;
     main: (name: string) => string;
     root: (name: string) => string;
     owns: (path: string) => string | undefined;

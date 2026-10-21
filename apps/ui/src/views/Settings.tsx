@@ -134,7 +134,7 @@ function SettingsBody({
                 checked={singleKeys}
                 onChange={onSingleKeys}
                 label="Single-key shortcuts"
-                hint="H K B open views, S Settings, T theme, N new. Ctrl K opens commands either way."
+                hint="H K B open views, S Settings, T theme, N new. Ctrl K opens commands and Ctrl B hides the sidebar either way."
             />
 
             <Switch checked={tutorial} onChange={onTutorial} label="Build tutorial" hint="Each new piece opens on a guided walk through what it is and how to fill it." />

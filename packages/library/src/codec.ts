@@ -38,7 +38,7 @@ const empty = (value: Value) => value === undefined || value === null || value =
 const simple = (value: Value): value is string | number | boolean | string[] =>
     typeof value !== "object" || (Array.isArray(value) && value.every((item) => typeof item === "string"));
 
-const scalarText = (value: string | number | boolean) => stringify(value).trimEnd();
+const scalarText = (value: string | number | boolean) => stringify(value, { lineWidth: 0 }).trimEnd();
 const flowText = (items: string[]) => `[${items.map(scalarText).join(", ")}]`;
 const lineStart = (text: string, at: number) => text.lastIndexOf("\n", at - 1) + 1;
 const lineEnd = (text: string, at: number) => {

@@ -72,16 +72,20 @@ The window keeps Windows' own title bar, so snapping and Snap Layouts stay, and 
 - A builder and library for the pieces agents work with: skills, agents, commands, prompts, rules, hooks, plugins
   and mods, in Claude Code's formats. The pieces live in a GitHub repository of the user's (chosen in Settings,
   created private with a develop branch when it does not exist yet), cloned under `~/.dyarchia-aspis/library/`.
-- Two columns on one grid: the pieces of the chosen kind (the kind is a select at the top of the list) and the
-  piece. Every piece has three modes over the same file: Tutorial opens on what this kind of piece is and then
-  walks the official steps one per screen, each with its fields and their explanations; Form is the fields alone;
-  Code is the file itself. A new piece opens in the tutorial, which can be switched off in Settings. A form change
-  rewrites only its own key, so comments, order and fields the form does not know survive.
+- The library lives in the sidebar: Build opens into one folder per kind and one file per piece, with a dot on
+  what is not published yet and a + on each folder. With nothing open, Build shows a card per kind and the changes
+  waiting to be published.
+- A piece has three modes over the same file. Guide is a real tutorial, written from the Claude Code docs: each
+  step is a lesson with a worked example and the common mistakes, beside the fields it fills and the file as it is
+  being written. On a wide window the step spreads over four cards of one size instead of leaving empty margins.
+  Form is every field; Code is the file itself. A new piece opens in the guide, which can be switched off in
+  Settings. Every change saves itself a moment after it is made (Ctrl S saves at once), and a form change rewrites
+  only its own key, so comments, order and fields the form does not know survive.
 - Each kind is validated as Claude Code reads it: errors (what Claude Code would refuse or skip) block publishing,
   warnings do not.
 - Publishing moves the changes to a `feature/` branch and opens a pull request to develop for the user to merge;
-  later publishes join that pull request, and once it is merged Build returns to develop. The publish controls
-  sit at the foot of the list and only appear when there are changes or a pull request.
+  later publishes join that pull request, and once it is merged Build returns to develop. Publish is the one
+  primary action, at the end of the bar, with the number of changes.
 - Links to the web (docs, the pull request) open in the system browser.
 
 ## Stack

@@ -102,10 +102,6 @@
     [data-theme="io"] .aspis-column__list:hover .aspis-tile:not(:hover) .aspis-tile__title {
         color: var(--aspis-ink-2);
     }
-
-    [data-theme="io"] .aspis-menu__list:hover .aspis-menu__item:not(:hover) {
-        color: var(--aspis-ink-3);
-    }
 }
 
 [data-theme="io"] .aspis-code__head {
@@ -143,8 +139,7 @@
     background: var(--aspis-bg);
 }
 
-[data-theme="io"] .aspis-shell__link[aria-current="page"]::before,
-[data-theme="io"] .aspis-menu__item[aria-current]::before {
+[data-theme="io"] .aspis-shell__link[aria-current="page"]::before {
     content: "";
     position: absolute;
     top: 0;

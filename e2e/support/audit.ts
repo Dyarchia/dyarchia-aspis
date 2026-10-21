@@ -59,16 +59,17 @@ export async function accessible(page: Page, exclude: string[] = []) {
  * Minimalism as a check: within what is in front of the user (the top dialog when one is open, else the window),
  * no heading, label, button, tab, link or menu entry says the same thing twice. Case is ignored because io writes
  * structure in capitals; only what is actually painted counts, so screen-reader-only titles are left out. The same
- * action on every row of a list (Remove, Wire it) is one action, not a repeat.
+ * action on every row of a list (Remove, Wire it) is one action, not a repeat. The sidebar entry marking where you
+ * are and the page heading naming it are the one pair allowed: they are how you know where you stand.
  */
 export async function saysEverythingOnce(page: Page) {
     const repeated = await page.evaluate(() => {
         const dialogs = [...document.querySelectorAll<HTMLDialogElement>("dialog[open]")];
         const root = dialogs.at(-1) ?? document.body;
         const seen = new Map<string, number>();
-        const selector = "h1, h2, h3, label, button, a, [role='tab'], .aspis-menu__label, .aspis-group__label, .aspis-column__title, .aspis-dialog__title";
+        const selector = "h1, h2, h3, label, button, a, [role='tab'], .aspis-group__label, .aspis-column__title, .aspis-dialog__title";
         for (const element of root.querySelectorAll<HTMLElement>(selector)) {
-            if (element.closest(".aspis-sr") || !element.checkVisibility({ visibilityProperty: true })) continue;
+            if (element.closest(".aspis-sr") || element.matches(".aspis-shell__link[aria-current='page']") || !element.checkVisibility({ visibilityProperty: true })) continue;
             const rect = element.getBoundingClientRect();
             if (rect.width < 2 || rect.height < 2) continue;
             const text = element.innerText.trim().toLowerCase();
@@ -125,6 +126,21 @@ const measure = (page: Page) =>
  * choose its own typeface, weight, case and tracking, which changes how wide a word is; to compare layouts and not
  * typefaces, both are measured with one shared face and none of those choices.
  */
+/*
+ * Parts of the window arrive after the first paint (the library tree once the library has loaded), so a layout is
+ * measured only once two readings a moment apart agree.
+ */
+async function settled(page: Page): Promise<Box[]> {
+    let last = await measure(page);
+    for (let attempt = 0; attempt < 30; attempt++) {
+        await page.waitForTimeout(100);
+        const next = await measure(page);
+        if (JSON.stringify(next) === JSON.stringify(last)) return next;
+        last = next;
+    }
+    return last;
+}
+
 export async function sameLayout(page: Page, show: () => Promise<void>) {
     const neutral = await page.addStyleTag({
         content: "*, *::before, *::after { font-family: 'Geist Mono Variable', monospace !important; font-weight: 400 !important; font-style: normal !important; letter-spacing: 0 !important; text-transform: none !important; }",
@@ -134,7 +150,7 @@ export async function sameLayout(page: Page, show: () => Promise<void>) {
         await useTheme(page, theme);
         await show();
         await page.mouse.move(0, 0);
-        boxes[theme] = await measure(page);
+        boxes[theme] = await settled(page);
     }
     await neutral.evaluate((tag) => tag.remove());
     expect(boxes.nyx.map((box) => box.key)).toEqual(boxes.io.map((box) => box.key));

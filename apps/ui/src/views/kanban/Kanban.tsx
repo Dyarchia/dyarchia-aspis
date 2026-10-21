@@ -178,7 +178,7 @@ export function Kanban({ server }: { server: ServerState }) {
                 </>
             }
         >
-            <div className="flex min-h-0 flex-1 flex-col pt-[var(--aspis-space-3)]">
+            <div className="flex min-h-0 flex-1 flex-col">
                 <Stage>
                     <Board label="Kanban">
                         {phases.map((phase) => {

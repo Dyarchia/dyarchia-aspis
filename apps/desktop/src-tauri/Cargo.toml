@@ -1,6 +1,6 @@
 [package]
 name = "dyarchia-aspis"
-version = "0.7.8-alpha"
+version = "0.7.9-alpha"
 description = "Dyarchia Aspis desktop app"
 authors = ["Hector Cervera Panella"]
 license = "MIT"
