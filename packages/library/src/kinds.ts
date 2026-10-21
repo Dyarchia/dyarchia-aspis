@@ -1,5 +1,13 @@
 import type { Value } from "./codec.ts";
 import type { Issue, Kind, KindId } from "./kind.ts";
+import { steps as skillsSteps } from "./tutorials/skills.ts";
+import { steps as agentsSteps } from "./tutorials/agents.ts";
+import { steps as commandsSteps } from "./tutorials/commands.ts";
+import { steps as promptsSteps } from "./tutorials/prompts.ts";
+import { steps as rulesSteps } from "./tutorials/rules.ts";
+import { steps as hooksSteps } from "./tutorials/hooks.ts";
+import { steps as pluginsSteps } from "./tutorials/plugins.ts";
+import { steps as modsSteps } from "./tutorials/mods.ts";
 
 /*
  * The eight kinds a library holds, in Claude Code's own formats. Fields, limits, lint levels and tutorial steps
@@ -9,7 +17,6 @@ import type { Issue, Kind, KindId } from "./kind.ts";
  * they use the smallest one that fits and say so.
  */
 
-const docs = (page: string) => `https://code.claude.com/docs/en/${page}`;
 const efforts = ["low", "medium", "high", "xhigh", "max"] as const;
 const kebab = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const truthy = (value: unknown) => value === true || ["true", "yes", "on", "1"].includes(String(value).toLowerCase());
@@ -46,7 +53,6 @@ const skills: Kind = {
     folder: "skills",
     format: "markdown",
     summary: "Instructions Claude loads when a task matches, or when you type /name.",
-    intro: "A skill is a folder with a SKILL.md: a description that tells Claude when it applies, and instructions it follows when it does. Claude reads only the descriptions until a task matches one; then it loads the whole skill. You can also start it yourself by typing /name.",
     main: (name) => `skills/${name}/SKILL.md`,
     root: (name) => `skills/${name}`,
     owns: inFolder("skills", (name) => `skills/${name}/SKILL.md`),
@@ -60,34 +66,7 @@ const skills: Kind = {
     ],
     essentials: ["name", "description", "when_to_use", "body"],
     body: { label: "Instructions", help: "$ARGUMENTS, $1, $name take what you typed; !`command` inserts its output." },
-    steps: [
-        { title: "Name it", text: "A skill is a folder whose name becomes the command you type. The name field can rename it; otherwise the folder decides.", fields: ["name"], source: docs("skills#create-your-first-skill") },
-        {
-            title: "Say what it does and when",
-            text: "Claude chooses skills by their description alone. Put the main use case first, in the words someone would actually use, and add trigger phrases in When to use.",
-            fields: ["description", "when_to_use"],
-            source: docs("skills#create-your-first-skill"),
-        },
-        {
-            title: "Decide who starts it",
-            text: "By default you and Claude can both start it. Make it typed-only for actions with side effects, or hide it from the menu when it is background knowledge for Claude.",
-            fields: ["disable-model-invocation", "user-invocable"],
-            source: docs("skills#control-who-invokes-a-skill"),
-        },
-        {
-            title: "Take inputs",
-            text: "Whatever follows the command arrives as $ARGUMENTS, or by position as $1, $2, or by name when you declare arguments. The hint tells people what to type.",
-            fields: ["arguments", "argument-hint", "body"],
-            source: docs("skills#pass-arguments-to-skills"),
-        },
-        {
-            title: "Isolate it or pre-approve tools",
-            text: "Optionally run it in its own subagent with context fork, pre-approve the tools it needs, limit it to some paths, or pick its model and effort.",
-            fields: ["context", "agent", "background", "allowed-tools", "disallowed-tools", "paths", "model", "effort", "shell"],
-            source: docs("skills#run-skills-in-a-subagent"),
-        },
-        { title: "Try it", text: "Ask for the task naturally and see whether Claude picks it up, then type /name. If it never triggers, the description is the first thing to sharpen.", fields: [], source: docs("skills#troubleshooting") },
-    ],
+    steps: skillsSteps,
     check: (piece, values, body) => {
         const issues = fileName(piece.name);
         if (piece.name.toLowerCase() === "synced" || piece.name.startsWith("anthropic-skills")) issues.push({ level: "error", message: `Claude Code does not load a skill folder named ${piece.name}` });
@@ -115,7 +94,6 @@ const agents: Kind = {
     folder: "agents",
     format: "markdown",
     summary: "Subagents with their own prompt, tools and model.",
-    intro: "An agent is a subagent: a separate Claude with its own system prompt, tools and model. The main session hands it work when the task matches its description, it works in its own context, and only its answer comes back.",
     main: (name) => `agents/${name}.md`,
     root: (name) => `agents/${name}.md`,
     owns: inFolder("agents", (name) => `agents/${name}.md`),
@@ -139,24 +117,7 @@ const agents: Kind = {
     ],
     essentials: ["name", "description", "tools", "model", "body"],
     body: { label: "System prompt", help: "It sees only what it is given, not your conversation." },
-    steps: [
-        { title: "Give it a name and a trigger", text: "Claude delegates by reading descriptions, so say what work this agent takes and when it should get it.", fields: ["name", "description"], source: docs("sub-agents#write-subagent-files") },
-        {
-            title: "Limit what it can do",
-            text: "Give it only the tools its job needs: a reviewer does not need to write. Remove tools or set how its calls are approved.",
-            fields: ["tools", "disallowedTools", "permissionMode"],
-            source: docs("sub-agents#control-subagent-capabilities"),
-        },
-        { title: "Choose the model", text: "Fast models suit search and triage; judgment calls deserve a stronger model or more effort.", fields: ["model", "effort", "maxTurns"], source: docs("sub-agents#choose-a-model") },
-        {
-            title: "Write its system prompt",
-            text: "The body is all it knows about its role: how to work, what to check, what to hand back. Preload skills or give it memory if it needs them.",
-            fields: ["body", "skills", "memory"],
-            source: docs("sub-agents#preload-skills-into-subagents"),
-        },
-        { title: "Extras", text: "Isolate it in a worktree, run it in the background, skip CLAUDE.md or give it a color.", fields: ["isolation", "background", "omitClaudeMd", "color", "initialPrompt"], source: docs("sub-agents#write-subagent-files") },
-        { title: "Try it", text: "Ask Claude to use it by name and check that the delegation shows up.", fields: [], source: docs("sub-agents#quickstart-create-your-first-subagent") },
-    ],
+    steps: agentsSteps,
     check: (piece, values) => [...fileName(piece.name), ...agentName(values.name)],
 };
 
@@ -167,7 +128,6 @@ const commands: Kind = {
     folder: "commands",
     format: "markdown",
     summary: "Prompts you run as /name, the older form of skills.",
-    intro: "A command is a single markdown file whose name becomes /name. Typing it sends its prompt, with what you wrote after the command filled in. Skills do the same and more; commands remain for simple prompts you trigger by hand.",
     main: (name) => `commands/${name}.md`,
     root: (name) => `commands/${name}.md`,
     owns: inFolder("commands", (name) => `commands/${name}.md`),
@@ -175,12 +135,7 @@ const commands: Kind = {
     fields: skillFields,
     essentials: ["description", "argument-hint", "body"],
     body: { label: "Prompt", help: "$ARGUMENTS, $1, $name take what you typed; !`command` inserts its output." },
-    steps: [
-        { title: "Name the command", text: "The file name is the command: deploy.md is /deploy.", fields: [], source: docs("skills#how-a-skill-gets-its-command-name") },
-        { title: "Describe it", text: "A short description shows in the / menu, and the hint says what to type after it.", fields: ["description", "argument-hint"], source: docs("skills#frontmatter-reference") },
-        { title: "Write the prompt", text: "The body is the prompt. Use $ARGUMENTS for everything typed after the command, or $1, $2 by position.", fields: ["body", "arguments"], source: docs("skills#available-string-substitutions") },
-        { title: "Tools and model", text: "Pre-approve what it needs and run simple commands on a faster model.", fields: ["allowed-tools", "disallowed-tools", "model", "effort", "disable-model-invocation"], source: docs("skills#frontmatter-reference") },
-    ],
+    steps: commandsSteps,
     check: (piece, values, body) => {
         const issues = fileName(piece.name);
         const tools = Array.isArray(values["allowed-tools"]) ? values["allowed-tools"].join(" ") : String(values["allowed-tools"] ?? "");
@@ -198,7 +153,6 @@ const prompts: Kind = {
     folder: "prompts",
     format: "markdown",
     summary: "Reusable prompt templates with {{variables}}.",
-    intro: "A prompt is a template you reuse across tasks. Its text marks with {{name}} what changes each time; whoever uses it fills those in and gets a complete, well-formed request.",
     main: (name) => `prompts/${name}.md`,
     root: (name) => `prompts/${name}.md`,
     owns: inFolder("prompts", (name) => `prompts/${name}.md`),
@@ -209,16 +163,7 @@ const prompts: Kind = {
     ],
     essentials: ["description", "variables", "body"],
     body: { label: "Template", help: "Write {{name}} where a variable goes." },
-    steps: [
-        { title: "Say what it is for", text: "A template is reused across tasks; its description is how you find it again.", fields: ["description"], source: docs("prompt-library") },
-        {
-            title: "Write the prompt",
-            text: "State the outcome you want, how Claude can check its work, what to look at and the shape of the answer. Mark what changes from task to task with {{name}}.",
-            fields: ["body"],
-            source: docs("prompt-library"),
-        },
-        { title: "Declare its variables", text: "List every {{name}} the template uses, so whoever fills it knows what to bring.", fields: ["variables"], source: docs("prompt-library") },
-    ],
+    steps: promptsSteps,
     check: (piece, values, body) => {
         const declared = Array.isArray(values.variables) ? values.variables.map(String) : [];
         const used = variables(body);
@@ -237,7 +182,6 @@ const rules: Kind = {
     folder: "rules",
     format: "markdown",
     summary: "Standing instructions for CLAUDE.md, AGENTS.md or .claude/rules.",
-    intro: "A rule is a standing instruction that loads into every session: what Claude should always know or do in a project. It lives in CLAUDE.md, AGENTS.md or a .claude/rules file, and a rules file can be limited to the paths it is about.",
     main: (name) => `rules/${name}.md`,
     root: (name) => `rules/${name}.md`,
     owns: inFolder("rules", (name) => `rules/${name}.md`),
@@ -245,15 +189,7 @@ const rules: Kind = {
     fields: [{ key: "paths", label: "Paths", control: "tags", placeholder: "src/api/**/*.ts", help: "Loads only for matching files. Empty: always loads." }],
     essentials: ["paths", "body"],
     body: { label: "Rules", help: "@path imports another file." },
-    steps: [
-        {
-            title: "Write what always applies",
-            text: "Memory files load at the start of every session. Short, concrete, checkable lines under headers work; vague ones and contradictions do not. Point at other files with @path instead of copying them.",
-            fields: ["body"],
-            source: docs("memory#write-effective-instructions"),
-        },
-        { title: "Scope it to files", text: "As a .claude/rules file, a rule can name the paths it applies to and load only when Claude touches them.", fields: ["paths"], source: docs("memory#path-specific-rules") },
-    ],
+    steps: rulesSteps,
     check: (piece, _values, body) => {
         const issues = fileName(piece.name);
         if (!body.trim()) issues.push({ level: "error", message: "The rule is empty", field: "body" });
@@ -358,7 +294,6 @@ const hooks: Kind = {
     folder: "hooks",
     format: "json",
     summary: "What runs at a point of Claude's work: before a tool, after an edit, when a turn ends.",
-    intro: "A hook is something that runs on its own at a fixed point of Claude's work: before a tool call, after an edit, when a prompt is sent, when a turn ends. It can check, record or block, and it runs every time, without Claude deciding to.",
     main: (name) => `hooks/${name}.json`,
     root: (name) => `hooks/${name}.json`,
     owns: inFolder("hooks", (name) => `hooks/${name}.json`),
@@ -377,23 +312,7 @@ const hooks: Kind = {
         { key: "statusMessage", label: "Status message", control: "text", help: "Shown while it runs." },
     ],
     essentials: ["description", "event", "matcher", "type", "command", "url", "prompt"],
-    steps: [
-        { title: "Choose the moment", text: "Hooks run at fixed points: before or after a tool, when a prompt is sent, when Claude stops. Pick where your check belongs.", fields: ["event", "description"], source: docs("hooks#hook-events") },
-        {
-            title: "Narrow it down",
-            text: "A matcher limits when it fires: the tool name for tool events, the source for session events. Some events take no matcher at all. if adds a permission rule on top.",
-            fields: ["matcher", "if"],
-            source: docs("hooks#matcher-patterns"),
-        },
-        {
-            title: "Say what runs",
-            text: "Pick the handler. A command gets the event as JSON on stdin: exit 0 lets things go on, exit 2 blocks and tells Claude why. Not every handler fits every event.",
-            fields: ["type", "command", "url", "prompt"],
-            source: docs("hooks#hook-handler-fields"),
-        },
-        { title: "Bound it", text: "A timeout keeps a slow check from stalling the session; a status message says what is running.", fields: ["timeout", "statusMessage"], source: docs("hooks#hook-handler-fields") },
-        { title: "Try it", text: "Check it appears in /hooks, then trigger the event and watch it run.", fields: [], source: docs("hooks-guide#set-up-your-first-hook") },
-    ],
+    steps: hooksSteps,
     check: (piece, values, _body) => {
         const issues = fileName(piece.name);
         let json: Record<string, unknown> = {};
@@ -458,7 +377,6 @@ const plugins: Kind = {
     folder: "plugins",
     format: "json",
     summary: "Skills, agents, hooks and servers that install together.",
-    intro: "A plugin bundles skills, agents, commands, hooks and servers so they install together in one step. It is a folder with a manifest that names it, and its parts sit in their own folders beside the manifest.",
     main: (name) => `plugins/${name}/.claude-plugin/plugin.json`,
     root: (name) => `plugins/${name}`,
     owns: inFolder("plugins", (name) => `plugins/${name}/.claude-plugin/plugin.json`),
@@ -471,18 +389,7 @@ const plugins: Kind = {
         { key: "keywords", label: "Keywords", control: "tags" },
     ],
     essentials: ["name", "displayName", "version", "description"],
-    steps: [
-        { title: "Make the folder", text: "A plugin is a folder with a .claude-plugin subfolder, which holds plugin.json and nothing else.", fields: [], source: docs("plugins/create#create-your-first-plugin") },
-        { title: "Write the manifest", text: "Only the name is required: it is how the plugin is installed. Description, version and author help whoever installs it.", fields: ["name", "displayName", "version", "description", "author", "authorEmail"], source: docs("plugins/create#create-your-first-plugin") },
-        {
-            title: "Add its parts",
-            text: "Skills, agents, commands, hooks and servers go in their folders at the plugin root (skills/, agents/, commands/, hooks/hooks.json, .mcp.json), never inside .claude-plugin. Add them in Code.",
-            fields: [],
-            source: docs("plugins/components"),
-        },
-        { title: "Make it findable", text: "Homepage, repository, license and keywords help people trust it and find it.", fields: ["homepage", "repository", "license", "keywords"], source: docs("plugins/manifest-reference") },
-        { title: "Validate and load it", text: "claude plugin validate checks it; claude --plugin-dir loads it for a try.", fields: [], source: docs("plugins/manifest-reference#validate-the-manifest") },
-    ],
+    steps: pluginsSteps,
     check: (piece, values) => {
         const issues = manifestIssues(piece, values);
         if (values.homepage && !URL.canParse(String(values.homepage))) issues.push({ level: "error", message: "The homepage is not a URL", field: "homepage" });
@@ -507,7 +414,6 @@ const mods: Kind = {
     folder: "mods",
     format: "json",
     summary: "Plugins whose code runs inside Claude Code.",
-    intro: "A mod is a plugin with code: a module that Claude Code loads and calls at its hook points, where it can read an event, change it or answer it. Use it when a hook command is not enough.",
     main: (name) => `mods/${name}/.claude-plugin/plugin.json`,
     root: (name) => `mods/${name}`,
     owns: inFolder("mods", (name) => `mods/${name}/.claude-plugin/plugin.json`),
@@ -518,23 +424,7 @@ const mods: Kind = {
     }),
     fields: manifestFields,
     essentials: ["name", "displayName", "version", "description"],
-    steps: [
-        { title: "Make the folders", text: "A mod is a plugin with code: a .claude-plugin folder for the manifest and a hooks folder for the module.", fields: [], source: docs("plugins/mods/create#write-a-mod-yourself") },
-        { title: "Write a plain manifest", text: "Name, version, description and author, as for any plugin. Mods add no manifest fields.", fields: ["name", "version", "description", "author", "authorEmail"], source: docs("plugins/mods/create#write-a-mod-yourself") },
-        {
-            title: "Point at the module",
-            text: "hooks/hooks.json lists exactly one module under modules. It is an ES module with static imports only, from claude-code or inside the mod.",
-            fields: [],
-            source: docs("plugins/mods/reference#files"),
-        },
-        {
-            title: "Register handlers",
-            text: "register receives on(event, matcher, hook). A hook gets the engine, the frozen event and next: call next to go on, rewrite with next({...e}), or answer by returning without it.",
-            fields: [],
-            source: docs("plugins/mods/events"),
-        },
-        { title: "Validate and load it", text: "claude plugin validate reads the module and lists its hooks; claude --plugin-dir loads it and reloads on save.", fields: [], source: docs("plugins/mods/create#check-what-claude-code-reads-from-your-mod") },
-    ],
+    steps: modsSteps,
     check: (piece, values) => {
         const issues = manifestIssues(piece, values);
         if (!piece.files.includes(`mods/${piece.name}/hooks/hooks.json`)) issues.push({ level: "error", message: "hooks/hooks.json is missing; it names the module to load" });

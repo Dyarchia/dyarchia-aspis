@@ -11,7 +11,7 @@ export interface CodeLine {
 
 const lineText = (line: CodeLine) => line.text ?? line.segments?.map(([, text]) => text).join("") ?? "";
 
-export function CodeBlock({ title, lang, lines }: { title: string; lang?: string; lines: readonly CodeLine[] }) {
+export function CodeBlock({ title, lang, lines, wrap }: { title: string; lang?: string; lines: readonly CodeLine[]; wrap?: boolean }) {
     const [copied, setCopied] = useState(false);
     const copy = async () => {
         await navigator.clipboard.writeText(lines.map(lineText).join("\n"));
@@ -19,7 +19,7 @@ export function CodeBlock({ title, lang, lines }: { title: string; lang?: string
         setTimeout(() => setCopied(false), 1600);
     };
     return (
-        <figure className="aspis-code">
+        <figure className="aspis-code" data-wrap={wrap || undefined}>
             <figcaption className="aspis-code__head">
                 <span className="aspis-code__title">{title}</span>
                 {lang && <span className="aspis-code__lang">{lang}</span>}
