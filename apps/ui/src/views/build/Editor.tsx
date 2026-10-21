@@ -131,7 +131,7 @@ export function Editor({
      * The tutorial is a guided walk: it opens on what this kind of piece is, then takes one step per screen with the
      * step's own fields and their explanations, and ends by handing over to the form.
      */
-    const walk = [{ title: `What is a ${kind.singular}?`, text: kind.intro, fields: [] as readonly string[], source: kind.steps[0]?.source ?? "" }, ...kind.steps];
+    const walk = kind.steps;
     const at = Math.min(step, walk.length - 1);
     const lesson = walk[at]!;
     const last = at === walk.length - 1;
