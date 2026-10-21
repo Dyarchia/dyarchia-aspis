@@ -126,6 +126,21 @@ const measure = (page: Page) =>
  * choose its own typeface, weight, case and tracking, which changes how wide a word is; to compare layouts and not
  * typefaces, both are measured with one shared face and none of those choices.
  */
+/*
+ * Parts of the window arrive after the first paint (the library tree once the library has loaded), so a layout is
+ * measured only once two readings a moment apart agree.
+ */
+async function settled(page: Page): Promise<Box[]> {
+    let last = await measure(page);
+    for (let attempt = 0; attempt < 30; attempt++) {
+        await page.waitForTimeout(100);
+        const next = await measure(page);
+        if (JSON.stringify(next) === JSON.stringify(last)) return next;
+        last = next;
+    }
+    return last;
+}
+
 export async function sameLayout(page: Page, show: () => Promise<void>) {
     const neutral = await page.addStyleTag({
         content: "*, *::before, *::after { font-family: 'Geist Mono Variable', monospace !important; font-weight: 400 !important; font-style: normal !important; letter-spacing: 0 !important; text-transform: none !important; }",
@@ -135,7 +150,7 @@ export async function sameLayout(page: Page, show: () => Promise<void>) {
         await useTheme(page, theme);
         await show();
         await page.mouse.move(0, 0);
-        boxes[theme] = await measure(page);
+        boxes[theme] = await settled(page);
     }
     await neutral.evaluate((tag) => tag.remove());
     expect(boxes.nyx.map((box) => box.key)).toEqual(boxes.io.map((box) => box.key));
