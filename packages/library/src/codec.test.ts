@@ -39,6 +39,13 @@ describe("markdown pieces", () => {
         expect(setFrontmatter("Just text\n", "description", "Fix an issue")).toBe("---\ndescription: Fix an issue\n---\nJust text\n");
     });
 
+    test("a long value stays on its own line and reads back as written", () => {
+        const long = "Reviews Apex classes and triggers for bulk safety, governor limits and test coverage before a pull request";
+        const text = setFrontmatter(skill, "description", long);
+        expect(text).toContain(`description: ${long}   # keep it short\n`);
+        expect(parseMarkdown(text).frontmatter.description).toBe(long);
+    });
+
     test("broken frontmatter is reported, not guessed at", () => {
         expect(parseMarkdown("---\nname: [unclosed\n---\nbody").error).toBeDefined();
         expect(() => setFrontmatter("---\nname: [unclosed\n---\nbody", "name", "x")).toThrow("does not parse");

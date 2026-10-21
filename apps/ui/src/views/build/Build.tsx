@@ -1,65 +1,64 @@
-import { Button, EmptyState, IconButton, Menu, Page, Select, TextField, VisuallyHidden, useHotkeys } from "@dyarchia/aspis";
+import { Button, Card, EmptyState, Icon, IconButton, Page, useHotkeys } from "@dyarchia/aspis";
 import { type KindId, kindIds, kinds, pieceAt } from "@dyarchia/library";
-import { useMemo, useState } from "react";
-import { useLibrary } from "../../use-library.ts";
-import type { ServerState } from "../../use-server.ts";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
+import type { Library } from "../../use-library.ts";
 import { Prompt, type PromptRequest } from "../kanban/Prompt.tsx";
 import { LibraryConnect } from "../Settings.tsx";
 import { Editor } from "./Editor.tsx";
+import { type Selection, nameRule, piecesOf } from "./pieces.ts";
 
-const nameRule = /^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$|^[a-z0-9]$/;
+const changeLabels = { added: "Added", modified: "Changed", deleted: "Deleted" } as const;
 
 /*
- * Two columns on one grid: the pieces of the chosen kind and the piece itself. Both columns share their first row,
- * so the kind and its + sit on the same line as the editor's modes and Save, and both columns start their content
- * on the same line below it. The publish cycle lives at the foot of the list and appears only when there is
- * something to publish or a pull request to follow. A piece made with the tutorial on opens in the tutorial.
+ * Build has no list of its own: the sidebar holds the library as folders and files. With nothing open it shows the
+ * library at a glance, one card per kind and the changes waiting to be published; with a piece open it is that
+ * piece's editor. Publishing is the one primary action, at the end of the bar, whatever is open. A piece made with
+ * the tutorial on opens in the guide.
  */
-export function Build({ server, tutorial }: { server: ServerState; tutorial: boolean }) {
-    const library = useLibrary(server);
-    const [kind, setKind] = useState<KindId>("skills");
-    const [selected, setSelected] = useState<string>();
-    const [fresh, setFresh] = useState<string>();
+export function Build({
+    library,
+    selection,
+    onSelect,
+    creating,
+    onCreated,
+    tutorial,
+}: {
+    library: Library;
+    selection?: Selection;
+    onSelect: (selection?: Selection) => void;
+    creating?: KindId;
+    onCreated: () => void;
+    tutorial: boolean;
+}) {
     const [prompt, setPrompt] = useState<PromptRequest>();
-    const [filter, setFilter] = useState("");
+    const [fresh, setFresh] = useState<string>();
     const [repo, setRepo] = useState("");
+    const pieces = useMemo(() => piecesOf(library.files), [library.files]);
 
-    const pieces = useMemo(() => {
-        const found = new Map<KindId, Set<string>>(kindIds.map((id) => [id, new Set<string>()]));
-        for (const path of library.files) {
-            const at = pieceAt(path);
-            if (at) found.get(at.kind)!.add(at.name);
-        }
-        return found;
-    }, [library.files]);
-    const changed = new Set((library.status?.changes ?? []).map((change) => pieceAt(change.path)).filter(Boolean).map((at) => `${at!.kind}/${at!.name}`));
-    const names = [...(pieces.get(kind) ?? [])].filter((name) => name.includes(filter.trim().toLowerCase())).sort();
-    const current = kinds[kind];
-
-    const create = () =>
+    const create = (kind: KindId) => {
+        const current = kinds[kind];
         setPrompt({
             title: `New ${current.singular}`,
             label: "Name",
             hint: "Lowercase letters, digits and hyphens",
             action: "Create",
             validate: (name) =>
-                !nameRule.test(name) ? "Only lowercase letters, digits and hyphens" : pieces.get(kind)?.has(name) ? `There is already a ${current.singular} named ${name}` : undefined,
+                !nameRule.test(name) ? "Only lowercase letters, digits and hyphens" : pieces.get(kind)?.includes(name) ? `There is already a ${current.singular} named ${name}` : undefined,
             submit: async (name) => {
                 for (const [path, content] of Object.entries(current.scaffold(name))) await library.write(path, content);
-                setFresh(name);
-                setSelected(name);
+                setFresh(`${kind}/${name}`);
+                onSelect({ kind, name });
             },
         });
+    };
 
-    const publish = () =>
-        setPrompt({
-            title: library.status?.pr?.state === "OPEN" ? "Add to the open pull request" : "Publish to the library",
-            label: "What changed, in one line",
-            action: "Publish",
-            submit: (message) => void library.publish(message),
-        });
+    useEffect(() => {
+        if (!creating) return;
+        create(creating);
+        onCreated();
+    }, [creating]);
 
-    useHotkeys({ n: () => library.status && create() });
+    useHotkeys({ n: () => library.status && create(selection?.kind ?? "skills") });
 
     if (!library.loaded) return <Page title="Build">{null}</Page>;
 
@@ -73,80 +72,133 @@ export function Build({ server, tutorial }: { server: ServerState; tutorial: boo
             </Page>
         );
 
-    const status = library.status;
-    const pr = status.pr;
-    const count = status.changes.length;
+    const pr = library.status.pr;
+    const count = library.status.changes.length;
+    const publish = () =>
+        setPrompt({
+            title: pr?.state === "OPEN" ? "Add to the open pull request" : "Publish to the library",
+            label: "What changed, in one line",
+            action: "Publish",
+            submit: (message) => void library.publish(message),
+        });
+    const actions = (
+        <>
+            {pr && pr.state !== "OPEN" && (
+                <Button variant="secondary" disabled={library.busy} onClick={() => void library.sync()}>
+                    Back to develop
+                </Button>
+            )}
+            <Button variant="primary" disabled={library.busy || count === 0} onClick={publish}>
+                {pr?.state === "OPEN" ? "Update pull request" : "Publish"}
+                {count > 0 && <span className="inline-grid h-5 min-w-5 place-items-center rounded-full bg-[color-mix(in_srgb,var(--aspis-invert-ink)_12%,transparent)] px-1.5 [font:var(--aspis-type-data)]">{count}</span>}
+            </Button>
+        </>
+    );
+    const key = selection && `${selection.kind}/${selection.name}`;
+
     return (
-        <Page title="Build">
-            <div className="grid min-h-0 flex-1 grid-cols-[280px_minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)]">
-                <div className="flex min-h-[var(--aspis-control-h)] items-center gap-[var(--aspis-space-2)] border-r border-[var(--aspis-line)] px-[var(--aspis-space-2)] pt-[var(--aspis-space-3)]">
-                    <Select
-                        label="Kind"
-                        hideLabel
-                        quiet
-                        value={kind}
-                        onChange={(event) => {
-                            setKind(event.target.value as KindId);
-                            setSelected(undefined);
-                            setFilter("");
-                        }}
-                        options={kindIds.map((id) => ({ value: id, label: pieces.get(id)?.size ? `${kinds[id].label} · ${pieces.get(id)!.size}` : kinds[id].label }))}
-                    />
-                    <IconButton icon="plus" label={`New ${current.singular}`} hotkey="N" className="ml-auto" onClick={create} />
-                </div>
-                {selected ? (
-                    <Editor
-                        key={`${kind}/${selected}`}
-                        kind={current}
-                        name={selected}
-                        library={library}
-                        tutorial={tutorial}
-                        start={tutorial && fresh === selected ? "tutorial" : "form"}
-                        onDeleted={() => setSelected(undefined)}
-                    />
-                ) : (
-                    <div className="col-start-2 row-start-2 min-h-0">
-                        <EmptyState title={current.summary} />
-                    </div>
-                )}
-                <section aria-label={current.label} className="col-start-1 row-start-2 flex min-h-0 flex-col border-r border-[var(--aspis-line)]">
-                    <div className="px-[var(--aspis-space-2)] pt-[var(--aspis-space-3)]">
-                        <TextField label={`Filter ${current.label.toLowerCase()}`} hideLabel placeholder="Filter" value={filter} onChange={(event) => setFilter(event.target.value)} />
-                    </div>
-                    <div className="min-h-0 flex-1 overflow-y-auto">
-                        <Menu
-                            label={current.label}
-                            value={selected}
-                            items={names.map((name) => ({ id: name, label: name, changed: changed.has(`${kind}/${name}`) }))}
-                            onSelect={(name) => {
-                                setFresh(undefined);
-                                setSelected(name);
-                            }}
-                        />
-                    </div>
-                    {(count > 0 || pr) && (
-                        <section aria-label="Publish" className="flex flex-col gap-[var(--aspis-space-3)] p-[var(--aspis-space-3)]">
-                            {pr && (
-                                <a href={pr.url} target="_blank" rel="noreferrer" className="aspis-field__hint flex min-h-[var(--aspis-row-h)] items-center">
-                                    Pull request {pr.state.toLowerCase()}
-                                    <VisuallyHidden>, opens GitHub</VisuallyHidden>
-                                </a>
-                            )}
-                            {pr && pr.state !== "OPEN" && (
-                                <Button variant="secondary" disabled={library.busy} onClick={() => void library.sync()}>
-                                    Back to develop
-                                </Button>
-                            )}
-                            {count > 0 && (
-                                <Button variant="primary" disabled={library.busy} onClick={publish}>
-                                    {pr?.state === "OPEN" ? "Update pull request" : `Publish ${count} change${count > 1 ? "s" : ""}`}
-                                </Button>
-                            )}
-                        </section>
-                    )}
-                </section>
-            </div>
+        <>
+            {selection && pieces.get(selection.kind)?.includes(selection.name) ? (
+                <Editor
+                    key={key}
+                    kind={kinds[selection.kind]}
+                    name={selection.name}
+                    library={library}
+                    tutorial={tutorial}
+                    start={tutorial && fresh === key ? "guide" : "form"}
+                    actions={actions}
+                    onUp={() => onSelect(undefined)}
+                    onDeleted={() => onSelect(undefined)}
+                />
+            ) : (
+                <Overview library={library} pieces={pieces} actions={actions} onCreate={create} onOpen={onSelect} />
+            )}
             <Prompt request={prompt} onClose={() => setPrompt(undefined)} />
+        </>
+    );
+}
+
+function Overview({
+    library,
+    pieces,
+    actions,
+    onCreate,
+    onOpen,
+}: {
+    library: Library;
+    pieces: Map<KindId, string[]>;
+    actions: ReactNode;
+    onCreate: (kind: KindId) => void;
+    onOpen: (selection: Selection) => void;
+}) {
+    const status = library.status!;
+    const changed = status.changes
+        .map((change) => ({ ...change, at: pieceAt(change.path) }))
+        .filter((change) => change.at !== undefined);
+    return (
+        <Page title="Build" actions={actions}>
+            <div className="grid min-h-0 flex-1 grid-cols-4 grid-rows-[auto_auto_minmax(0,1fr)] gap-4 px-4 pb-4">
+                {kindIds.map((id) => (
+                    <Card key={id}>
+                        <div className="flex flex-col gap-3">
+                            <div className="flex items-center gap-2 text-[var(--aspis-ink-2)]">
+                                <Icon name="folder" />
+                                <span className="font-medium">{kinds[id].label}</span>
+                                <IconButton icon="plus" label={`New ${kinds[id].singular}`} className="ml-auto" onClick={() => onCreate(id)} />
+                            </div>
+                            <span className="[font:var(--aspis-type-display)]">{pieces.get(id)?.length ?? 0}</span>
+                            <p className="m-0 text-[var(--aspis-ink-3)]">{kinds[id].summary}</p>
+                        </div>
+                    </Card>
+                ))}
+                <Card
+                    title="Changes not published"
+                    className="col-span-4"
+                    meta={
+                        status.pr ? (
+                            <a href={status.pr.url} target="_blank" rel="noreferrer">
+                                Pull request {status.pr.state.toLowerCase()}
+                            </a>
+                        ) : (
+                            status.branch
+                        )
+                    }
+                >
+                    {changed.length === 0 ? (
+                        <p className="m-0 text-[var(--aspis-ink-3)]">Everything in the library is published.</p>
+                    ) : (
+                        <table className="-mx-[var(--aspis-space-5)] -mt-[var(--aspis-space-5)] w-[calc(100%+2*var(--aspis-space-5))] border-collapse">
+                            <thead>
+                                <tr className="h-10 bg-[var(--aspis-surface-deep)] text-left text-[var(--aspis-ink-3)]">
+                                    {["Piece", "Kind", "Change", "File"].map((head) => (
+                                        <th key={head} className="border-b border-[var(--aspis-line)] px-[var(--aspis-space-5)] font-medium">
+                                            {head}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {changed.map((change) => (
+                                    <tr key={change.path} className="h-12 border-b border-[var(--aspis-line)]">
+                                        <td className="px-[var(--aspis-space-5)]">
+                                            {change.status === "deleted" ? (
+                                                change.at!.name
+                                            ) : (
+                                                <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-[var(--aspis-ink-1)] hover:underline" onClick={() => onOpen(change.at!)}>
+                                                    {change.at!.name}
+                                                </button>
+                                            )}
+                                        </td>
+                                        <td className="px-[var(--aspis-space-5)] text-[var(--aspis-ink-3)] capitalize">{kinds[change.at!.kind].singular}</td>
+                                        <td className="px-[var(--aspis-space-5)]">{changeLabels[change.status]}</td>
+                                        <td className="px-[var(--aspis-space-5)] [font:var(--aspis-type-data)] text-[var(--aspis-ink-3)]">{change.path}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </Card>
+            </div>
         </Page>
     );
 }

@@ -576,15 +576,35 @@ a {
     display: flex;
     flex: none;
     align-items: center;
-    gap: var(--aspis-space-3);
-    padding: var(--aspis-space-3) var(--aspis-space-4) 0;
+    gap: var(--aspis-space-2);
+    height: var(--aspis-head-h);
+    padding: 0 var(--aspis-space-4);
+}
+
+.aspis-page__rule {
+    flex: none;
+    width: var(--aspis-border-w);
+    height: var(--aspis-space-4);
+    margin: 0 var(--aspis-space-2) 0 var(--aspis-space-1);
+    background: var(--aspis-line-strong);
+}
+
+.aspis-page__title {
+    margin: 0;
+    font: var(--aspis-type-item);
+    color: var(--aspis-ink-1);
+    white-space: nowrap;
+}
+
+.aspis-page__title:focus {
+    outline: none;
 }
 
 .aspis-page__actions {
     display: flex;
     flex: none;
     align-items: center;
-    gap: var(--aspis-space-3);
+    gap: var(--aspis-space-2);
     margin-left: auto;
 }
 
@@ -593,6 +613,160 @@ a {
     flex: 1;
     flex-direction: column;
     min-height: 0;
+}
+
+.aspis-crumbs ol,
+.aspis-crumbs li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--aspis-ink-3);
+}
+
+.aspis-crumbs ol {
+    margin-right: 10px;
+}
+
+.aspis-crumbs__link {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: var(--aspis-type-item);
+    color: var(--aspis-ink-3);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.aspis-crumbs__link:hover {
+    color: var(--aspis-ink-1);
+}
+
+/*
+ * Cards of a page grid share one radius, one hairline and one head height, so cards in a row line up on every edge:
+ * heads, bodies and feet. Only the body scrolls.
+ */
+.aspis-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border: var(--aspis-border-w) solid var(--aspis-line);
+    border-radius: var(--aspis-radius-surface);
+    background: var(--aspis-surface);
+}
+
+.aspis-card__head,
+.aspis-card__foot {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--aspis-space-2);
+    padding: 0 var(--aspis-space-5);
+}
+
+.aspis-card__head {
+    justify-content: space-between;
+    height: var(--aspis-card-head-h);
+    border-bottom: var(--aspis-border-w) solid var(--aspis-line);
+}
+
+.aspis-card__foot {
+    height: var(--aspis-card-foot-h);
+    border-top: var(--aspis-border-w) solid var(--aspis-line);
+}
+
+.aspis-card__title {
+    margin: 0;
+    font: var(--aspis-type-item);
+    font-weight: 600;
+    color: var(--aspis-ink-1);
+}
+
+.aspis-card__meta {
+    min-width: 0;
+    overflow: hidden;
+    font: var(--aspis-type-data);
+    color: var(--aspis-ink-3);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aspis-card__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--aspis-space-5);
+    min-height: 0;
+    padding: var(--aspis-space-5);
+    overflow-y: auto;
+}
+
+.aspis-stepper {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    list-style: none;
+    border: var(--aspis-border-w) solid var(--aspis-line);
+    border-radius: var(--aspis-radius-surface);
+    background: var(--aspis-surface);
+}
+
+.aspis-stepper li {
+    display: flex;
+    min-width: 0;
+}
+
+.aspis-stepper li + li {
+    border-left: var(--aspis-border-w) solid var(--aspis-line);
+}
+
+.aspis-stepper__step {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--aspis-space-1);
+    min-width: 0;
+    padding: var(--aspis-space-3) var(--aspis-space-4);
+    border: 0;
+    background: none;
+    color: var(--aspis-ink-3);
+    text-align: left;
+    cursor: pointer;
+}
+
+.aspis-stepper__step:hover {
+    background: var(--aspis-hover);
+}
+
+.aspis-stepper__step[data-state="done"] {
+    color: var(--aspis-ink-2);
+}
+
+.aspis-stepper__step[data-state="now"] {
+    background: var(--aspis-fill);
+    color: var(--aspis-ink-1);
+    box-shadow: inset 0 -2px 0 var(--aspis-ink-1);
+}
+
+.aspis-stepper__step:focus-visible {
+    outline-offset: -2px;
+}
+
+.aspis-stepper__index {
+    display: flex;
+    align-items: center;
+    gap: var(--aspis-space-1);
+    font: var(--aspis-type-data);
+}
+
+.aspis-stepper__label {
+    font: var(--aspis-type-ui);
+    font-weight: 500;
 }
 
 .aspis-group {
@@ -609,8 +783,7 @@ a {
     color: var(--aspis-ink-1);
 }
 
-.aspis-column__count,
-.aspis-menu__count {
+.aspis-column__count {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -711,6 +884,11 @@ a {
     overflow-x: auto;
     font: var(--aspis-type-code);
     color: var(--aspis-ink-2);
+}
+
+.aspis-code[data-wrap] .aspis-code__body {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 
 .aspis-code__line[data-diff] {
@@ -945,20 +1123,19 @@ a {
 
 .aspis-toaster {
     position: fixed;
-    left: 50%;
+    right: var(--aspis-space-5);
     bottom: var(--aspis-space-5);
     z-index: 1100;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-end;
     gap: var(--aspis-space-2);
-    transform: translateX(-50%);
 }
 
 .aspis-toaster__region {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-end;
     gap: var(--aspis-space-2);
 }
 
@@ -977,9 +1154,10 @@ a {
 }
 
 /*
- * The shell: a sidebar with the views, and under them the server state and the pinned controls, beside the view.
- * The first link sits on the same top line as the first row of every pane. Under 1100px the sidebar narrows to
- * icons; the labels stay in the accessibility tree.
+ * The shell, as shadcn's collapsible sidebar: the app and its library on top, the views under them, and a view that
+ * holds things opens into folders and files, each level one guide line deeper with its icons on that line. The
+ * server state and the pinned links sit at the foot. Collapsed, the sidebar is gone and the view takes the window;
+ * under 1100px it narrows to icons and the tree closes, with the labels kept in the accessibility tree.
  */
 .aspis-shell {
     position: relative;
@@ -989,6 +1167,15 @@ a {
     height: 100vh;
     overflow: hidden;
     background: var(--aspis-bg);
+}
+
+.aspis-shell[data-collapsed] {
+    grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.aspis-shell[data-collapsed] > .aspis-shell__nav,
+.aspis-shell[data-collapsed] > .aspis-shell__foot {
+    display: none;
 }
 
 .aspis-shell::after {
@@ -1023,7 +1210,7 @@ a {
 .aspis-shell__foot {
     grid-column: 1;
     min-width: 0;
-    padding: var(--aspis-space-3) var(--aspis-space-2);
+    padding: var(--aspis-space-2);
     border-right: var(--aspis-border-w) solid var(--aspis-line);
     background: var(--aspis-surface-deep);
 }
@@ -1033,7 +1220,49 @@ a {
     overflow-y: auto;
 }
 
-.aspis-shell__nav ul {
+.aspis-shell__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: var(--aspis-head-h);
+    margin: calc(-1 * var(--aspis-space-2)) 0 0;
+    padding: 0 var(--aspis-space-2);
+}
+
+.aspis-shell__logo {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: var(--aspis-row-h);
+    height: var(--aspis-row-h);
+    border-radius: var(--aspis-radius-inset);
+    background: var(--aspis-invert-bg);
+    font: var(--aspis-type-ui);
+    font-weight: 600;
+    color: var(--aspis-invert-ink);
+}
+
+.aspis-shell__name,
+.aspis-shell__detail {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aspis-shell__name {
+    font: var(--aspis-type-ui);
+    font-weight: 600;
+    color: var(--aspis-ink-1);
+}
+
+.aspis-shell__detail {
+    font: var(--aspis-type-data);
+    color: var(--aspis-ink-3);
+}
+
+.aspis-shell__menu,
+.aspis-shell__sub {
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -1042,12 +1271,24 @@ a {
     list-style: none;
 }
 
+.aspis-shell__sub {
+    margin: 2px 0 2px 15px;
+    padding-left: var(--aspis-space-2);
+    border-left: var(--aspis-border-w) solid var(--aspis-line-strong);
+}
+
+.aspis-shell__row {
+    position: relative;
+    display: flex;
+}
+
 .aspis-shell__link {
     position: relative;
     display: flex;
+    flex: 1;
     align-items: center;
-    gap: 10px;
-    width: 100%;
+    gap: var(--aspis-space-2);
+    min-width: 0;
     height: var(--aspis-row-h);
     padding: 0 var(--aspis-space-2);
     border: var(--aspis-border-w) solid transparent;
@@ -1064,6 +1305,10 @@ a {
         background-color var(--aspis-dur-fast) ease;
 }
 
+.aspis-shell__sub .aspis-shell__link {
+    height: calc(var(--aspis-row-h) - var(--aspis-space-1));
+}
+
 .aspis-shell__link:focus-visible {
     outline-offset: -2px;
 }
@@ -1077,7 +1322,66 @@ a {
 .aspis-shell__label {
     flex: 1;
     min-width: 0;
+    overflow: hidden;
     text-align: left;
+    text-overflow: ellipsis;
+}
+
+.aspis-shell__count {
+    font: var(--aspis-type-data);
+    color: var(--aspis-ink-3);
+}
+
+.aspis-shell__chevron {
+    color: var(--aspis-ink-3);
+    transition: transform var(--aspis-dur-fast) var(--aspis-ease-out);
+}
+
+.aspis-shell__link[aria-expanded="true"] .aspis-shell__chevron,
+.aspis-shell__toggle[aria-expanded="true"] .aspis-icon {
+    transform: rotate(90deg);
+}
+
+.aspis-shell__mark {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: var(--aspis-radius-dot);
+    background: var(--aspis-signal-warn);
+    box-shadow: 0 0 var(--aspis-signal-glow) var(--aspis-signal-warn);
+}
+
+/*
+ * A row's own control (open the tree, add to a folder) sits over the end of the row. The add button shows on
+ * hover or focus, taking the place of the count and the chevron it would otherwise cover.
+ */
+.aspis-shell__toggle,
+.aspis-shell__add {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: var(--aspis-target);
+    height: var(--aspis-target);
+    margin-right: var(--aspis-space-1);
+    transform: translateY(-50%);
+}
+
+.aspis-shell__toggle .aspis-icon {
+    transition: transform var(--aspis-dur-fast) var(--aspis-ease-out);
+}
+
+.aspis-shell__add {
+    opacity: 0;
+}
+
+.aspis-shell__row:hover > .aspis-shell__add,
+.aspis-shell__row:focus-within > .aspis-shell__add {
+    opacity: 1;
+}
+
+.aspis-shell__row:has(> .aspis-shell__add):is(:hover, :focus-within) .aspis-shell__count,
+.aspis-shell__row:has(> .aspis-shell__add):is(:hover, :focus-within) .aspis-shell__chevron {
+    visibility: hidden;
 }
 
 .aspis-shell__foot {
@@ -1137,12 +1441,21 @@ a {
     }
 
     .aspis-shell__link,
-    .aspis-shell__status {
+    .aspis-shell__status,
+    .aspis-shell__brand {
         justify-content: center;
     }
 
     .aspis-shell__foot {
         align-items: center;
+    }
+
+    .aspis-shell__sub,
+    .aspis-shell__toggle,
+    .aspis-shell__count,
+    .aspis-shell__chevron,
+    .aspis-shell__mark {
+        display: none;
     }
 
     .aspis-shell__label,
@@ -1285,8 +1598,13 @@ a {
     min-height: var(--aspis-control-h);
 }
 
+/*
+ * A wide row takes the width the form already has and never asks for more: a long log line or path would otherwise
+ * widen the label column and push every value out of line.
+ */
 .aspis-form__value[data-wide] {
     grid-column: 1 / -1;
+    contain: inline-size;
 }
 
 .aspis-form__value:empty {
@@ -1308,24 +1626,6 @@ a {
 .aspis-form__value > .aspis-icon-button:first-child,
 .aspis-form__value > :first-child > .aspis-icon-button:first-child {
     margin-left: calc((16px - var(--aspis-row-h)) / 2);
-}
-
-.aspis-progress {
-    flex: 1;
-    max-width: 240px;
-    height: 2px;
-    appearance: none;
-    border: 0;
-    background: var(--aspis-line);
-    color: var(--aspis-ink-1);
-}
-
-.aspis-progress::-webkit-progress-bar {
-    background: var(--aspis-line);
-}
-
-.aspis-progress::-webkit-progress-value {
-    background: var(--aspis-ink-1);
 }
 
 .aspis-board {
@@ -1693,69 +1993,6 @@ a {
     color: var(--aspis-ink-1);
 }
 
-.aspis-menu {
-    padding: var(--aspis-space-3) var(--aspis-space-2);
-}
-
-.aspis-menu__list {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.aspis-menu__item {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: var(--aspis-space-2);
-    width: 100%;
-    min-width: 0;
-    height: var(--aspis-row-h);
-    padding: 0 10px;
-    border: var(--aspis-border-w) solid transparent;
-    border-radius: var(--aspis-radius-item);
-    background: none;
-    font: var(--aspis-type-ui);
-    text-align: left;
-    text-transform: var(--aspis-case-ui);
-    letter-spacing: var(--aspis-tracking-ui);
-    color: var(--aspis-ink-2);
-    cursor: pointer;
-    transition:
-        color var(--aspis-dur-fast) ease,
-        opacity var(--aspis-dur-base) ease,
-        background-color var(--aspis-dur-fast) ease;
-}
-
-.aspis-menu__item:focus-visible {
-    outline-offset: -2px;
-}
-
-.aspis-menu__item:hover,
-.aspis-menu__item[aria-current] {
-    background: var(--aspis-hover);
-    color: var(--aspis-ink-1);
-}
-
-.aspis-menu__label {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.aspis-menu__dot {
-    flex: none;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--aspis-signal-warn);
-}
-
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -1777,7 +2014,6 @@ a {
 
     .aspis-button,
     .aspis-tabs__tab,
-    .aspis-menu__item,
     .aspis-shell__link,
     .aspis-icon-button,
     .aspis-tile,
@@ -1792,7 +2028,6 @@ a {
     }
 
     .aspis-tabs__tab[aria-selected="true"],
-    .aspis-menu__item[aria-current],
     .aspis-shell__link[aria-current="page"],
     .aspis-tile[aria-current] {
         border-color: Highlight;
@@ -1804,7 +2039,6 @@ a {
     .aspis-switch__thumb,
     .aspis-status__dot,
     .aspis-chip__dot,
-    .aspis-menu__dot,
     .aspis-toast__dot {
         forced-color-adjust: none;
     }
@@ -1828,7 +2062,6 @@ a {
 
     .aspis-status__dot,
     .aspis-chip__dot,
-    .aspis-menu__dot,
     .aspis-toast__dot {
         background: CanvasText;
         box-shadow: none;

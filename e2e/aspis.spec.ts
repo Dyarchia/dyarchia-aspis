@@ -4,7 +4,7 @@ import { type ThemeName, accessible, api, headers, live, project, sameLayout, sa
 const themes = ["io", "nyx"] as const;
 const views = [
     { key: "h", name: "home", panes: [] },
-    { key: "k", name: "kanban", panes: [".aspis-page__bar .aspis-field__input"] },
+    { key: "k", name: "kanban", panes: [".aspis-column"] },
     { key: "b", name: "build", panes: [] },
 ] as const;
 

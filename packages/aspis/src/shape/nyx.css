@@ -63,7 +63,6 @@
 
 [data-theme="nyx"] .aspis-tabs__tab[aria-selected="true"]::before,
 [data-theme="nyx"] .aspis-shell__link[aria-current="page"]::before,
-[data-theme="nyx"] .aspis-menu__item[aria-current]::before,
 [data-theme="nyx"] .aspis-column[data-drop="allowed"]::before,
 [data-theme="nyx"] .aspis-tile[aria-current]::before,
 [data-theme="nyx"] .aspis-palette__box::before {

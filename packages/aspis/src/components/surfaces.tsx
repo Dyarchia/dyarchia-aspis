@@ -1,25 +1,93 @@
 import { type KeyboardEvent, type ReactNode, useEffect, useRef } from "react";
-import { IconButton } from "./primitives.tsx";
+import { Icon, IconButton, cx } from "./primitives.tsx";
+import { useSidebar } from "./shell.tsx";
+
+export interface Crumb {
+    label: string;
+    onClick: () => void;
+}
 
 /*
- * A view in a desktop window. The sidebar already says which view this is, so the title is only spoken (and takes
- * focus when the view changes); the optional toolbar and the panes start on the same top line as the sidebar. The
- * body never scrolls as a page; the panes inside it scroll on their own.
+ * A view in a desktop window, headed as shadcn's inset pages are: the sidebar toggle, a hairline, the trail of
+ * places above this one and the view's own name, which is the page heading and takes focus when the view changes.
+ * Tools follow the name and actions end the bar. The body never scrolls as a page; the panes inside it do.
  */
-export function Page({ title, tools, actions, children }: { title: string; tools?: ReactNode; actions?: ReactNode; children: ReactNode }) {
+export function Page({ title, crumbs = [], tools, actions, children }: { title: string; crumbs?: readonly Crumb[]; tools?: ReactNode; actions?: ReactNode; children: ReactNode }) {
+    const sidebar = useSidebar();
     return (
         <div className="aspis-page">
-            <h1 className="aspis-sr" tabIndex={-1}>
-                {title}
-            </h1>
-            {(tools || actions) && (
-                <div className="aspis-page__bar">
-                    {tools}
-                    {actions && <div className="aspis-page__actions">{actions}</div>}
-                </div>
-            )}
+            <header className="aspis-page__bar">
+                <IconButton icon="panel" label={sidebar.collapsed ? "Show the sidebar" : "Hide the sidebar"} hotkey="Ctrl B" onClick={sidebar.toggle} />
+                <span className="aspis-page__rule" aria-hidden="true" />
+                {crumbs.length > 0 && (
+                    <nav className="aspis-crumbs" aria-label="Breadcrumb">
+                        <ol>
+                            {crumbs.map((crumb) => (
+                                <li key={crumb.label}>
+                                    <button type="button" className="aspis-crumbs__link" onClick={crumb.onClick}>
+                                        {crumb.label}
+                                    </button>
+                                    <Icon name="next" size={14} />
+                                </li>
+                            ))}
+                        </ol>
+                    </nav>
+                )}
+                <h1 className="aspis-page__title" tabIndex={-1}>
+                    {title}
+                </h1>
+                {tools}
+                {actions && <div className="aspis-page__actions">{actions}</div>}
+            </header>
             <div className="aspis-page__body">{children}</div>
         </div>
+    );
+}
+
+/*
+ * A card of the page grid. Its head names what it holds, with a quiet note on the right; the body scrolls on its
+ * own; the foot carries its actions. Cards in one row share their height, so their heads, bodies and feet line up.
+ */
+export function Card({ title, meta, footer, className, children }: { title?: string; meta?: ReactNode; footer?: ReactNode; className?: string; children: ReactNode }) {
+    return (
+        <section className={cx("aspis-card", className)} aria-label={title}>
+            {title && (
+                <header className="aspis-card__head">
+                    <h2 className="aspis-card__title">{title}</h2>
+                    {meta && <span className="aspis-card__meta">{meta}</span>}
+                </header>
+            )}
+            <div className="aspis-card__body">{children}</div>
+            {footer && <footer className="aspis-card__foot">{footer}</footer>}
+        </section>
+    );
+}
+
+/*
+ * The steps of a walk, side by side in equal cells: the ones behind are ticked, the current one is lit and
+ * underlined, and any step can be visited again.
+ */
+export function Stepper({ label, steps, current, onSelect }: { label: string; steps: readonly string[]; current: number; onSelect: (step: number) => void }) {
+    return (
+        <ol className="aspis-stepper" aria-label={label} style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
+            {steps.map((step, index) => (
+                <li key={step}>
+                    <button
+                        type="button"
+                        className="aspis-stepper__step"
+                        data-state={index < current ? "done" : index === current ? "now" : undefined}
+                        aria-current={index === current ? "step" : undefined}
+                        onClick={() => onSelect(index)}
+                    >
+                        <span className="aspis-stepper__index">
+                            {index + 1}
+                            {index < current && <Icon name="check" size={12} />}
+                        </span>
+                        <span className="aspis-stepper__label">{step}</span>
+                    </button>
+                </li>
+            ))}
+        </ol>
     );
 }
 
