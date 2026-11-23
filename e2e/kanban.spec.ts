@@ -148,6 +148,7 @@ test("the board in both themes", async ({ page, request }) => {
         await saysEverythingOnce(page);
         await column(page, "Review").getByText("Archive stale Quote fields").click();
         await expect(page.locator(".aspis-inspector")).toBeVisible();
+        await page.locator(".aspis-board").evaluate((board) => (board.scrollLeft = board.scrollWidth));
         await expect(page).toHaveScreenshot(`card-${theme}.png`, { mask: [page.locator(".aspis-thread__when")] });
         await accessible(page);
         await saysEverythingOnce(page);
