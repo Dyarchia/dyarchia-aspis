@@ -62,14 +62,25 @@ async function tour(step: number) {
     }
     await press("b");
     await snap(step, "build");
-    const pieces = page.getByRole("list").nth(2).locator(".aspis-menu__item");
+    const pieces = page.locator(".aspis-shell__sub .aspis-shell__sub .aspis-shell__link");
     if ((await pieces.count()) > 0) {
         await pieces.first().click();
-        for (const mode of ["Tutorial", "Form", "Code"]) {
+        for (const mode of ["Guide", "Form", "Code"]) {
             await page.getByRole("tab", { name: mode, exact: true }).click();
             await snap(step, `piece-${mode.toLowerCase()}`);
         }
         await page.getByRole("tab", { name: "Form", exact: true }).click();
+    }
+    await page.locator(".aspis-shell__brand").click();
+    await snap(step, "repositories");
+    await page.keyboard.press("Escape");
+    await press("p");
+    const add = page.getByRole("button", { name: /^New session in/ }).first();
+    if (await add.count()) {
+        await add.click({ force: true });
+        await sleep(800);
+        await snap(step, "session");
+        await page.getByRole("button", { name: /^Close Session/ }).click();
     }
     await press("s");
     await snap(step, "settings");
