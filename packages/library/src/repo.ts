@@ -54,6 +54,19 @@ const slug = (text: string) =>
         .replace(/-+$/, "") || "changes";
 
 /*
+ * The repositories the signed-in user can pick as a library: their own, those they collaborate on and those of
+ * their organizations, most recently pushed first.
+ */
+export async function listRepos(options: { gh?: string[]; exec?: Exec } = {}): Promise<string[]> {
+    const done = await (options.exec ?? run)([...(options.gh ?? ["gh"]), "api", "--paginate", "user/repos?per_page=100&sort=pushed&affiliation=owner,collaborator,organization_member", "--jq", ".[].full_name"]);
+    if (!done.ok) throw new LibraryError(`Could not list your repositories: ${done.err || done.out || "GitHub CLI failed"}`);
+    return done.out
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+}
+
+/*
  * The user's library: a GitHub repository cloned under ~/.dyarchia-aspis/library. Pieces are edited on the working
  * tree. Publishing never touches the base branch: it moves the changes to a feature/ branch, pushes it and opens a
  * pull request to develop for the user to merge. While that pull request is open, later publishes add commits to

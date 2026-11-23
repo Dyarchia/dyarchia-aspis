@@ -1385,6 +1385,124 @@ a {
     padding: 0 var(--space-2);
 }
 
+/*
+ * A menu floats under what opened it, anchored to it in the top layer: the raised ground, the light edge and the
+ * float shadow, a search line as tall as a header, then rows as tall as a control. The list scrolls on its own.
+ */
+.aspis-shell__brand {
+    anchor-name: --aspis-brand;
+}
+
+.aspis-menu {
+    position-anchor: --aspis-brand;
+    inset: auto;
+    top: anchor(bottom);
+    left: anchor(left);
+    width: calc(var(--aspis-nav-w) + 2 * var(--size-header));
+    max-height: min(480px, calc(100vh - 2 * var(--size-header)));
+    margin: var(--space-1) 0 0 var(--space-2);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-tile);
+    background: var(--ground-raised);
+    box-shadow: inset 0 1px 0 0 var(--edge-light), var(--shadow-float);
+    color: var(--ink);
+    overflow: hidden;
+}
+
+.aspis-menu:popover-open {
+    display: flex;
+    flex-direction: column;
+    animation: aspis-rise var(--aspis-base) var(--aspis-ease);
+}
+
+.aspis-menu__search {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--size-header);
+    padding: 0 var(--space-4);
+    box-shadow: inset 0 -1px 0 var(--hairline);
+    color: var(--ink-muted);
+}
+
+.aspis-menu__input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    outline: none;
+    background: none;
+    font: var(--text-body);
+    color: var(--ink);
+    caret-color: var(--ink);
+}
+
+.aspis-menu__input::placeholder {
+    color: var(--ink-muted);
+}
+
+.aspis-menu__list {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin: 0;
+    padding: var(--space-2);
+    overflow-y: auto;
+    list-style: none;
+}
+
+.aspis-menu__list + .aspis-menu__list {
+    flex: none;
+    box-shadow: inset 0 1px 0 var(--hairline);
+}
+
+.aspis-menu__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    height: var(--size-control);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: none;
+    font: var(--text-body);
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+}
+
+.aspis-menu__item:hover,
+.aspis-menu__item:focus-visible {
+    outline: none;
+    background: var(--ground-hover);
+}
+
+.aspis-menu__item .aspis-icon {
+    color: var(--ink-muted);
+}
+
+.aspis-menu__item .aspis-menu__check {
+    color: var(--ink);
+}
+
+.aspis-menu__label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aspis-menu__note {
+    margin: 0;
+    padding: var(--space-2);
+    font: var(--text-body);
+    color: var(--ink-muted);
+}
+
 .aspis-icon-button {
     display: inline-grid;
     place-items: center;
@@ -2035,6 +2153,25 @@ a {
     display: grid;
     height: 100%;
     place-items: center;
+}
+
+/*
+ * A terminal session fills its pane with the page margin around it, on the ground: the terminal's own background is
+ * the ground too, so the cells meet the app with no band of another grey.
+ */
+.aspis-terminal {
+    flex: 1;
+    min-height: 0;
+    padding: var(--space-4);
+    background: var(--ground);
+}
+
+.aspis-terminal .xterm {
+    height: 100%;
+}
+
+.aspis-terminal .xterm-viewport {
+    scrollbar-width: none;
 }
 
 .aspis-display {

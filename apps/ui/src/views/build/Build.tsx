@@ -3,7 +3,6 @@ import { type KindId, kindIds, kinds, pieceAt } from "@dyarchia/library";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import type { Library } from "../../use-library.ts";
 import { Prompt, type PromptRequest } from "../kanban/Prompt.tsx";
-import { LibraryConnect } from "../Settings.tsx";
 import { Editor } from "./Editor.tsx";
 import { type Selection, nameRule, piecesOf } from "./pieces.ts";
 
@@ -32,7 +31,6 @@ export function Build({
 }) {
     const [prompt, setPrompt] = useState<PromptRequest>();
     const [fresh, setFresh] = useState<string>();
-    const [repo, setRepo] = useState("");
     const pieces = useMemo(() => piecesOf(library.files), [library.files]);
 
     const create = (kind: KindId) => {
@@ -66,8 +64,12 @@ export function Build({
         return (
             <Page title="Build">
                 <EmptyState
-                    title="Connect the GitHub repository that holds your library"
-                    action={<LibraryConnect repo={repo} onRepo={setRepo} busy={library.busy} onConnect={() => void library.connect(repo.trim())} />}
+                    title="Choose the repository that holds your library"
+                    action={
+                        <Button variant="primary" icon="repo" onClick={() => document.getElementById("aspis-brand-menu")?.showPopover()}>
+                            Choose a repository
+                        </Button>
+                    }
                 />
             </Page>
         );

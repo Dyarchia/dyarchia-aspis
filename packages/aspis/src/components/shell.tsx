@@ -29,6 +29,18 @@ export interface NavEntry<T extends string> {
     onToggle?: () => void;
 }
 
+/*
+ * The head of the sidebar names the app and what it works on, and opens a menu of its own: the menu is a native
+ * popover, so it closes on Escape or a click outside and sits in the top layer under the head.
+ */
+export interface ShellBrand {
+    name: string;
+    detail: string;
+    label: string;
+    menu: ReactNode;
+    onOpen?: () => void;
+}
+
 export interface ShellLink {
     label: string;
     icon: IconName;
@@ -59,7 +71,7 @@ export function AppShell<T extends string>({
     nav: readonly NavEntry<T>[];
     active: T;
     onNavigate: (id: T) => void;
-    brand: { name: string; detail: string };
+    brand: ShellBrand;
     status: ReactNode;
     links: readonly ShellLink[];
     state?: string;
@@ -79,7 +91,7 @@ export function AppShell<T extends string>({
         >
             <Icon name={props.icon} />
             <span className="aspis-shell__label">{props.label}</span>
-            {props.count !== undefined && <span className="aspis-shell__count">{props.count}</span>}
+            {props.count ? <span className="aspis-shell__count">{props.count}</span> : null}
             {props.mark && <span className="aspis-shell__mark" title={props.mark} aria-label={props.mark} />}
             {props.expanded !== undefined && <Icon name="next" className="aspis-shell__chevron" />}
         </button>
@@ -91,7 +103,7 @@ export function AppShell<T extends string>({
                     Skip to content
                 </a>
                 <nav className="aspis-shell__nav" aria-label="Primary">
-                    <div className="aspis-shell__brand">
+                    <button type="button" className="aspis-shell__brand" popoverTarget="aspis-brand-menu" aria-label={`${brand.label}: ${brand.detail}`}>
                         <span className="aspis-shell__logo" aria-hidden="true">
                             {brand.name.slice(0, 1)}
                         </span>
@@ -99,6 +111,16 @@ export function AppShell<T extends string>({
                             <span className="aspis-shell__name">{brand.name}</span>
                             <span className="aspis-shell__detail">{brand.detail}</span>
                         </span>
+                        <Icon name="next" className="aspis-shell__chevron" />
+                    </button>
+                    <div
+                        id="aspis-brand-menu"
+                        className="aspis-menu"
+                        popover="auto"
+                        aria-label={brand.label}
+                        onToggle={(event) => (event.nativeEvent as ToggleEvent).newState === "open" && brand.onOpen?.()}
+                    >
+                        {brand.menu}
                     </div>
                     <ul className="aspis-shell__menu">
                         {nav.map((entry) => (

@@ -159,6 +159,10 @@ export class Store {
             .run(key, value, Date.now());
     }
 
+    deleteSetting(key: string): void {
+        this.db.query("DELETE FROM settings WHERE key = ?").run(key);
+    }
+
     getMeta(key: string): string | undefined {
         return this.db.query<{ value: string }, [string]>("SELECT value FROM meta WHERE key = ?").get(key)?.value;
     }

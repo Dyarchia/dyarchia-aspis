@@ -1,6 +1,6 @@
-import { type KeyboardEvent, type ReactNode, createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
+import { type InputHTMLAttributes, type KeyboardEvent, type ReactNode, createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Icon, Kbd, type Tone, VisuallyHidden } from "./primitives.tsx";
+import { Icon, type IconName, Kbd, type Tone, VisuallyHidden } from "./primitives.tsx";
 
 export interface Command {
     id: string;
@@ -167,3 +167,30 @@ export function Toaster({ children }: { children: ReactNode }) {
 }
 
 export const useToast = () => useContext(ToastContext);
+
+/*
+ * The pieces of a floating menu (the sidebar head's, for one): a search line on top, one row per choice with the
+ * current one checked, and a quiet line for a state that has no rows (loading, an error, nothing found).
+ */
+export function MenuSearch({ label, ...rest }: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
+    return (
+        <label className="aspis-menu__search">
+            <Icon name="search" />
+            <input className="aspis-menu__input" aria-label={label} placeholder={label} autoComplete="off" spellCheck={false} {...rest} />
+        </label>
+    );
+}
+
+export function MenuItem({ icon, current, children, onClick }: { icon?: IconName; current?: boolean; children: ReactNode; onClick: () => void }) {
+    return (
+        <button type="button" className="aspis-menu__item" aria-current={current || undefined} onClick={onClick}>
+            {icon && <Icon name={icon} />}
+            <span className="aspis-menu__label">{children}</span>
+            {current && <Icon name="check" className="aspis-menu__check" />}
+        </button>
+    );
+}
+
+export function MenuNote({ children }: { children: ReactNode }) {
+    return <p className="aspis-menu__note">{children}</p>;
+}
