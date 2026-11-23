@@ -84,7 +84,7 @@ export function BoardDialog({
                         {board ? "Save" : "Create"}
                     </Button>
                     {board && (
-                        <div className="ml-auto flex items-center gap-[var(--aspis-space-1)]">
+                        <div className="ml-auto flex items-center gap-[var(--space-1)]">
                             {confirm ? (
                                 <>
                                     <Button variant="quiet" autoFocus onClick={() => setConfirm(false)}>
@@ -118,7 +118,7 @@ export function BoardDialog({
                 <Form>
                     <TextField label="Name" autoFocus required value={name} onChange={(event) => setName(event.target.value)} />
                     <FormRow label="Folder">
-                        <div className="flex items-center gap-[var(--aspis-space-2)]">
+                        <div className="flex items-center gap-[var(--space-2)]">
                             <TextField
                                 label="Folder"
                                 hideLabel

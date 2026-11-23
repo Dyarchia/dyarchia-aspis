@@ -22,7 +22,7 @@ describe.each(kindIds)("%s", (id) => {
         const walked = new Set(kind.steps.flatMap((step) => step.fields));
         expect([...walked].filter((key) => !keys.has(key))).toEqual([]);
         expect(kind.fields.filter((field) => field.required && !walked.has(field.key)).map((field) => field.key)).toEqual([]);
-        for (const step of kind.steps) expect(step.source).toStartWith("https://code.claude.com/docs/en/");
+        for (const step of kind.steps) expect(step.source).toStartWith(id === "commands" ? "https://" : "https://code.claude.com/docs/en/");
     });
 
     test("the form leads with real fields, every required one among them", () => {

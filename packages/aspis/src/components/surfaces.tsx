@@ -100,6 +100,27 @@ export function GroupHeader({ label, actions }: { label: string; actions?: React
     );
 }
 
+/*
+ * Synthic's Stat: a figure on the base plane with a hairline edge, its label and an optional action on top, the
+ * figure in the kpi style with tabular numerals, and one quiet line under it that never wraps.
+ */
+export function Stat({ label, value, note, action }: { label: string; value: ReactNode; note?: string; action?: ReactNode }) {
+    return (
+        <section className="aspis-stat" aria-label={label}>
+            <div className="aspis-stat__top">
+                <h2 className="aspis-stat__label">{label}</h2>
+                {action}
+            </div>
+            <span className="aspis-stat__value">{value}</span>
+            {note && (
+                <p className="aspis-stat__note" title={note}>
+                    {note}
+                </p>
+            )}
+        </section>
+    );
+}
+
 export function EmptyState({ title, action }: { title: string; action?: ReactNode }) {
     return (
         <div className="aspis-empty">

@@ -7,7 +7,7 @@ import { readHint } from "./hints.ts";
 import { openLinksOutside } from "./links.ts";
 import "./styles.css";
 
-applyTheme(Theme.catch("io").parse(readHint("theme")));
+applyTheme(Theme.catch("dark").parse(readHint("theme")));
 openLinksOutside();
 
 createRoot(document.getElementById("root")!).render(

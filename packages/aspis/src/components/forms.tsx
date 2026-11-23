@@ -110,7 +110,7 @@ export function Select({
 }
 
 /*
- * A two-way choice where off has a name of its own (io and nyx) shows that name before the track; the switch is
+ * A two-way choice where off has a name of its own (Dark and Light) shows that name before the track; the switch is
  * still named by its on side, which is what checked means to a screen reader.
  */
 export function Switch({ checked, onChange, label, off, hint }: { checked: boolean; onChange: (checked: boolean) => void; label: string; off?: string; hint?: string }) {

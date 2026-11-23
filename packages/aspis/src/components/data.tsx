@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { Status, type Tone } from "./primitives.tsx";
 
 export type TokenKind = "" | "keyword" | "function" | "literal" | "argument" | "comment";

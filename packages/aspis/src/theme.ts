@@ -1,4 +1,4 @@
-export type ThemeName = "io" | "nyx";
+export type ThemeName = "dark" | "light";
 
 let settle: ReturnType<typeof setTimeout> | undefined;
 

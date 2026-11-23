@@ -7,13 +7,21 @@ const read = (...parts: string[]) => readFileSync(join(src, ...parts), "utf8");
 const all = (text: string, pattern: RegExp) => new Set(Array.from(text.matchAll(pattern), (match) => match[1]!));
 const uncomment = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, "");
 
-const themes = ["io", "nyx"] as const;
-const definitions = (css: string) => new Map(Array.from(uncomment(css).matchAll(/(--aspis-[a-z0-9-]+)\s*:\s*([^;]+);/g), (match) => [match[1]!, match[2]!.trim()]));
+/*
+ * Synthic's tokens are copied verbatim into tokens/synthic.css: a block for dark (Space, also :root) and one for
+ * light (Earth) that hold the colours and shadows, then one :root block of geometry and type shared by both.
+ */
+const themes = ["dark", "light"] as const;
+const blocks = (css: string) => Array.from(uncomment(css).matchAll(/([^{}]+)\{([^{}]*)\}/g), (match) => ({ selector: match[1]!.trim(), body: match[2]! }));
+const definitions = (body: string) => new Map(Array.from(body.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g), (match) => [match[1]!, match[2]!.trim()]));
+const synthic = blocks(read("tokens", "synthic.css"));
+const palettes = {
+    dark: definitions(synthic.find((block) => block.selector.includes('[data-theme="dark"]'))!.body),
+    light: definitions(synthic.find((block) => block.selector === '[data-theme="light"]')!.body),
+};
+const shared = definitions(synthic.find((block) => block.selector === ":root")!.body);
 const geometry = definitions(read("tokens", "geometry.css"));
-const palettes = Object.fromEntries(themes.map((theme) => [theme, definitions(read("tokens", `${theme}.css`))]));
 const base = read("base.css");
-const shapes = Object.fromEntries(themes.map((theme) => [theme, read("shape", `${theme}.css`)]));
-const structure = [base, ...Object.values(shapes)];
 const markup = readdirSync(join(src, "components"))
     .map((file) => read("components", file))
     .join("\n");
@@ -24,7 +32,7 @@ const views = (dir: string): string =>
 const app = views(join(src, "..", "..", "..", "apps", "ui", "src"));
 
 const classesIn = (text: string) => all(text, /\b(aspis-[a-z]+(?:-[a-z]+)*(?:__[a-z]+(?:-[a-z]+)*)?)\b/g);
-const markupClasses = new Set([...classesIn(markup)].filter((name) => !name.startsWith("aspis-main")));
+const markupClasses = new Set([...classesIn(markup + app)].filter((name) => !name.startsWith("aspis-main")));
 const cssClasses = (css: string) => all(uncomment(css), /\.(aspis-[a-z-]+(?:__[a-z-]+)?)/g);
 
 interface Rule {
@@ -46,109 +54,72 @@ const rules = (css: string): Rule[] =>
             .map((line) => [line.slice(0, line.indexOf(":")).trim(), line.slice(line.indexOf(":") + 1).trim()] as [string, string]),
     })).filter((rule) => rule.selectors.length > 0);
 
-/*
- * What a theme may say about a box: how it is painted, its type face, and motion that never moves it in the
- * flow. Anything else would let io and nyx place or size the same element differently.
- */
-const paint = [
-    /^color$/,
-    /^background(-[a-z-]+)?$/,
-    /^border(-(top|right|bottom|left))?-(color|style)$/,
-    /^border(-[a-z-]+)?-radius$/,
-    /^box-shadow$/,
-    /^outline(-[a-z]+)?$/,
-    /^opacity$/,
-    /^(backdrop-)?filter$/,
-    /^transform$/,
-    /^transition(-[a-z-]+)?$/,
-    /^animation(-[a-z-]+)?$/,
-    /^font-(family|weight|style)$/,
-    /^letter-spacing$/,
-    /^text-transform$/,
-    /^text-(decoration|underline|shadow)(-[a-z-]+)?$/,
-    /^mask(-[a-z-]+)?$/,
-    /^clip-path$/,
-    /^mix-blend-mode$/,
-    /^offset-(path|distance)$/,
-    /^z-index$/,
-    /^pointer-events$/,
-];
-
 describe("tokens", () => {
     test("both themes define exactly the same vocabulary", () => {
-        expect([...palettes.io!.keys()].sort()).toEqual([...palettes.nyx!.keys()].sort());
+        expect([...palettes.dark.keys()].sort()).toEqual([...palettes.light.keys()].sort());
     });
 
-    test("geometry is defined once, for every theme, and themes size their type from it", () => {
+    /*
+     * A theme holds colours and shadows only. Sizes, spacing, radii and type live once, in the shared :root block
+     * and in geometry.css, so dark and light lay out the same page to the pixel.
+     */
+    test("themes paint and never size", () => {
         for (const theme of themes) {
-            expect([...palettes[theme]!.keys()].filter((name) => geometry.has(name))).toEqual([]);
-            const sized = [...palettes[theme]!].filter(([name, value]) => name.startsWith("--aspis-type-") && /\d(px|rem|em)\b/.test(value));
+            const sized = [...palettes[theme]].filter(([name, value]) => !name.startsWith("--shadow-") && !/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(value));
             expect(sized).toEqual([]);
         }
+        expect([...shared.keys()].filter((name) => palettes.dark.has(name))).toEqual([]);
     });
 
-    test("every token used is defined, and every token defined is used", () => {
+    test("every token used is defined, and every Aspis token defined is used", () => {
         const local = all(base, /(--aspis-[a-z0-9-]+)\s*:/g);
-        const defined = new Set([...geometry.keys(), ...palettes.io!.keys(), ...local, "--aspis-tone"]);
-        const tokenText = [...Object.values(palettes), geometry].flatMap((map) => [...map.values()]).join("\n");
-        const used = all(structure.join("\n") + markup + app + tokenText, /var\((--aspis-[a-z0-9-]+)/g);
+        const defined = new Set([...palettes.dark.keys(), ...shared.keys(), ...geometry.keys(), ...local]);
+        const used = all(base + markup + app, /var\((--[a-z0-9-]+)/g);
         expect([...used].filter((name) => !defined.has(name))).toEqual([]);
-        expect([...defined].filter((name) => !used.has(name) && !local.has(name))).toEqual([]);
+        expect([...geometry.keys(), ...local].filter((name) => name.startsWith("--aspis-") && !used.has(name))).toEqual([]);
     });
 
     test("every animation defined is used", () => {
-        const css = uncomment(structure.join("\n"));
+        const css = uncomment(base);
         const defined = [...css.matchAll(/@keyframes ([a-z-]+)/g)].map((match) => match[1]!);
         expect(defined.filter((name) => !new RegExp(`animation(-name)?:[^;]*\\b${name}\\b`).test(css))).toEqual([]);
     });
 });
 
 describe("purity", () => {
-    test.each(["base.css", "shape/io.css", "shape/nyx.css", "tokens/geometry.css"])("%s holds no literal colours", (file) => {
+    test.each(["base.css", "tokens/geometry.css"])("%s holds no literal colours", (file) => {
         const text = uncomment(read(...file.split("/")));
         expect(text.match(/#[0-9a-fA-F]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|oklch)\(/g) ?? []).toEqual([]);
     });
 
-    test("structure only reads aspis variables", () => {
-        const foreign = [...all(structure.join("\n"), /var\((--[a-z0-9-]+)/g)].filter((name) => !name.startsWith("--aspis-"));
-        expect(foreign).toEqual([]);
-    });
-});
-
-describe("one layout, two paints", () => {
-    test.each(themes)("shape/%s.css only paints", (theme) => {
-        const parsed = rules(shapes[theme]!);
-        const absolute = new Set(parsed.filter((rule) => rule.declarations.some(([name, value]) => name === "position" && value === "absolute")).flatMap((rule) => rule.selectors));
-        const breaches = parsed.flatMap((rule) =>
-            rule.declarations
-                .filter(([name]) => !paint.some((pattern) => pattern.test(name)))
-                .filter(() => !rule.selectors.every((selector) => /::(before|after)$/.test(selector) && absolute.has(selector)))
-                .map(([name, value]) => `${rule.selectors.join(", ")} { ${name}: ${value} }`),
-        );
-        expect(breaches).toEqual([]);
+    test("structure reads only Synthic's tokens and the few Aspis adds", () => {
+        const known = new Set([...palettes.dark.keys(), ...shared.keys(), ...geometry.keys(), "--aspis-tone"]);
+        expect([...all(base, /var\((--[a-z0-9-]+)/g)].filter((name) => !known.has(name))).toEqual([]);
     });
 
-    test.each(themes)("shape/%s.css never hides or fades content, only decoration", (theme) => {
-        const faded = rules(shapes[theme]!).filter((rule) => rule.declarations.some(([name, value]) => (name === "opacity" && Number(value) < 1) || name === "visibility"));
-        expect(faded.flatMap((rule) => rule.selectors).filter((selector) => !/::(before|after)$|__glint$/.test(selector))).toEqual([]);
+    test("no theme selector in the structure: one layout, two paints", () => {
+        expect(rules(base).flatMap((rule) => rule.selectors).filter((selector) => /data-theme="/.test(selector))).toEqual([]);
+    });
+
+    test("lines never take space: free-height boxes draw them as inset shadows", () => {
+        const fixed = /aspis-(button|field__input|switch__track)/;
+        const bordered = rules(base).filter((rule) => rule.declarations.some(([name, value]) => /^border(-(top|right|bottom|left))?$/.test(name) && /\d+px solid/.test(value) && !/transparent/.test(value)));
+        expect(bordered.flatMap((rule) => rule.selectors).filter((selector) => !fixed.test(selector))).toEqual([]);
     });
 
     test("every component class is laid out in base, and every styled class exists in markup", () => {
         const laidOut = cssClasses(base);
-        expect([...markupClasses].filter((name) => !laidOut.has(name) && !/__(label|text|lines|gutter|main|item|hint|name)$/.test(name))).toEqual([]);
-        const styled = new Set([...cssClasses(base), ...structure.flatMap((css) => [...cssClasses(css)])]);
-        expect([...styled].filter((name) => !markupClasses.has(name))).toEqual([]);
+        const components = [...classesIn(markup)].filter((name) => !name.startsWith("aspis-main"));
+        expect(components.filter((name) => !laidOut.has(name) && !/__(label|text|lines|gutter|main|item|hint|name)$/.test(name))).toEqual([]);
+        expect([...laidOut].filter((name) => !markupClasses.has(name))).toEqual([]);
     });
 });
 
 type Rgb = [number, number, number, number];
 
-const parseColor = (value: string): Rgb | undefined => {
-    const hex = value.match(/^#([0-9a-f]{6})([0-9a-f]{2})?$/i);
-    if (hex) return [0, 2, 4].map((at) => parseInt(hex[1]!.slice(at, at + 2), 16)).concat(hex[2] ? parseInt(hex[2], 16) / 255 : 1) as Rgb;
-    const rgb = value.match(/^rgb\((\d+) (\d+) (\d+)(?: \/ ([\d.]+))?\)$/);
-    if (rgb) return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3]), rgb[4] ? Number(rgb[4]) : 1];
-    return undefined;
+const parseColor = (value: string): Rgb => {
+    const hex = value.match(/^#([0-9a-f]{6})([0-9a-f]{2})?$/i)!;
+    return [0, 2, 4].map((at) => parseInt(hex[1]!.slice(at, at + 2), 16)).concat(hex[2] ? parseInt(hex[2], 16) / 255 : 1) as Rgb;
 };
 
 const over = ([r, g, b, a]: Rgb, [br, bg, bb]: Rgb): Rgb => [r * a + br * (1 - a), g * a + bg * (1 - a), b * a + bb * (1 - a), 1];
@@ -160,23 +131,26 @@ const contrast = (front: Rgb, back: Rgb) => {
 };
 
 describe.each(themes)("contrast in %s", (theme) => {
-    const color = (token: string) => parseColor(palettes[theme]!.get(`--aspis-${token}`)!)!;
-    const grounds = ["bg", "bg-raised", "surface", "surface-deep"];
-    const text = ["ink-1", "ink-2", "ink-3", "accent", "signal-ok", "signal-warn", "signal-danger", "signal-info", "syntax-keyword", "syntax-function", "syntax-literal", "syntax-argument", "syntax-comment"];
+    const color = (token: string) => parseColor(palettes[theme].get(`--${token}`)!);
+    const grounds = ["ground", "ground-raised", "ground-sunken", "ground-hover", "ground-selected"];
+    const text = ["ink", "ink-muted", "up", "down", "moss", "clay", "sky", "sun", "nebula", "tide"];
     const ratios = (fronts: string[], backs: string[]) => fronts.flatMap((front) => backs.map((back) => [`${front} on ${back}`, contrast(color(front), color(back))] as const));
 
     test("text reaches 4.5:1 on every surface", () => {
         expect(ratios(text, grounds).filter(([, ratio]) => ratio < 4.5)).toEqual([]);
-        expect(ratios(["term-ink", "term-dim"], ["term-bg", "term-bar"]).filter(([, ratio]) => ratio < 4.5)).toEqual([]);
-        expect(ratios(["invert-ink"], ["invert-bg"]).filter(([, ratio]) => ratio < 4.5)).toEqual([]);
+        expect(ratios(["on-primary"], ["primary-fill"]).filter(([, ratio]) => ratio < 4.5)).toEqual([]);
+        expect(ratios(["ink-inverse"], ["ink"]).filter(([, ratio]) => ratio < 4.5)).toEqual([]);
+        for (const hue of ["moss", "clay", "sky", "sun", "nebula", "tide"]) expect(ratios([hue], [`${hue}-tile`]).filter(([, ratio]) => ratio < 4.5)).toEqual([]);
     });
 
+    /* A control's edge is read against what surrounds it, the ground or a floating surface, never its own well. */
     test("control boundaries and focus reach 3:1", () => {
-        expect(ratios(["line-control", "focus"], grounds).filter(([, ratio]) => ratio < 3)).toEqual([]);
+        expect(ratios(["line-control"], ["ground", "ground-raised"]).filter(([, ratio]) => ratio < 3)).toEqual([]);
+        expect(ratios(["focus"], ["ground", "ground-raised", "ground-sunken"]).filter(([, ratio]) => ratio < 3)).toEqual([]);
     });
 
-    test("the faintest ink is never used for text", () => {
-        const faint = structure.flatMap((css) => rules(css)).filter((rule) => rule.declarations.some(([name, value]) => name === "color" && value.includes("--aspis-ink-4")));
-        expect(faint.map((rule) => rule.selectors.join(", "))).toEqual([]);
+    test("the faintest ink is only for disabled controls and placeholders", () => {
+        const faint = rules(base).filter((rule) => rule.declarations.some(([name, value]) => name === "color" && value.includes("--ink-faint")));
+        expect(faint.flatMap((rule) => rule.selectors).filter((selector) => !/:disabled|placeholder/.test(selector))).toEqual([]);
     });
 });

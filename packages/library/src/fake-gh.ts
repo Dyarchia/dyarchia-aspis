@@ -1,7 +1,7 @@
 /*
  * Stands in for the GitHub CLI in tests. "GitHub" is a folder of bare repositories (FAKE_GH_REMOTES, one
  * owner__name.git per repository) and pull requests are JSON files in FAKE_GH_PRS. Only the calls the library
- * makes are answered: auth status, repo view, repo create, repo clone, pr view and pr create. Unit tests call
+ * makes are answered: auth status, the repository list, repo view, repo create, repo clone, pr view and pr create. Unit tests call
  * fakeGh() in process through their Exec, so no bun process starts per call; e2e runs this file as the gh command.
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -20,6 +20,10 @@ export async function fakeGh(args: string[], env: Record<string, string | undefi
     };
 
     if (group === "auth" && verb === "status") return answer(!env.FAKE_GH_SIGNED_OUT);
+    if (group === "api" && args.some((arg) => arg.startsWith("user/repos"))) {
+        const names = existsSync(env.FAKE_GH_REMOTES!) ? readdirSync(env.FAKE_GH_REMOTES!).filter((name) => name.endsWith(".git")) : [];
+        return answer(true, names.map((name) => name.slice(0, -4).replace("__", "/")).join("\n"));
+    }
     if (group === "repo" && verb === "view") return existsSync(bare(rest[0]!)) ? answer(true, JSON.stringify({ name: rest[0]!.split("/")[1] })) : answer(false);
     if (group === "repo" && verb === "create") return git("init", "-q", "--bare", "-b", "main", bare(rest[0]!));
     if (group === "repo" && verb === "clone") return git("clone", "-q", bare(rest[0]!), rest[1]!);

@@ -1,8 +1,6 @@
-import { Button, Chip, Dialog, GroupHeader, Switch, TextField } from "@dyarchia/aspis";
+import { Button, Chip, Dialog, GroupHeader, Switch } from "@dyarchia/aspis";
 import type { Theme } from "@dyarchia/core";
-import { useState } from "react";
 import { useAgents } from "../use-agents.ts";
-import { useLibrary } from "../use-library.ts";
 import type { ServerState } from "../use-server.ts";
 import type { UpdateState, Updates } from "../use-updates.ts";
 
@@ -76,16 +74,13 @@ function SettingsBody({
     onTutorial: (enabled: boolean) => void;
 }) {
     const agents = useAgents(server);
-    const library = useLibrary(server);
-    const [repo, setRepo] = useState("");
     const status = updateStatus(updates.state);
-    const pr = library.status?.pr;
 
     return (
         <>
-            <Switch off="io" label="nyx" checked={server.settings.theme === "nyx"} onChange={(nyx) => onTheme(nyx ? "nyx" : "io")} />
+            <Switch off="Dark" label="Light" checked={server.settings.theme === "light"} onChange={(light) => onTheme(light ? "light" : "dark")} />
 
-            <div className="flex items-center gap-[var(--aspis-space-3)]">
+            <div className="flex items-center gap-[var(--space-3)]">
                 <span className="aspis-field__hint flex-1">{[server.health?.version ?? "…", status].filter(Boolean).join(" · ")}</span>
                 {updates.state.kind === "available" ? (
                     <Button variant="primary" icon="arrow" onClick={() => void updates.install()}>
@@ -98,11 +93,11 @@ function SettingsBody({
                 )}
             </div>
 
-            <section className="flex flex-col gap-[var(--aspis-space-3)]">
+            <section className="flex flex-col gap-[var(--space-3)]">
                 <GroupHeader label="Agent CLIs" />
-                <ul className="m-0 flex list-none flex-col gap-[var(--aspis-space-3)] p-0">
+                <ul className="m-0 flex list-none flex-col gap-[var(--space-3)] p-0">
                     {agents.agents?.map((agent) => (
-                        <li key={agent.harness} className="flex items-center gap-[var(--aspis-space-3)]">
+                        <li key={agent.harness} className="flex items-center gap-[var(--space-3)]">
                             <span className="flex-1">{agent.harness}</span>
                             {!agent.cli && !agent.installed && <Chip tone="warn">CLI not found</Chip>}
                             <Button
@@ -119,17 +114,6 @@ function SettingsBody({
                 {agents.installable === false && <span className="aspis-field__hint">CLIs are wired from the installed desktop app.</span>}
             </section>
 
-            <section className="flex flex-col gap-[var(--aspis-space-3)]">
-                <GroupHeader label="Library" />
-                {library.repo && library.status ? (
-                    <span className="aspis-field__hint">
-                        {[library.repo, library.status.branch !== "develop" && library.status.branch, pr && `pull request ${pr.state.toLowerCase()}`].filter(Boolean).join(" · ")}
-                    </span>
-                ) : (
-                    <LibraryConnect repo={repo} onRepo={setRepo} busy={library.busy} onConnect={() => void library.connect(repo.trim())} />
-                )}
-            </section>
-
             <Switch
                 checked={singleKeys}
                 onChange={onSingleKeys}
@@ -139,38 +123,12 @@ function SettingsBody({
 
             <Switch checked={tutorial} onChange={onTutorial} label="Build tutorial" hint="Each new piece opens on a guided walk through what it is and how to fill it." />
 
-            <div className="flex min-w-0 flex-col gap-[var(--aspis-space-1)]">
+            <div className="flex min-w-0 flex-col gap-[var(--space-1)]">
                 <span className="aspis-field__hint truncate" title={server.health?.dbPath}>
                     {server.health?.dbPath ?? "…"}
                 </span>
                 {server.health?.lastDispatch && <span className="aspis-field__hint">Last dispatch {new Date(server.health.lastDispatch).toLocaleString()}</span>}
             </div>
         </>
-    );
-}
-
-export function LibraryConnect({ repo, onRepo, busy, onConnect }: { repo: string; onRepo: (repo: string) => void; busy: boolean; onConnect: () => void }) {
-    return (
-        <form
-            className="flex w-full max-w-[560px] items-start gap-[var(--aspis-space-3)]"
-            onSubmit={(event) => {
-                event.preventDefault();
-                if (repo.trim()) onConnect();
-            }}
-        >
-            <div className="flex-1">
-                <TextField
-                    label="Library repository"
-                    hideLabel
-                    placeholder="owner/repo"
-                    hint="Created as a private repository if it does not exist."
-                    value={repo}
-                    onChange={(event) => onRepo(event.target.value)}
-                />
-            </div>
-            <Button type="submit" variant="primary" disabled={!repo.trim() || busy}>
-                Connect
-            </Button>
-        </form>
     );
 }

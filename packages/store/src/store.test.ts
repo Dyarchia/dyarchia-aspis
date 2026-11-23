@@ -19,11 +19,11 @@ afterEach(() => {
 test("creates the database in WAL mode and migrates once", () => {
     const path = tempDb();
     const store = new Store(path);
-    expect(store.schemaVersion).toBe(8);
+    expect(store.schemaVersion).toBe(9);
     expect(store.db.query<{ journal_mode: string }, []>("PRAGMA journal_mode").get()!.journal_mode).toBe("wal");
     store.close();
     const reopened = new Store(path);
-    expect(reopened.schemaVersion).toBe(8);
+    expect(reopened.schemaVersion).toBe(9);
     reopened.close();
 });
 
@@ -79,9 +79,9 @@ test("each board starts from the runners of its newest card", () => {
 test("settings round trip and upsert", () => {
     const store = new Store(tempDb());
     expect(store.getSetting("theme")).toBeUndefined();
-    store.setSetting("theme", "io");
-    store.setSetting("theme", "nyx");
-    expect(store.getSetting("theme")).toBe("nyx");
+    store.setSetting("theme", "dark");
+    store.setSetting("theme", "light");
+    expect(store.getSetting("theme")).toBe("light");
     store.close();
 });
 
@@ -91,11 +91,11 @@ test("watch reports writes made by another connection", async () => {
     const writer = new Store(path);
     const seen: number[] = [];
     const stop = reader.watch((version) => seen.push(version), 20);
-    writer.setSetting("theme", "nyx");
+    writer.setSetting("theme", "light");
     await Bun.sleep(80);
     stop();
     expect(seen.length).toBe(1);
-    expect(reader.getSetting("theme")).toBe("nyx");
+    expect(reader.getSetting("theme")).toBe("light");
     reader.close();
     writer.close();
 });

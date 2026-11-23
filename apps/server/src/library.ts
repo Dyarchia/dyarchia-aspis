@@ -1,5 +1,5 @@
 import { kinds, pieceAt, validate } from "@dyarchia/library";
-import { LibraryError, LibraryRepo } from "@dyarchia/library/repo";
+import { LibraryError, LibraryRepo, listRepos } from "@dyarchia/library/repo";
 import { KanbanError, type Store, aspisHome } from "@dyarchia/store";
 import { Hono } from "hono";
 import { join } from "node:path";
@@ -9,10 +9,6 @@ const Connect = z.object({ repo: z.string().trim().regex(/^[\w.-]+\/[\w.-]+$/, "
 const FileBody = z.object({ path: z.string().min(1), text: z.string() });
 const Publish = z.object({ message: z.string().trim().min(1, "Describe the change") });
 
-/*
- * The library repository the user chose lives under ~/.dyarchia-aspis/library/<name>. ASPIS_LIBRARY points it at
- * another folder and ASPIS_GH replaces the GitHub CLI, so development and e2e never reach GitHub.
- */
 /* Every piece touched by the unpublished changes, checked as Build checks it: errors stop the publish. */
 async function problems(repo: LibraryRepo): Promise<string[]> {
     const touched = new Map<string, { kind: keyof typeof kinds; name: string }>();
@@ -37,12 +33,19 @@ async function problems(repo: LibraryRepo): Promise<string[]> {
     return found;
 }
 
+/*
+ * The library is whichever repository the user picked last, kept until they pick another or none. Each one is cloned
+ * under ~/.dyarchia-aspis/library/<owner>/<name> and stays there, so switching away never loses unpublished work:
+ * picking it again finds it as it was left. ASPIS_LIBRARY moves that root and ASPIS_GH replaces the GitHub CLI, so
+ * development and e2e never reach GitHub.
+ */
 export function libraryRoutes(store: Store, changed: () => void) {
+    const gh = process.env.ASPIS_GH ? (JSON.parse(process.env.ASPIS_GH) as string[]) : undefined;
     const repoName = () => store.getSetting("library.repo");
     const open = (name = repoName()) => {
-        if (!name) throw new KanbanError("Choose the library repository in Settings first", 409);
-        const path = process.env.ASPIS_LIBRARY ?? join(aspisHome(), "library", name.split("/")[1]!);
-        return new LibraryRepo({ path, gh: process.env.ASPIS_GH ? JSON.parse(process.env.ASPIS_GH) : undefined });
+        if (!name) throw new KanbanError("Choose a repository first", 409);
+        const [owner, repo] = name.split("/");
+        return new LibraryRepo({ path: join(process.env.ASPIS_LIBRARY ?? join(aspisHome(), "library"), owner!, repo!), gh });
     };
     const guard = async <T>(action: () => Promise<T> | T): Promise<T> => {
         try {
@@ -59,6 +62,12 @@ export function libraryRoutes(store: Store, changed: () => void) {
             if (!name) return c.json({ repo: null, status: null });
             const repo = open(name);
             return c.json({ repo: name, status: repo.exists ? await guard(() => repo.status()) : null });
+        })
+        .get("/repos", async (c) => c.json(await guard(() => listRepos({ gh }))))
+        .delete("/", (c) => {
+            store.deleteSetting("library.repo");
+            changed();
+            return c.json({ repo: null, status: null });
         })
         .post("/connect", async (c) => {
             const { repo: name } = Connect.parse(await c.req.json());

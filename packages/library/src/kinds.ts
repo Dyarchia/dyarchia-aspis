@@ -14,7 +14,8 @@ import { steps as modsSteps } from "./tutorials/mods.ts";
  * follow the Claude Code documentation (code.claude.com/docs/en): an error is something Claude Code would refuse,
  * skip or ignore, a warning is style or a field that would be dropped. Anything the docs leave open is not
  * invented here; it stays editable in Code and is kept as written. Prompts have no file format in Claude Code, so
- * they use the smallest one that fits and say so.
+ * they use the smallest one that fits and say so. Commands are the one kind outside Claude Code: console scripts,
+ * taught from the consoles' own documentation.
  */
 
 const efforts = ["low", "medium", "high", "xhigh", "max"] as const;
@@ -121,25 +122,38 @@ const agents: Kind = {
     check: (piece, values) => [...fileName(piece.name), ...agentName(values.name)],
 };
 
+/*
+ * Commands are console scripts, not prompts: the body runs line by line in Git Bash, PowerShell or cmd, as the
+ * shell field says (Git Bash when it says nothing). Arguments only name what the body reads as $1, $args[0] or %1.
+ */
+const consoles = ["git-bash", "powershell", "cmd"] as const;
+
 const commands: Kind = {
     id: "commands",
     label: "Commands",
     singular: "command",
     folder: "commands",
     format: "markdown",
-    summary: "Prompts you run as /name, the older form of skills.",
+    summary: "Console scripts for Git Bash, PowerShell or cmd.",
     main: (name) => `commands/${name}.md`,
     root: (name) => `commands/${name}.md`,
     owns: inFolder("commands", (name) => `commands/${name}.md`),
-    scaffold: (name) => ({ [`commands/${name}.md`]: "" }),
-    fields: skillFields,
-    essentials: ["description", "argument-hint", "body"],
-    body: { label: "Prompt", help: "$ARGUMENTS, $1, $name take what you typed; !`command` inserts its output." },
+    scaffold: (name) => ({ [`commands/${name}.md`]: "---\nshell: git-bash\n---\n\n" }),
+    fields: [
+        { key: "description", label: "Description", control: "textarea", help: "What it does, in one line." },
+        { key: "shell", label: "Shell", control: "select", options: consoles, help: "The console that runs the body." },
+        { key: "arguments", label: "Arguments", control: "tags", placeholder: "org, branch", help: "Read in order as $1, $args[0] or %1." },
+    ],
+    essentials: ["description", "shell", "arguments", "body"],
+    body: { label: "Script", help: "Written as you would type it at that console, one line after another." },
     steps: commandsSteps,
     check: (piece, values, body) => {
         const issues = fileName(piece.name);
-        const tools = Array.isArray(values["allowed-tools"]) ? values["allowed-tools"].join(" ") : String(values["allowed-tools"] ?? "");
-        if (/!`/.test(body) && !/Bash/.test(tools)) issues.push({ level: "warn", message: "The prompt runs !`commands` but Bash is not among the allowed tools", field: "allowed-tools" });
+        const shell = values.shell ?? "git-bash";
+        if (!consoles.includes(shell as (typeof consoles)[number])) issues.push({ level: "error", message: `Shell must be one of ${consoles.join(", ")}`, field: "shell" });
+        if (!body.trim()) issues.push({ level: "warn", message: "The script is empty: the command would do nothing", field: "body" });
+        if (shell === "git-bash" && /\b(Get|Set|Remove|New)-[A-Z]\w+/.test(body)) issues.push({ level: "warn", message: "The script uses PowerShell cmdlets but runs in Git Bash", field: "shell" });
+        if (shell === "powershell" && /\$\{?\d/.test(body)) issues.push({ level: "warn", message: "PowerShell reads arguments as $args[0], not $1", field: "body" });
         return issues;
     },
 };

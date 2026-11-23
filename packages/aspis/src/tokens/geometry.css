@@ -1,37 +1,23 @@
 /*
- * Geometry shared by every theme: spacing, sizes and the type scale. A theme paints these boxes and picks the
- * typeface, weight, case and tracking that fill them; it never resizes or moves them, so io and nyx lay out the
- * same page to the pixel. Sizes are font-size/line-height pairs read by the --aspis-type-* tokens of each theme.
+ * What Aspis needs beyond Synthic's own tokens (tokens/synthic.css, copied verbatim from the design system): the
+ * sidebar and rail widths, the form label column, the chip and small-target heights, the width of a Windows caption
+ * button, and Synthic's one motion curve with its two durations. Every size is a multiple of Synthic's 4px unit.
+ * The two typefaces are Synthic's, bundled from Fontsource so the app never waits on the network; Fontsource
+ * registers them under their variable names, so the font tokens name those first.
  */
 :root {
-    --aspis-space-1: 4px;
-    --aspis-space-2: 8px;
-    --aspis-space-3: 12px;
-    --aspis-space-4: 16px;
-    --aspis-space-5: 24px;
-    --aspis-space-6: 40px;
-    --aspis-gutter: 32px;
-    --aspis-control-h: 36px;
-    --aspis-row-h: 32px;
-    --aspis-bar-h: 40px;
-    --aspis-pill-h: 20px;
+    --font-sans: "Google Sans Flex Variable", "Google Sans Flex", system-ui, sans-serif;
+    --font-mono: "Google Sans Code Variable", "Google Sans Code", ui-monospace, monospace;
+
+    --aspis-nav-w: 256px;
+    --aspis-rail-w: 56px;
+    --aspis-label-w: 112px;
+    --aspis-chip-h: 24px;
     --aspis-target: 24px;
     --aspis-caption-w: 46px;
-    --aspis-label-w: 160px;
-    --aspis-value-w: 560px;
-    --aspis-nav-w: 256px;
-    --aspis-head-h: 64px;
-    --aspis-card-head-h: 48px;
-    --aspis-card-foot-h: 56px;
-    --aspis-rail-w: 56px;
-    --aspis-border-w: 1px;
-    --aspis-focus-w: 2px;
 
-    --aspis-text-display: 32px/40px;
-    --aspis-text-body: 15px/24px;
-    --aspis-text-item: 14px/20px;
-    --aspis-text-ui: 13px/20px;
-    --aspis-text-data: 12px/18px;
-    --aspis-text-label: 11px/16px;
-    --aspis-text-code: 13px/20px;
+    --aspis-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --aspis-fast: 150ms;
+    --aspis-base: 220ms;
+    --aspis-theme: 450ms;
 }

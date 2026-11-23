@@ -14,8 +14,9 @@ fn colorref(hex: &str) -> Result<COLORREF, String> {
 
 /*
  * The window keeps Windows' own title bar, so snapping, Snap Layouts, resizing and the system menu all stay, and
- * only its paint follows the theme: the caption takes the app's background, the title its quiet ink and the edge
- * the same line the app draws between panes. Windows 10 ignores these attributes and keeps its default bar.
+ * only its paint follows the theme: the caption takes the app's ground, the title the same colour so only the icon
+ * and the buttons show, and the edge the line the app draws between panes. Windows 10 ignores these attributes and
+ * keeps its default bar.
  */
 #[tauri::command]
 pub fn paint_frame(window: WebviewWindow, caption: String, text: String, border: String) -> Result<(), String> {

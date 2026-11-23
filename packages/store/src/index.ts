@@ -121,6 +121,7 @@ export const migrations: (string | ((db: Database) => void))[] = [
     boardSettings,
     `ALTER TABLE boards DROP COLUMN max_running;
      DELETE FROM settings WHERE key = 'maxRunning';`,
+    `DELETE FROM settings WHERE key = 'theme' AND value NOT IN ('dark', 'light');`,
 ];
 
 export const aspisHome = () => process.env.ASPIS_HOME ?? join(homedir(), ".dyarchia-aspis");
@@ -156,6 +157,10 @@ export class Store {
         this.db
             .query("INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at")
             .run(key, value, Date.now());
+    }
+
+    deleteSetting(key: string): void {
+        this.db.query("DELETE FROM settings WHERE key = ?").run(key);
     }
 
     getMeta(key: string): string | undefined {

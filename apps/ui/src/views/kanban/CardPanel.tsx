@@ -114,8 +114,8 @@ export function CardPanel({
      * phases it cannot reach yet disabled and their reason beside them. A move that needs a note asks for it.
      */
     const head = (
-        <div className="flex min-w-0 flex-col gap-[var(--aspis-space-2)]">
-            <div className="flex items-center gap-[var(--aspis-space-3)]">
+        <div className="flex min-w-0 flex-col gap-[var(--space-2)]">
+            <div className="flex items-center gap-[var(--space-3)]">
                 <span className="aspis-tile__ref">#{card.id}</span>
                 <Select
                     label="Phase"
@@ -163,16 +163,16 @@ export function CardPanel({
             <Form>
                 {card.phase === "review" && (
                     <FormRow label="Checks">
-                        <div className="flex flex-wrap items-center gap-[var(--aspis-space-3)]">
+                        <div className="flex flex-wrap items-center gap-[var(--space-3)]">
                             <Mark ok={card.auditorVerdict?.ok ?? null} label="Auditor" />
                             <span className="aspis-field__hint">{card.auditorVerdict?.reason ?? card.held ?? "Auditing…"}</span>
                         </div>
-                        <div className="flex flex-wrap items-center gap-[var(--aspis-space-3)]">
+                        <div className="flex flex-wrap items-center gap-[var(--space-3)]">
                             <Mark ok={card.humanVerdict?.ok ?? null} label="You" />
                             {card.humanVerdict?.reason && <span className="aspis-field__hint">{card.humanVerdict.reason}</span>}
                         </div>
                         {(card.auditorVerdict || card.held) && (
-                            <div className="flex gap-[var(--aspis-space-2)]">
+                            <div className="flex gap-[var(--space-2)]">
                                 {card.auditorVerdict ? (
                                     <Button variant="primary" icon="check" onClick={() => ask(`Check #${card.id}`, "Why you approve it", "Approve", (text) => void board.verdict(card.id, true, text))}>
                                         Approve
@@ -236,10 +236,10 @@ export function CardPanel({
 
                 {(editable || card.files.length > 0) && (
                     <FormRow label="Files">
-                        <div className="flex flex-wrap items-center gap-[var(--aspis-space-3)]">
+                        <div className="flex flex-wrap items-center gap-[var(--space-3)]">
                             {editable && <IconButton icon="clip" label="Attach" onClick={() => upload.current?.click()} />}
                             {card.files.map((file) => (
-                                <span key={file.id} className="inline-flex items-center gap-[var(--aspis-space-2)]">
+                                <span key={file.id} className="inline-flex items-center gap-[var(--space-2)]">
                                     <a className="aspis-field__hint" href={board.fileUrl(card.id, file.id)} download={file.name}>
                                         {file.name}
                                     </a>
@@ -309,11 +309,11 @@ export function CardPanel({
                 {(card.dependsOn.length > 0 || (editable && others.length > 0)) && (
                     <FormRow label="Depends on">
                         {card.dependsOn.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-[var(--aspis-space-3)]">
+                            <div className="flex flex-wrap items-center gap-[var(--space-3)]">
                                 {card.dependsOn.map((dependency) => {
                                     const other = cards.find((candidate) => candidate.id === dependency);
                                     return (
-                                        <span key={dependency} className="inline-flex items-center gap-[var(--aspis-space-1)]">
+                                        <span key={dependency} className="inline-flex items-center gap-[var(--space-1)]">
                                             <Mark ok={other?.phase === "done" || other?.phase === "archived" ? true : null} label={`#${dependency} ${other?.title ?? ""}`} />
                                             {editable && (
                                                 <IconButton icon="close" label={`Remove dependency ${dependency}`} onClick={() => edit({ dependsOn: card.dependsOn.filter((value) => value !== dependency) })} />
@@ -337,7 +337,7 @@ export function CardPanel({
 
                 {server.health?.dev && simulate.length > 0 && (
                     <FormRow label="Simulate">
-                        <div className="flex flex-wrap gap-[var(--aspis-space-2)]">
+                        <div className="flex flex-wrap gap-[var(--space-2)]">
                             {simulate.map((action) => (
                                 <Button key={action.label} variant="secondary" onClick={action.run}>
                                     {action.label}
@@ -351,7 +351,7 @@ export function CardPanel({
                     <Thread entries={entries} />
                 </FormRow>
                 <FormRow label="Note">
-                    <div className="flex items-start gap-[var(--aspis-space-3)]">
+                    <div className="flex items-start gap-[var(--space-3)]">
                         <div className="min-w-0 flex-1">
                             <TextArea label="Note" hideLabel rows={1} value={note} placeholder="Note for the agent" onChange={(event) => setNote(event.target.value)} />
                         </div>
