@@ -1,4 +1,4 @@
-import { Button, Card, EmptyState, Icon, IconButton, Page, Stat, useHotkeys } from "@dyarchia/aspis";
+import { Button, Card, EmptyState, IconButton, Page, Stat, useHotkeys } from "@dyarchia/aspis";
 import { type KindId, kindIds, kinds, pieceAt } from "@dyarchia/library";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import type { Library } from "../../use-library.ts";
