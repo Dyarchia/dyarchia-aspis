@@ -83,9 +83,9 @@ function SettingsBody({
 
     return (
         <>
-            <Switch off="io" label="nyx" checked={server.settings.theme === "nyx"} onChange={(nyx) => onTheme(nyx ? "nyx" : "io")} />
+            <Switch off="Dark" label="Light" checked={server.settings.theme === "light"} onChange={(light) => onTheme(light ? "light" : "dark")} />
 
-            <div className="flex items-center gap-[var(--aspis-space-3)]">
+            <div className="flex items-center gap-[var(--space-3)]">
                 <span className="aspis-field__hint flex-1">{[server.health?.version ?? "…", status].filter(Boolean).join(" · ")}</span>
                 {updates.state.kind === "available" ? (
                     <Button variant="primary" icon="arrow" onClick={() => void updates.install()}>
@@ -98,11 +98,11 @@ function SettingsBody({
                 )}
             </div>
 
-            <section className="flex flex-col gap-[var(--aspis-space-3)]">
+            <section className="flex flex-col gap-[var(--space-3)]">
                 <GroupHeader label="Agent CLIs" />
-                <ul className="m-0 flex list-none flex-col gap-[var(--aspis-space-3)] p-0">
+                <ul className="m-0 flex list-none flex-col gap-[var(--space-3)] p-0">
                     {agents.agents?.map((agent) => (
-                        <li key={agent.harness} className="flex items-center gap-[var(--aspis-space-3)]">
+                        <li key={agent.harness} className="flex items-center gap-[var(--space-3)]">
                             <span className="flex-1">{agent.harness}</span>
                             {!agent.cli && !agent.installed && <Chip tone="warn">CLI not found</Chip>}
                             <Button
@@ -119,7 +119,7 @@ function SettingsBody({
                 {agents.installable === false && <span className="aspis-field__hint">CLIs are wired from the installed desktop app.</span>}
             </section>
 
-            <section className="flex flex-col gap-[var(--aspis-space-3)]">
+            <section className="flex flex-col gap-[var(--space-3)]">
                 <GroupHeader label="Library" />
                 {library.repo && library.status ? (
                     <span className="aspis-field__hint">
@@ -139,7 +139,7 @@ function SettingsBody({
 
             <Switch checked={tutorial} onChange={onTutorial} label="Build tutorial" hint="Each new piece opens on a guided walk through what it is and how to fill it." />
 
-            <div className="flex min-w-0 flex-col gap-[var(--aspis-space-1)]">
+            <div className="flex min-w-0 flex-col gap-[var(--space-1)]">
                 <span className="aspis-field__hint truncate" title={server.health?.dbPath}>
                     {server.health?.dbPath ?? "…"}
                 </span>
@@ -152,7 +152,7 @@ function SettingsBody({
 export function LibraryConnect({ repo, onRepo, busy, onConnect }: { repo: string; onRepo: (repo: string) => void; busy: boolean; onConnect: () => void }) {
     return (
         <form
-            className="flex w-full max-w-[560px] items-start gap-[var(--aspis-space-3)]"
+            className="flex w-full max-w-[560px] items-start gap-[var(--space-3)]"
             onSubmit={(event) => {
                 event.preventDefault();
                 if (repo.trim()) onConnect();

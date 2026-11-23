@@ -61,7 +61,7 @@ export function RunnerFields({ label, runner, disabled, onCommit }: { label: str
         onCommit(latest.current);
     };
     return (
-        <div className="grid grid-cols-3 gap-[var(--aspis-space-4)]">
+        <div className="grid grid-cols-3 gap-[var(--space-4)]">
             <Select
                 label={`${label} harness`}
                 hideLabel
@@ -85,7 +85,7 @@ export function RunnerFields({ label, runner, disabled, onCommit }: { label: str
 
 export function RunnerHeads() {
     return (
-        <div className="grid grid-cols-3 gap-[var(--aspis-space-4)]" aria-hidden="true">
+        <div className="grid grid-cols-3 gap-[var(--space-4)]" aria-hidden="true">
             <span className="aspis-field__hint">Harness</span>
             <span className="aspis-field__hint">Model</span>
             <span className="aspis-field__hint">Effort</span>

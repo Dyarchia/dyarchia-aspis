@@ -1,18 +1,6 @@
 {
     "name": "@dyarchia/aspis",
     "version": "0.0.0",
-    "private": true,
-    "type": "module",
-    "exports": {
-        ".": "./src/index.ts",
-        "./aspis.css": "./src/aspis.css"
-    },
-    "scripts": { "typecheck": "tsc --noEmit -p ." },
-    "dependencies": {
-        "@fontsource-variable/geist": "5.3.0",
-        "@fontsource-variable/geist-mono": "5.3.0"
-    },
-    "peerDependencies": { "react": "19.3.0", "react-dom": "19.3.0" },
     "devDependencies": {
         "@types/bun": "1.4.3",
         "@types/react": "19.3.0",
@@ -20,5 +8,22 @@
         "react": "19.3.0",
         "react-dom": "19.3.0",
         "typescript": "7.0.2"
+    },
+    "peerDependencies": {
+        "react": "19.3.0",
+        "react-dom": "19.3.0"
+    },
+    "exports": {
+        ".": "./src/index.ts",
+        "./aspis.css": "./src/aspis.css"
+    },
+    "private": true,
+    "scripts": {
+        "typecheck": "tsc --noEmit -p ."
+    },
+    "type": "module",
+    "dependencies": {
+        "@fontsource-variable/google-sans-code": "5.3.2",
+        "@fontsource-variable/google-sans-flex": "5.3.2"
     }
 }

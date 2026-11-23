@@ -17,30 +17,30 @@ const language = (path: string): Extension => {
     return yamlFrontmatter({ content: markdown() });
 };
 
-/* Colors come from the active theme's tokens, so the editor follows io and nyx like the rest of the app. */
+/* Colors come from the active theme's tokens, so the editor follows dark and light like the rest of the app. */
 const look = EditorView.theme({
-    "&": { height: "100%", color: "var(--aspis-term-ink)", backgroundColor: "var(--aspis-term-bg)", font: "var(--aspis-type-code)" },
-    "&.cm-focused": { outline: "var(--aspis-focus-w) solid var(--aspis-focus)", outlineOffset: "calc(-1 * var(--aspis-focus-w))" },
-    ".cm-scroller": { fontFamily: "var(--aspis-font-mono)", lineHeight: "1.7" },
-    ".cm-content": { padding: "var(--aspis-space-3) 0", caretColor: "var(--aspis-accent)" },
-    ".cm-gutters": { backgroundColor: "var(--aspis-term-bg)", color: "var(--aspis-term-dim)", border: "none", paddingRight: "var(--aspis-space-2)" },
-    ".cm-activeLine": { backgroundColor: "var(--aspis-term-highlight)" },
-    ".cm-activeLineGutter": { backgroundColor: "transparent", color: "var(--aspis-term-ink)" },
-    ".cm-cursor": { borderLeftColor: "var(--aspis-accent)" },
-    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "var(--aspis-term-highlight) !important" },
-    ".cm-matchingBracket": { backgroundColor: "var(--aspis-term-highlight)", outline: "1px solid var(--aspis-term-rule)" },
+    "&": { height: "100%", color: "var(--ink)", backgroundColor: "var(--ground)", font: "var(--text-data)" },
+    "&.cm-focused": { outline: "2px solid var(--focus)", outlineOffset: "calc(-1 * 2px)" },
+    ".cm-scroller": { fontFamily: "var(--font-mono)", lineHeight: "1.7" },
+    ".cm-content": { padding: "var(--space-3) 0", caretColor: "var(--ink)" },
+    ".cm-gutters": { backgroundColor: "var(--ground)", color: "var(--ink-muted)", border: "none", paddingRight: "var(--space-2)" },
+    ".cm-activeLine": { backgroundColor: "var(--ground-selected)" },
+    ".cm-activeLineGutter": { backgroundColor: "transparent", color: "var(--ink)" },
+    ".cm-cursor": { borderLeftColor: "var(--ink)" },
+    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "var(--ground-selected) !important" },
+    ".cm-matchingBracket": { backgroundColor: "var(--ground-selected)", outline: "1px solid var(--hairline)" },
 });
 
 const highlight = HighlightStyle.define([
-    { tag: [tags.keyword, tags.operatorKeyword, tags.modifier, tags.definitionKeyword], color: "var(--aspis-syntax-keyword)" },
-    { tag: [tags.function(tags.variableName), tags.function(tags.propertyName), tags.heading], color: "var(--aspis-syntax-function)", fontWeight: "500" },
-    { tag: [tags.string, tags.number, tags.bool, tags.null, tags.atom], color: "var(--aspis-syntax-literal)" },
-    { tag: [tags.propertyName, tags.attributeName, tags.variableName, tags.labelName], color: "var(--aspis-syntax-argument)" },
-    { tag: [tags.comment, tags.meta, tags.processingInstruction, tags.contentSeparator], color: "var(--aspis-syntax-comment)" },
+    { tag: [tags.keyword, tags.operatorKeyword, tags.modifier, tags.definitionKeyword], color: "var(--nebula)" },
+    { tag: [tags.function(tags.variableName), tags.function(tags.propertyName), tags.heading], color: "var(--sky)", fontWeight: "500" },
+    { tag: [tags.string, tags.number, tags.bool, tags.null, tags.atom], color: "var(--moss)" },
+    { tag: [tags.propertyName, tags.attributeName, tags.variableName, tags.labelName], color: "var(--tide)" },
+    { tag: [tags.comment, tags.meta, tags.processingInstruction, tags.contentSeparator], color: "var(--ink-muted)" },
     { tag: [tags.emphasis], fontStyle: "italic" },
     { tag: [tags.strong], fontWeight: "600" },
-    { tag: [tags.link, tags.url], color: "var(--aspis-syntax-function)", textDecoration: "underline" },
-    { tag: [tags.monospace], color: "var(--aspis-syntax-literal)" },
+    { tag: [tags.link, tags.url], color: "var(--sky)", textDecoration: "underline" },
+    { tag: [tags.monospace], color: "var(--moss)" },
 ]);
 
 /*
@@ -91,7 +91,7 @@ export function CodeEditor({ path, value, onChange, onSave }: { path: string; va
 
     return (
         <>
-            <div ref={host} className="min-h-0 flex-1 overflow-hidden rounded-[var(--aspis-radius-inset)] border border-[var(--aspis-line)]" />
+            <div ref={host} className="min-h-0 flex-1 overflow-hidden rounded-[var(--radius-tile)] border border-[var(--hairline)]" />
             <VisuallyHidden id={hint}>Tab indents. Press Escape, then Tab, to leave the editor.</VisuallyHidden>
         </>
     );

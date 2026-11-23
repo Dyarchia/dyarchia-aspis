@@ -121,6 +121,7 @@ export const migrations: (string | ((db: Database) => void))[] = [
     boardSettings,
     `ALTER TABLE boards DROP COLUMN max_running;
      DELETE FROM settings WHERE key = 'maxRunning';`,
+    `DELETE FROM settings WHERE key = 'theme' AND value NOT IN ('dark', 'light');`,
 ];
 
 export const aspisHome = () => process.env.ASPIS_HOME ?? join(homedir(), ".dyarchia-aspis");

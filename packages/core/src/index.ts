@@ -12,13 +12,13 @@ export const Health = z.object({
 });
 export type Health = z.infer<typeof Health>;
 
-export const Theme = z.enum(["io", "nyx"]);
+export const Theme = z.enum(["dark", "light"]);
 export type Theme = z.infer<typeof Theme>;
 
 export const Settings = z.object({ theme: Theme });
 export type Settings = z.infer<typeof Settings>;
 
-export const defaultSettings: Settings = { theme: "io" };
+export const defaultSettings: Settings = { theme: "dark" };
 
 export const ServerEvent = z.discriminatedUnion("type", [
     z.object({ type: z.literal("hello"), dataVersion: z.number().int(), settings: Settings }),

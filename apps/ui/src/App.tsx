@@ -122,7 +122,7 @@ function Workspace() {
               }
             : entry,
     );
-    const otherTheme: Theme = server.settings.theme === "io" ? "nyx" : "io";
+    const otherTheme: Theme = server.settings.theme === "dark" ? "light" : "dark";
 
     const commands: Command[] = [
         ...views.filter((entry) => entry.id !== view).map((entry) => ({ id: `go-${entry.id}`, label: `Go to ${entry.label}`, hotkey: entry.hotkey, run: () => go(entry.id) })),

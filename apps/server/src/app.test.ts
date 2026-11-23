@@ -45,15 +45,15 @@ test("persists the theme and broadcasts it", async () => {
     ws.onmessage = (e) => events.push(ServerEvent.parse(JSON.parse(String(e.data))));
     await new Promise((resolve) => (ws.onopen = resolve));
 
-    expect(Settings.parse(await (await fetch(`${base}/settings`, { headers: auth })).json()).theme).toBe("io");
-    const put = await fetch(`${base}/settings`, { method: "PUT", headers: auth, body: JSON.stringify({ theme: "nyx" }) });
-    expect(Settings.parse(await put.json()).theme).toBe("nyx");
-    expect(store.getSetting("theme")).toBe("nyx");
+    expect(Settings.parse(await (await fetch(`${base}/settings`, { headers: auth })).json()).theme).toBe("dark");
+    const put = await fetch(`${base}/settings`, { method: "PUT", headers: auth, body: JSON.stringify({ theme: "light" }) });
+    expect(Settings.parse(await put.json()).theme).toBe("light");
+    expect(store.getSetting("theme")).toBe("light");
     expect((await fetch(`${base}/settings`, { method: "PUT", headers: auth, body: JSON.stringify({ theme: "light" }) })).status).toBe(400);
 
     await Bun.sleep(50);
     ws.close();
-    expect(events).toContainEqual({ type: "settings", settings: { theme: "nyx" } });
+    expect(events).toContainEqual({ type: "settings", settings: { theme: "light" } });
 });
 
 test("pushes a change when another connection writes", async () => {

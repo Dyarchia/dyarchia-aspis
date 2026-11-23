@@ -37,7 +37,7 @@ function useColumns(ref: RefObject<HTMLElement | null>) {
 const inline = (text: string) =>
     text.split(/(`[^`]+`)/).map((part, index) =>
         part.startsWith("`") && part.endsWith("`") ? (
-            <code key={index} className="rounded-[var(--aspis-radius-hint)] bg-[var(--aspis-fill)] px-1.5 py-px [font:var(--aspis-type-code)] text-[var(--aspis-ink-1)]">
+            <code key={index} className="rounded-[var(--radius-control)] bg-[var(--ground-selected)] px-1.5 py-px [font:var(--text-data)] text-[var(--ink)]">
                 {part.slice(1, -1)}
             </code>
         ) : (
@@ -48,10 +48,10 @@ const inline = (text: string) =>
 function Lesson({ step }: { step: Step }) {
     return (
         <div className="flex max-w-[72ch] flex-col gap-4">
-            <h3 className="m-0 [font:var(--aspis-type-display)] tracking-[var(--aspis-tracking-display)]">{step.title}</h3>
-            <p className="m-0 font-medium [font:var(--aspis-type-body)]">{inline(step.text)}</p>
+            <h3 className="m-0 [font:var(--text-title)] tracking-[-0.02em]">{step.title}</h3>
+            <p className="m-0 font-medium [font:var(--text-body)]">{inline(step.text)}</p>
             {step.body.map((paragraph, index) => (
-                <p key={index} className="m-0 [font:var(--aspis-type-body)] text-[var(--aspis-ink-2)]">
+                <p key={index} className="m-0 [font:var(--text-body)] text-[var(--ink-muted)]">
                     {inline(paragraph)}
                 </p>
             ))}
@@ -65,19 +65,19 @@ function Example({ step }: { step: Step }) {
             {step.example && (
                 <div className="flex flex-col gap-2">
                     <CodeBlock wrap title={step.example.file} lang={step.example.lang} lines={step.example.code.split("\n").map((text) => ({ text }))} />
-                    {step.example.note && <p className="m-0 [font:var(--aspis-type-ui)] text-[var(--aspis-ink-3)]">{inline(step.example.note)}</p>}
+                    {step.example.note && <p className="m-0 [font:var(--text-body)] text-[var(--ink-muted)]">{inline(step.example.note)}</p>}
                 </div>
             )}
             {step.pitfalls && step.pitfalls.length > 0 && (
                 <section aria-label="Common mistakes" className="flex flex-col gap-2.5">
                     <h4 className="m-0 flex items-center gap-2 font-semibold">
-                        <Icon name="alert" className="text-[var(--aspis-signal-warn)]" />
+                        <Icon name="alert" className="text-[var(--sun)]" />
                         Common mistakes
                     </h4>
                     <ul className="m-0 flex list-none flex-col gap-2 p-0">
                         {step.pitfalls.map((pitfall) => (
-                            <li key={pitfall} className="flex gap-2.5 [font:var(--aspis-type-ui)] text-[var(--aspis-ink-2)]">
-                                <span aria-hidden="true" className="mt-2 size-[5px] flex-none rounded-full bg-[var(--aspis-signal-warn)]" />
+                            <li key={pitfall} className="flex gap-2.5 [font:var(--text-body)] text-[var(--ink-muted)]">
+                                <span aria-hidden="true" className="mt-2 size-[5px] flex-none rounded-full bg-[var(--sun)]" />
                                 <span>{inline(pitfall)}</span>
                             </li>
                         ))}
@@ -107,13 +107,13 @@ function FilePreview({ text, keys }: { text: string; keys: readonly string[] }) 
             key === "body" ? close >= 0 && index > close : line.includes(`"${key}"`) || ((close < 0 || index < close) && owner(index).startsWith(`${key}:`)),
         );
     return (
-        <pre className="-m-[var(--aspis-space-5)] py-4 [font:var(--aspis-type-code)]">
+        <pre className="-m-[var(--space-6)] py-4 [font:var(--text-data)]">
             {lines.map((line, index) => (
                 <div
                     key={index}
-                    className={`grid min-h-5 grid-cols-[44px_minmax(0,1fr)] pr-4 whitespace-pre-wrap ${lit(line, index) ? "bg-[linear-gradient(90deg,var(--aspis-fill),transparent)] shadow-[inset_2px_0_0_var(--aspis-ink-1)]" : ""}`}
+                    className={`grid min-h-5 grid-cols-[44px_minmax(0,1fr)] pr-4 whitespace-pre-wrap ${lit(line, index) ? "bg-[linear-gradient(90deg,var(--ground-selected),transparent)] shadow-[inset_2px_0_0_var(--ink)]" : ""}`}
                 >
-                    <span className="pr-4 text-right text-[var(--aspis-ink-4)] select-none">{index + 1}</span>
+                    <span className="pr-4 text-right text-[var(--ink-faint)] select-none">{index + 1}</span>
                     <span>{line}</span>
                 </div>
             ))}
@@ -236,7 +236,7 @@ export function Editor({
                 {list.map((issue, index) => (
                     <li key={index} className="flex items-center gap-2">
                         <Chip tone={issue.level === "error" ? "danger" : "warn"}>{issue.level}</Chip>
-                        <span className="[font:var(--aspis-type-ui)] text-[var(--aspis-ink-2)]">{issue.message}</span>
+                        <span className="[font:var(--text-body)] text-[var(--ink-muted)]">{issue.message}</span>
                     </li>
                 ))}
             </ul>
@@ -246,7 +246,7 @@ export function Editor({
         <div className="flex flex-col gap-5">
             {kind.fields.filter((field) => lesson.fields.includes(field.key)).map((field) => control(field, true))}
             {lesson.fields.includes("body") && body(true)}
-            {lesson.fields.length === 0 && <p className="m-0 text-[var(--aspis-ink-3)]">Nothing to fill in on this step.</p>}
+            {lesson.fields.length === 0 && <p className="m-0 text-[var(--ink-muted)]">Nothing to fill in on this step.</p>}
         </div>
     );
     const walk = (
@@ -260,7 +260,7 @@ export function Editor({
         </>
     );
     const source = (
-        <a className="ml-auto inline-flex items-center gap-1 text-[var(--aspis-ink-3)] underline underline-offset-4" href={lesson.source} target="_blank" rel="noreferrer">
+        <a className="ml-auto inline-flex items-center gap-1 text-[var(--ink-muted)] underline underline-offset-4" href={lesson.source} target="_blank" rel="noreferrer">
             {kind.label} in the Claude Code docs
             <Icon name="external" size={12} />
         </a>
@@ -321,7 +321,7 @@ export function Editor({
                     {extrasOpen && extras.map((field) => control(field, false))}
                     {extrasOpen && !kind.essentials.includes("body") && kind.body && <div className="col-span-full">{body(false)}</div>}
                 </div>
-                {reading.extra.length > 0 && <p className="m-0 [font:var(--aspis-type-ui)] text-[var(--aspis-ink-3)]">Kept as written, edit them in Code: {reading.extra.join(", ")}</p>}
+                {reading.extra.length > 0 && <p className="m-0 [font:var(--text-body)] text-[var(--ink-muted)]">Kept as written, edit them in Code: {reading.extra.join(", ")}</p>}
             </Card>
             {preview([])}
         </div>

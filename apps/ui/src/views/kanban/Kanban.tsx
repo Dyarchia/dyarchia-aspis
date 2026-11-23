@@ -201,7 +201,7 @@ export function Kanban({ server }: { server: ServerState }) {
                                     }}
                                 >
                                     {phase === "triage" && creating && (
-                                        <li className="aspis-column__item flex items-center gap-[var(--aspis-space-1)]">
+                                        <li className="aspis-column__item flex items-center gap-[var(--space-1)]">
                                             <TextField
                                                 label="New card title"
                                                 hideLabel

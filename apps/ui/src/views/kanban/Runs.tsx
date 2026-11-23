@@ -67,7 +67,7 @@ export function RunHistory({ card, board, changes, label, actions }: { card: Car
     const [state, tone] = status(run);
 
     return (
-        <div className="flex flex-col gap-[var(--aspis-space-3)]">
+        <div className="flex flex-col gap-[var(--space-3)]">
             <GroupHeader label={label} actions={actions} />
             {runs.length > 1 && (
                 <Tabs
