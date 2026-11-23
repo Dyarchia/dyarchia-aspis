@@ -148,7 +148,13 @@ test("the board in both themes", async ({ page, request }) => {
         await saysEverythingOnce(page);
         await column(page, "Review").getByText("Archive stale Quote fields").click();
         await expect(page.locator(".aspis-inspector")).toBeVisible();
-        await page.locator(".aspis-board").evaluate((board) => (board.scrollLeft = board.scrollWidth));
+        const board = page.locator(".aspis-board");
+        await expect.poll(() => board.evaluate(async (element) => {
+            element.scrollLeft = element.scrollWidth;
+            const before = element.scrollLeft;
+            await new Promise((done) => setTimeout(done, 150));
+            return element.scrollLeft === before && before === element.scrollWidth - element.clientWidth;
+        })).toBe(true);
         await expect(page).toHaveScreenshot(`card-${theme}.png`, { mask: [page.locator(".aspis-thread__when, .aspis-inspector input[type=\"datetime-local\"]")] });
         await accessible(page);
         await saysEverythingOnce(page);
