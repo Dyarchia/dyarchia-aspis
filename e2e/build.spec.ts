@@ -6,7 +6,7 @@ const headers = { authorization: "Bearer dev", "content-type": "application/json
 
 test.describe.configure({ mode: "serial" });
 
-async function openBuild(page: Page, theme: "io" | "nyx" = "io") {
+async function openBuild(page: Page, theme: "dark" | "light" = "dark") {
     await page.request.put(`${api}/settings`, { headers, data: { theme } });
     await page.addInitScript(() => localStorage.clear());
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -27,11 +27,16 @@ async function create(page: Page, singular: string, name: string) {
     await prompt.locator(".aspis-dialog__foot button").last().click();
 }
 
-test("Build connects its library in place", async ({ page }) => {
+const repoMenu = (page: Page) => page.locator("#shell-menu");
+
+test("Build's library is picked from the sidebar head, and a new name is created", async ({ page }) => {
     await openBuild(page);
-    await page.getByRole("textbox", { name: "Library repository" }).fill("owner/mantinea");
-    await page.getByRole("button", { name: "Connect" }).click();
-    await expect(page.getByText("Library owner/mantinea is ready")).toBeVisible();
+    await expect(sidebar(page).getByRole("button", { name: "Library repository: No repository" })).toBeVisible();
+    await page.getByRole("button", { name: "Choose a repository" }).click();
+    await repoMenu(page).getByRole("textbox", { name: "Find a repository" }).fill("owner/library");
+    await repoMenu(page).getByRole("button", { name: "Create owner/library" }).click();
+    await expect(page.getByText("Library owner/library is ready")).toBeVisible();
+    await expect(sidebar(page).getByRole("button", { name: "Library repository: owner/library" })).toBeVisible();
     await expect(page.getByRole("button", { name: "New skill" }).first()).toBeVisible();
     await expect(sidebar(page).getByRole("button", { name: /^Skills/ })).toHaveAttribute("aria-expanded", "true");
 });
@@ -79,11 +84,21 @@ test("publishing opens a pull request to develop and later publishes join it", a
     await expect(page.getByText(/Pull request ready for your merge/)).toBeVisible();
     await expect(page.getByRole("link", { name: /Pull request open/ })).toBeVisible();
     await expect(page.getByRole("button", { name: "Update pull request" })).toBeDisabled();
-    await page.keyboard.press("s");
-    await expect(page.getByRole("dialog", { name: "Settings" }).getByText("owner/mantinea · feature/build-add-the-apex-review-skill · pull request open")).toBeVisible();
 });
 
-for (const theme of ["io", "nyx"] as const) {
+test("None sets the library aside and picking it again finds the work as it was left", async ({ page }) => {
+    await openBuild(page);
+    await sidebar(page).getByRole("button", { name: "Library repository: owner/library" }).click();
+    await repoMenu(page).getByRole("button", { name: "None" }).click();
+    await expect(page.getByText("Choose the repository that holds your library")).toBeVisible();
+    await expect(sidebar(page).getByRole("button", { name: /^Skills/ })).toHaveCount(0);
+    await sidebar(page).getByRole("button", { name: /^Library repository/ }).click();
+    await repoMenu(page).getByRole("button", { name: "owner/library" }).click();
+    await expect(piece(page, "apex-review")).toBeVisible();
+    await expect(page.getByRole("link", { name: /Pull request open/ })).toBeVisible();
+});
+
+for (const theme of ["dark", "light"] as const) {
     test(`Build in ${theme}`, async ({ page }) => {
         await openBuild(page, theme);
         await page.mouse.move(0, 0);

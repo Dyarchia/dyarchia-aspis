@@ -101,10 +101,14 @@ export class LibraryRepo {
         return done.out;
     }
 
-    /* Clones the repository, or creates it (private) when GitHub has no such repository yet, and leaves it on develop. */
+    /*
+     * Clones the repository, or creates it (private) when GitHub has no such repository yet, and leaves it on develop.
+     * A clone that is already there is taken as it was left, on whatever branch its open pull request is.
+     */
     async connect(repo: string): Promise<void> {
         if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new LibraryError(`${repo} is not owner/name`);
-        if (!this.exists) {
+        const fresh = !this.exists;
+        if (fresh) {
             await this.must(this.ghRun("auth", "status"), "GitHub CLI is not signed in");
             mkdirSync(dirname(this.path), { recursive: true });
             if ((await this.ghRun("repo", "view", repo, "--json", "name")).ok) {
@@ -115,7 +119,7 @@ export class LibraryRepo {
             }
         }
         if (!(await this.git("rev-parse", "--verify", "--quiet", "HEAD")).ok) await this.seed();
-        await this.ensureDevelop();
+        await this.ensureDevelop(fresh);
     }
 
     private async seed() {
@@ -130,7 +134,7 @@ export class LibraryRepo {
         await this.must(this.git("push", "-u", "origin", branch), "Could not push the layout");
     }
 
-    private async ensureDevelop() {
+    private async ensureDevelop(move: boolean) {
         const local = (await this.git("rev-parse", "--verify", "--quiet", "refs/heads/develop")).ok;
         const remote = (await this.git("rev-parse", "--verify", "--quiet", "refs/remotes/origin/develop")).ok;
         if (!local && remote) await this.must(this.git("branch", "--track", "develop", "origin/develop"), "Could not track develop");
@@ -138,7 +142,7 @@ export class LibraryRepo {
             await this.must(this.git("branch", "develop"), "Could not create develop");
             await this.must(this.git("push", "-u", "origin", "develop"), "Could not push develop");
         }
-        if ((await this.git("branch", "--show-current")).out !== "develop" && (await this.changes()).length === 0) await this.git("switch", "develop");
+        if (move && (await this.git("branch", "--show-current")).out !== "develop" && (await this.changes()).length === 0) await this.git("switch", "develop");
     }
 
     async changes(): Promise<Change[]> {

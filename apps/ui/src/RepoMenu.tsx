@@ -16,7 +16,6 @@ export function RepoMenu({ library, opened }: { library: Library; opened: number
 
     useEffect(() => {
         if (!opened) return;
-        setQuery("");
         setError(undefined);
         library
             .repos()
@@ -24,10 +23,11 @@ export function RepoMenu({ library, opened }: { library: Library; opened: number
             .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : String(reason)));
     }, [opened]);
 
-    const close = () => document.getElementById("aspis-brand-menu")?.hidePopover();
+    const close = () => document.getElementById("shell-menu")?.hidePopover();
     const choose = (repo: string | null) => {
         close();
-        if (repo === (library.repo ?? null)) return;
+        setQuery("");
+        if (library.loaded && repo === (library.repo ?? null)) return;
         void (repo ? library.connect(repo) : library.disconnect());
     };
     const needle = query.trim().toLowerCase();

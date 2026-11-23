@@ -25,7 +25,8 @@ already named after the board, is used as it is; anywhere else the board gets it
 and "nyx-board" make Downloads\nyx-board), and the dialog names that folder before saving. Archived boards stay
 listed under Archived, and deleting a board removes it and its cards from Aspis, never the folder on disk.
 
-The window keeps Windows' own title bar, so snapping and Snap Layouts stay, and paints it with the theme.
+The window keeps Windows' own title bar, so snapping and Snap Layouts stay, and paints it with the theme; the
+title is painted in the bar's own colour, since the sidebar already names the app.
 
 ## Scheduled runs
 
@@ -70,8 +71,11 @@ The window keeps Windows' own title bar, so snapping and Snap Layouts stay, and 
 ## Build
 
 - A builder and library for the pieces agents work with: skills, agents, commands, prompts, rules, hooks, plugins
-  and mods, in Claude Code's formats. The pieces live in a GitHub repository of the user's (chosen in Settings,
-  created private with a develop branch when it does not exist yet), cloned under `~/.dyarchia-aspis/library/`.
+  and mods, in Claude Code's formats; commands are the exception, console scripts for Git Bash, PowerShell or cmd.
+- The library is a GitHub repository of the user's, picked from the head of the sidebar: it lists the repositories
+  the GitHub CLI can see, offers to create a new owner/name (private, with a develop branch) and has None. The
+  choice stays until it is changed. Each repository is cloned under `~/.dyarchia-aspis/library/<owner>/<name>` and
+  kept there, so switching away never loses unpublished work.
 - The library lives in the sidebar: Build opens into one folder per kind and one file per piece, with a dot on
   what is not published yet and a + on each folder. With nothing open, Build shows a card per kind and the changes
   waiting to be published.
@@ -88,24 +92,30 @@ The window keeps Windows' own title bar, so snapping and Snap Layouts stay, and 
   primary action, at the end of the bar, with the number of changes.
 - Links to the web (docs, the pull request) open in the system browser.
 
+## Projects
+
+- The Kanban's project folders, in the sidebar. A + on one opens a terminal session under it; sessions live while
+  the app is open. A session runs a stand-in for `syn`, the TUI still to come, drawn to Synthic's TUI guide in
+  xterm.js with the Synthic Space and Earth schemes, so both themes can be judged in a real terminal.
+
 ## Stack
 
 - Tauri 2 shell with a Bun-compiled Hono sidecar (`aspis-server`)
 - React, Vite and Tailwind v4 for the views
 - SQLite (`bun:sqlite`, WAL) as the shared source of truth
-- Aspis design system with two themes, io and nyx
+- Aspis design system: Synthic, dark (Space) and light (Earth)
 
 ## Aspis
 
-One layout, two paints: io and nyx are the same page, with every box in the same place, and differ only in
-colour, type face, borders and motion.
+Aspis is the Synthic design system (`the_design/Synthic`) reproduced: one flat ground, lines drawn as inset
+shadows, relief only for what floats, every size a multiple of 4, Google Sans Flex and Google Sans Code bundled,
+duotone icons. Dark and light are the same page, with every box in the same place, and differ only in colour.
 
-- `tokens/geometry.css` holds spacing, sizes, the type scale and border widths, once for both themes.
-- `tokens/<theme>.css` holds the paint: colours, families, weights, case, radii, shadows and timing.
-- `base.css` lays out every component and reads tokens only.
-- `shape/<theme>.css` may only paint. `aspis.test.ts` parses it against a property whitelist, and also checks
-  that both themes share one token vocabulary, that no theme hides or fades content, and that text reaches
-  4.5:1 and control boundaries and focus 3:1 on every surface.
+- `tokens/synthic.css` is Synthic's `tokens.css` copied verbatim; `tokens/geometry.css` adds the few sizes Aspis
+  needs (sidebar, label column, chip and target heights) and points the font tokens at the bundled files.
+- `base.css` lays out and paints every component and reads tokens only.
+- `aspis.test.ts` checks that both themes share one vocabulary and hold only colours and shadows, that no rule
+  names a theme, that lines never take space, and that text reaches 4.5:1 and control boundaries and focus 3:1.
 - `e2e/support/audit.ts` measures every aspis element in both themes and fails on a 1px drift, and runs axe
   (WCAG 2.2 AA) on every view; serious and critical findings fail CI.
 - The theme lives in `state.db` and is pushed to every open client. It is one switch in Settings, `T` toggles
@@ -133,7 +143,7 @@ packages/core      zod schemas and shared types
 packages/store     SQLite access, migrations and change watching
 packages/runner    Scheduled dispatcher, Ready pickup and guard, auditor, CLI wiring
 packages/library   Build: kinds, formats, lossless codec, validation and the library repository
-packages/aspis     design system: --aspis-* tokens, io and nyx themes, React components
+packages/aspis     design system: Synthic tokens, dark and light, React components
 apps/server        local HTTP and WebSocket server, compiled to the sidecar
 apps/ui            React views
 apps/desktop       Tauri shell and NSIS installer
@@ -154,8 +164,9 @@ bun run dev
   server starts from `apps/server/src/dev.ts`, which adds `/dev` routes to act as agent, system or auditor
   through the same rules and to run the dispatcher on demand; the sidecar is compiled from `main.ts` and never
   contains them. Set `ASPIS_CLAUDE` to point runs at another executable; tests and e2e use
-  `packages/runner/src/fake-claude.ts`, so they need neither the CLI nor a login. `ASPIS_LIBRARY` and `ASPIS_GH`
-  do the same for Build: e2e uses a local folder and `packages/library/src/fake-gh.ts` over bare repositories.
+  `packages/runner/src/fake-claude.ts`, so they need neither the CLI nor a login. `ASPIS_LIBRARY` (the root
+  that holds one clone per `<owner>/<name>`) and `ASPIS_GH` do the same for Build: e2e uses a local folder and
+  `packages/library/src/fake-gh.ts` over bare repositories.
 - `bun run test`, `bun run typecheck` and `bun run e2e` are what CI runs. The e2e suite keeps its state in
   `.e2e-state/`, wiped at the start of every run. `bun run e2e -- --update-snapshots=all` rewrites the baselines
   in `e2e/__screenshots__` after an intended visual change.

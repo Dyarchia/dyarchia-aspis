@@ -1,7 +1,7 @@
 import { type Page, expect, test } from "@playwright/test";
 import { type ThemeName, accessible, api, headers, live, project, sameLayout, saysEverythingOnce, scrollsOnlyDown, startOnOneLine, useTheme } from "./support/audit.ts";
 
-const themes = ["io", "nyx"] as const;
+const themes = ["dark", "light"] as const;
 const views = [
     { key: "h", name: "home", panes: [] },
     { key: "k", name: "kanban", panes: [".aspis-column"] },
@@ -45,13 +45,13 @@ test.beforeAll(async ({ request }) => void (await project(request)));
 
 for (const view of views) {
     test(`${view.name} is one layout in both themes`, async ({ page }) => {
-        await open(page, "io");
+        await open(page, "dark");
         await page.keyboard.press(view.key);
         await sameLayout(page, async () => {});
     });
 
     test(`${view.name} fits every window, says everything once and starts on one line`, async ({ page }) => {
-        await open(page, "io");
+        await open(page, "dark");
         await page.keyboard.press(view.key);
         for (const size of windows) {
             await page.setViewportSize(size);
@@ -86,7 +86,7 @@ for (const theme of themes) {
 }
 
 test("settings fits the smallest window, and Escape gives focus back to the gear", async ({ page }) => {
-    await open(page, "io");
+    await open(page, "dark");
     await page.setViewportSize(windows[0]!);
     const gear = page.getByRole("button", { name: "Settings" });
     await gear.click();
@@ -99,14 +99,14 @@ test("settings fits the smallest window, and Escape gives focus back to the gear
 });
 
 test("the theme is one switch in Settings", async ({ page }) => {
-    await open(page, "io");
+    await open(page, "dark");
     await page.keyboard.press("s");
-    const nyx = settings(page).getByRole("switch", { name: "nyx" });
-    await expect(nyx).toHaveAttribute("aria-checked", "false");
-    await nyx.click();
-    await expect(page.locator('html[data-theme="nyx"]')).toBeAttached();
-    await nyx.click();
-    await expect(page.locator('html[data-theme="io"]')).toBeAttached();
+    const light = settings(page).getByRole("switch", { name: "Light" });
+    await expect(light).toHaveAttribute("aria-checked", "false");
+    await light.click();
+    await expect(page.locator('html[data-theme="light"]')).toBeAttached();
+    await light.click();
+    await expect(page.locator('html[data-theme="dark"]')).toBeAttached();
 });
 
 for (const theme of themes) {
@@ -126,7 +126,7 @@ for (const theme of themes) {
 
 test("the palette stacks over a dialog, and Escape closes only the palette", async ({ page }) => {
     const { id } = await (await page.request.post(`${api}/cards`, { headers, data: { title: "Palette over a panel", board: await project(page.request) } })).json();
-    await open(page, "io");
+    await open(page, "dark");
     await page.keyboard.press("k");
     await page.getByRole("combobox", { name: "Board" }).selectOption({ label: "ivirma-crm" });
     const tile = page.getByRole("button", { name: "Palette over a panel" });
@@ -145,7 +145,7 @@ test("the palette stacks over a dialog, and Escape closes only the palette", asy
 });
 
 test("single-key shortcuts can be switched off", async ({ page }) => {
-    await open(page, "io");
+    await open(page, "dark");
     const shortcuts = settings(page).getByRole("switch", { name: "Single-key shortcuts" });
     await page.keyboard.press("s");
     await shortcuts.click();
@@ -158,16 +158,16 @@ test("single-key shortcuts can be switched off", async ({ page }) => {
 });
 
 test("theme hotkey persists in state.db and every client follows", async ({ page, browser }) => {
-    await open(page, "io");
+    await open(page, "dark");
     const other = await browser.newPage();
     await other.goto("/");
-    await expect(other.locator('html[data-theme="io"]')).toBeAttached();
+    await expect(other.locator('html[data-theme="dark"]')).toBeAttached();
     await live(other);
 
     await page.keyboard.press("t");
-    await expect(page.locator('html[data-theme="nyx"]')).toBeAttached();
-    await expect(other.locator('html[data-theme="nyx"]')).toBeAttached();
+    await expect(page.locator('html[data-theme="light"]')).toBeAttached();
+    await expect(other.locator('html[data-theme="light"]')).toBeAttached();
     const settings = await (await page.request.get(`${api}/settings`, { headers })).json();
-    expect(settings.theme).toBe("nyx");
+    expect(settings.theme).toBe("light");
     await other.close();
 });

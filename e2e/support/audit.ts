@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 export const api = "http://127.0.0.1:4319";
 export const headers = { authorization: "Bearer dev", "content-type": "application/json" };
-export type ThemeName = "io" | "nyx";
+export type ThemeName = "dark" | "light";
 
 /* The project every e2e card lives on unless a test makes its own, made the first time a spec asks for it. */
 export async function project(request: APIRequestContext): Promise<number> {
@@ -57,8 +57,8 @@ export async function accessible(page: Page, exclude: string[] = []) {
 
 /*
  * Minimalism as a check: within what is in front of the user (the top dialog when one is open, else the window),
- * no heading, label, button, tab, link or menu entry says the same thing twice. Case is ignored because io writes
- * structure in capitals; only what is actually painted counts, so screen-reader-only titles are left out. The same
+ * no heading, label, button, tab, link or menu entry says the same thing twice. Case is ignored because labels are
+ * written in capitals; only what is actually painted counts, so screen-reader-only titles are left out. The same
  * action on every row of a list (Remove, Wire it) is one action, not a repeat. The sidebar entry marking where you
  * are and the page heading naming it are the one pair allowed: they are how you know where you stand.
  */
@@ -122,11 +122,6 @@ const measure = (page: Page) =>
     );
 
 /*
- * Lays the same page out in io and in nyx and asserts that every aspis element sits in the same box. A theme may
- * choose its own typeface, weight, case and tracking, which changes how wide a word is; to compare layouts and not
- * typefaces, both are measured with one shared face and none of those choices.
- */
-/*
  * Parts of the window arrive after the first paint (the library tree once the library has loaded), so a layout is
  * measured only once two readings a moment apart agree.
  */
@@ -141,23 +136,20 @@ async function settled(page: Page): Promise<Box[]> {
     return last;
 }
 
+/* Lays the same page out in dark and in light and asserts that every aspis element sits in the same box. */
 export async function sameLayout(page: Page, show: () => Promise<void>) {
-    const neutral = await page.addStyleTag({
-        content: "*, *::before, *::after { font-family: 'Geist Mono Variable', monospace !important; font-weight: 400 !important; font-style: normal !important; letter-spacing: 0 !important; text-transform: none !important; }",
-    });
-    const boxes: Record<ThemeName, Box[]> = { io: [], nyx: [] };
-    for (const theme of ["io", "nyx"] as const) {
+    const boxes: Record<ThemeName, Box[]> = { dark: [], light: [] };
+    for (const theme of ["dark", "light"] as const) {
         await useTheme(page, theme);
         await show();
         await page.mouse.move(0, 0);
         boxes[theme] = await settled(page);
     }
-    await neutral.evaluate((tag) => tag.remove());
-    expect(boxes.nyx.map((box) => box.key)).toEqual(boxes.io.map((box) => box.key));
-    const drift = boxes.io.flatMap((io, index) => {
-        const nyx = boxes.nyx[index]!;
-        const off = (["x", "y", "w", "h"] as const).filter((field) => Math.abs(io[field] - nyx[field]) > 1);
-        return off.length ? [`${io.key}: ${off.map((field) => `${field} ${io[field]} vs ${nyx[field]}`).join(", ")}`] : [];
+    expect(boxes.light.map((box) => box.key)).toEqual(boxes.dark.map((box) => box.key));
+    const drift = boxes.dark.flatMap((dark, index) => {
+        const light = boxes.light[index]!;
+        const off = (["x", "y", "w", "h"] as const).filter((field) => Math.abs(dark[field] - light[field]) > 1);
+        return off.length ? [`${dark.key}: ${off.map((field) => `${field} ${dark[field]} vs ${light[field]}`).join(", ")}`] : [];
     });
     expect(drift).toEqual([]);
 }

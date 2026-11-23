@@ -19,11 +19,11 @@ const language = (path: string): Extension => {
 
 /* Colors come from the active theme's tokens, so the editor follows dark and light like the rest of the app. */
 const look = EditorView.theme({
-    "&": { height: "100%", color: "var(--ink)", backgroundColor: "var(--ground)", font: "var(--text-data)" },
+    "&": { height: "100%", color: "var(--ink)", backgroundColor: "transparent", font: "var(--text-data)" },
     "&.cm-focused": { outline: "2px solid var(--focus)", outlineOffset: "calc(-1 * 2px)" },
     ".cm-scroller": { fontFamily: "var(--font-mono)", lineHeight: "1.7" },
     ".cm-content": { padding: "var(--space-3) 0", caretColor: "var(--ink)" },
-    ".cm-gutters": { backgroundColor: "var(--ground)", color: "var(--ink-muted)", border: "none", paddingRight: "var(--space-2)" },
+    ".cm-gutters": { backgroundColor: "transparent", color: "var(--ink-muted)", border: "none", paddingRight: "var(--space-2)" },
     ".cm-activeLine": { backgroundColor: "var(--ground-selected)" },
     ".cm-activeLineGutter": { backgroundColor: "transparent", color: "var(--ink)" },
     ".cm-cursor": { borderLeftColor: "var(--ink)" },
@@ -91,7 +91,7 @@ export function CodeEditor({ path, value, onChange, onSave }: { path: string; va
 
     return (
         <>
-            <div ref={host} className="min-h-0 flex-1 overflow-hidden rounded-[var(--radius-tile)] border border-[var(--hairline)]" />
+            <div ref={host} className="min-h-0 flex-1 overflow-hidden rounded-[var(--radius-control)] bg-[var(--ground-sunken)] shadow-[inset_0_0_0_1px_var(--hairline)]" />
             <VisuallyHidden id={hint}>Tab indents. Press Escape, then Tab, to leave the editor.</VisuallyHidden>
         </>
     );

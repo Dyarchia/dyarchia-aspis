@@ -685,6 +685,52 @@ a {
     overflow-y: auto;
 }
 
+.aspis-stat {
+    display: grid;
+    grid-template-rows: 24px 40px 20px;
+    row-gap: var(--space-2);
+    min-width: 0;
+    padding: var(--space-4);
+    border-radius: var(--radius-tile);
+    box-shadow: inset 0 0 0 1px var(--hairline);
+}
+
+.aspis-stat__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.aspis-stat__top .aspis-icon-button {
+    width: var(--aspis-target);
+    height: var(--aspis-target);
+}
+
+.aspis-stat__label {
+    margin: 0;
+    font: var(--text-caption);
+    color: var(--ink-muted);
+}
+
+.aspis-stat__value {
+    font: var(--text-kpi);
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+}
+
+.aspis-stat__note {
+    margin: 0;
+    overflow: hidden;
+    font: var(--text-caption);
+    line-height: 20px;
+    color: var(--ink-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .aspis-stepper {
     display: grid;
     margin: 0;
@@ -1192,6 +1238,7 @@ a {
 
 .aspis-shell__nav {
     grid-row: 1;
+    overflow-x: hidden;
     overflow-y: auto;
 }
 
@@ -1594,7 +1641,7 @@ a {
  */
 .aspis-inspector {
     position: absolute;
-    top: 0;
+    top: var(--space-2);
     right: var(--space-4);
     bottom: var(--space-4);
     z-index: 2;
@@ -1739,7 +1786,7 @@ a {
     gap: var(--space-4);
     height: 100%;
     min-height: 0;
-    padding: 0 var(--space-4) var(--space-4);
+    padding: var(--space-2) var(--space-4) var(--space-4);
     overflow-x: auto;
 }
 

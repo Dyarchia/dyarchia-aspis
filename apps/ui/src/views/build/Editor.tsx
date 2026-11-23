@@ -366,7 +366,7 @@ export function Editor({
                 </>
             }
         >
-            <TabPanel id="editor-mode" value={active} className="flex min-h-0 flex-1 flex-col px-4 pb-4">
+            <TabPanel id="editor-mode" value={active} className="flex min-h-0 flex-1 flex-col px-4 pt-2 pb-4">
                 <div ref={grid} className="flex min-h-0 flex-1 flex-col">
                     {active === "guide" && guide}
                     {active === "form" && form}

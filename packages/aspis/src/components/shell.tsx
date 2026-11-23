@@ -103,7 +103,7 @@ export function AppShell<T extends string>({
                     Skip to content
                 </a>
                 <nav className="aspis-shell__nav" aria-label="Primary">
-                    <button type="button" className="aspis-shell__brand" popoverTarget="aspis-brand-menu" aria-label={`${brand.label}: ${brand.detail}`}>
+                    <button type="button" className="aspis-shell__brand" popoverTarget="shell-menu" aria-label={`${brand.label}: ${brand.detail}`}>
                         <span className="aspis-shell__logo" aria-hidden="true">
                             {brand.name.slice(0, 1)}
                         </span>
@@ -114,7 +114,7 @@ export function AppShell<T extends string>({
                         <Icon name="next" className="aspis-shell__chevron" />
                     </button>
                     <div
-                        id="aspis-brand-menu"
+                        id="shell-menu"
                         className="aspis-menu"
                         popover="auto"
                         aria-label={brand.label}

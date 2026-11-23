@@ -29,7 +29,7 @@ const act = (request: APIRequestContext, id: number, actor: string, to: string, 
 const column = (page: Page, name: string) => page.locator(`section.aspis-column[aria-label="${name}"]`);
 const unfold = (page: Page, name: string) => page.getByRole("button", { name: `Show ${name}` }).click();
 
-async function openBoard(page: Page, theme: "io" | "nyx" = "io") {
+async function openBoard(page: Page, theme: "dark" | "light" = "dark") {
     await page.request.put(`${api}/settings`, { headers, data: { theme } });
     await page.addInitScript(() => localStorage.clear());
     await page.setViewportSize({ width: 1600, height: 900 });
@@ -139,7 +139,7 @@ test("the board in both themes", async ({ page, request }) => {
     await act(request, review, "agent", "review", { note: "Removed 14 fields, tests green" });
     await call(request, `/dev/cards/${review}/verdict`, "POST", { ok: true, reason: "Diff matches the brief" });
 
-    for (const theme of ["io", "nyx"] as const) {
+    for (const theme of ["dark", "light"] as const) {
         await openBoard(page, theme);
         await expect(column(page, "Review").getByText("Archive stale Quote fields")).toBeVisible();
         await page.mouse.move(0, 0);

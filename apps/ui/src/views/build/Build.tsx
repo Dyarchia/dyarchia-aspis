@@ -1,4 +1,4 @@
-import { Button, Card, EmptyState, Icon, IconButton, Page, useHotkeys } from "@dyarchia/aspis";
+import { Button, Card, EmptyState, Icon, IconButton, Page, Stat, useHotkeys } from "@dyarchia/aspis";
 import { type KindId, kindIds, kinds, pieceAt } from "@dyarchia/library";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import type { Library } from "../../use-library.ts";
@@ -66,7 +66,7 @@ export function Build({
                 <EmptyState
                     title="Choose the repository that holds your library"
                     action={
-                        <Button variant="primary" icon="repo" onClick={() => document.getElementById("aspis-brand-menu")?.showPopover()}>
+                        <Button variant="primary" icon="repo" onClick={() => document.getElementById("shell-menu")?.showPopover()}>
                             Choose a repository
                         </Button>
                     }
@@ -92,7 +92,7 @@ export function Build({
             )}
             <Button variant="primary" disabled={library.busy || count === 0} onClick={publish}>
                 {pr?.state === "OPEN" ? "Update pull request" : "Publish"}
-                {count > 0 && <span className="inline-grid h-5 min-w-5 place-items-center rounded-full bg-[color-mix(in_srgb,var(--ink-inverse)_12%,transparent)] px-1.5 [font:var(--text-caption)]">{count}</span>}
+                {count > 0 && <span className="inline-grid h-5 min-w-5 place-items-center rounded-full bg-[color-mix(in_srgb,var(--on-primary)_16%,transparent)] px-1.5 [font:var(--text-label)] tabular-nums">{count}</span>}
             </Button>
         </>
     );
@@ -139,19 +139,15 @@ function Overview({
         .filter((change) => change.at !== undefined);
     return (
         <Page title="Build" actions={actions}>
-            <div className="grid min-h-0 flex-1 grid-cols-4 grid-rows-[auto_auto_minmax(0,1fr)] gap-4 px-4 pb-4">
+            <div className="grid min-h-0 flex-1 grid-cols-4 grid-rows-[auto_auto_minmax(0,1fr)] gap-4 px-4 pt-2 pb-4">
                 {kindIds.map((id) => (
-                    <Card key={id}>
-                        <div className="flex flex-col gap-3">
-                            <div className="flex items-center gap-2 text-[var(--ink-muted)]">
-                                <Icon name="folder" />
-                                <span className="font-medium">{kinds[id].label}</span>
-                                <IconButton icon="plus" label={`New ${kinds[id].singular}`} className="ml-auto" onClick={() => onCreate(id)} />
-                            </div>
-                            <span className="[font:var(--text-title)]">{pieces.get(id)?.length ?? 0}</span>
-                            <p className="m-0 text-[var(--ink-muted)]">{kinds[id].summary}</p>
-                        </div>
-                    </Card>
+                    <Stat
+                        key={id}
+                        label={kinds[id].label}
+                        value={pieces.get(id)?.length ?? 0}
+                        note={kinds[id].summary}
+                        action={<IconButton icon="plus" label={`New ${kinds[id].singular}`} onClick={() => onCreate(id)} />}
+                    />
                 ))}
                 <Card
                     title="Changes not published"
@@ -169,11 +165,11 @@ function Overview({
                     {changed.length === 0 ? (
                         <p className="m-0 text-[var(--ink-muted)]">Everything in the library is published.</p>
                     ) : (
-                        <table className="-mx-[var(--space-6)] -mt-[var(--space-6)] w-[calc(100%+2*var(--space-6))] border-collapse">
+                        <table className="-mx-[var(--space-4)] -mt-[var(--space-4)] w-[calc(100%+2*var(--space-4))] border-collapse">
                             <thead>
-                                <tr className="h-10 bg-[var(--ground)] text-left text-[var(--ink-muted)]">
+                                <tr className="h-10 text-left text-[var(--ink-muted)]">
                                     {["Piece", "Kind", "Change", "File"].map((head) => (
-                                        <th key={head} className="border-b border-[var(--hairline)] px-[var(--space-6)] font-medium">
+                                        <th key={head} className="px-[var(--space-4)] uppercase tracking-[0.06em] shadow-[inset_0_-1px_0_var(--hairline)] [font:var(--text-label)]">
                                             {head}
                                         </th>
                                     ))}
@@ -181,8 +177,8 @@ function Overview({
                             </thead>
                             <tbody>
                                 {changed.map((change) => (
-                                    <tr key={change.path} className="h-12 border-b border-[var(--hairline)]">
-                                        <td className="px-[var(--space-6)]">
+                                    <tr key={change.path} className="h-10 shadow-[inset_0_-1px_0_var(--hairline)]">
+                                        <td className="px-[var(--space-4)]">
                                             {change.status === "deleted" ? (
                                                 change.at!.name
                                             ) : (
@@ -191,9 +187,9 @@ function Overview({
                                                 </button>
                                             )}
                                         </td>
-                                        <td className="px-[var(--space-6)] text-[var(--ink-muted)] capitalize">{kinds[change.at!.kind].singular}</td>
-                                        <td className="px-[var(--space-6)]">{changeLabels[change.status]}</td>
-                                        <td className="px-[var(--space-6)] [font:var(--text-caption)] text-[var(--ink-muted)]">{change.path}</td>
+                                        <td className="px-[var(--space-4)] text-[var(--ink-muted)] capitalize">{kinds[change.at!.kind].singular}</td>
+                                        <td className="px-[var(--space-4)]">{changeLabels[change.status]}</td>
+                                        <td className="px-[var(--space-4)] [font:var(--text-data)] text-[var(--ink-muted)]">{change.path}</td>
                                     </tr>
                                 ))}
                             </tbody>
