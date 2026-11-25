@@ -53,7 +53,7 @@ test("persists the theme and broadcasts it", async () => {
 
     await Bun.sleep(50);
     ws.close();
-    expect(events).toContainEqual({ type: "settings", settings: { theme: "light" } });
+    expect(events).toContainEqual({ type: "settings", settings: { theme: "light", console: "git-bash" } });
 });
 
 test("pushes a change when another connection writes", async () => {
