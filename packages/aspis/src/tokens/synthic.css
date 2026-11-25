@@ -1,73 +1,91 @@
 /* Synthic — generated from tokens.json */
 :root, [data-theme="dark"] {
-  --ground: #141413; /* Fondo de página y de todo lo que no flota: un solo plano, sin degradados ni ruido. En oscuro es el vacío; en claro, piedra arenosa. */
-  --ground-raised: #1a1a18; /* Superficie de lo que flota: modales, paleta de comandos, menús y paneles de detalle superpuestos. Siempre con `shadow-float`; nunca para tarjetas en el plano base. */
+  --ground: #141413; /* Fondo de página y de todo lo que no flota: un solo plano. En Space, casi negro; en Earth, un gris muy claro y neutro (92 %), no blanco: las grandes superficies son las que deslumbran, así que bajan de luz mientras el texto sigue casi negro. */
+  --ground-raised: #1a1a18; /* Superficie de lo que se superpone al plano: paneles anclados, modales, paleta y menús. En Earth apenas más clara que `ground`, nunca blanco puro. Con `shadow-dock` si va anclado, `shadow-float` si flota. */
   --ground-sunken: #10100f; /* Pozos: inputs, áreas de texto, la pista de una barra de progreso. */
   --ground-hover: #1f1f1d; /* Fila o celda bajo el cursor en listas, tablas y la paleta. Solo hover, nunca selección. */
-  --ground-selected: #24241f; /* Fila, tarjeta u opción seleccionada; también relleno del botón `primary` en oscuro. */
-  --hairline: #2b2a28; /* La única línea del sistema: 1 px para separar columnas, filas y el canto de tarjetas y modales. Decorativa, no transmite estado. */
-  --line-control: #6a6964; /* Borde de controles que deben reconocerse como tales (inputs, botón `default`). 3,2:1 sobre `ground` en oscuro y 3,1:1 en claro. */
+  --ground-selected: #24241f; /* Fila, tarjeta u opción seleccionada; también relleno del botón `primary` en Space. Nunca como relleno en reposo. */
+  --hairline: #222220; /* La única línea del sistema: 1 px para separar columnas, filas, el canto de las tarjetas y el borde de los paneles anclados, y el subrayado de los campos. Casi invisible a propósito: insinúa, no corta. Decorativa, no transmite estado. */
+  --line-control: #6a6964; /* El gris plateado del hover: subrayado de un campo y canto de una tarjeta bajo el cursor, y borde del botón `default`. 3,2:1 sobre `ground` en Space y 3,1:1 en Earth. */
   --ink: #f3f1ec; /* Texto principal y titulares sobre `ground`, `ground-raised` y `ground-sunken`. No es blanco puro: evita el halo de las letras sobre oscuro (16:1 / 15:1). */
-  --ink-muted: #a3a19a; /* Texto secundario: etiquetas, metadatos, cabeceras de columna, ejes. Legible sobre `ground` y `ground-raised` en ambos temas (≥6:1). */
+  --ink-muted: #a3a19a; /* Texto secundario: etiquetas, metadatos, cabeceras de columna, ejes. En Earth es casi tinta (8:1), no un gris: el texto secundario se distingue por tamaño y peso tanto como por tono. ≥6:1 sobre `ground` y `ground-raised` en ambos temas. */
   --ink-faint: #6e6c66; /* Solo deshabilitado y placeholder. No pasa 4,5:1: nunca para texto que haya que leer. */
   --ink-inverse: #141413; /* Texto sobre un relleno `ink` (botón primario en claro, tooltip). */
   --primary-fill: #24241f; /* Relleno del botón `primary`: metal oscuro en el tema Space, tinta en Earth. Siempre con `shadow-edge`. */
   --on-primary: #f3f1ec; /* Texto e icono sobre `primary-fill` (13,8:1 / 15,2:1). */
-  --edge-light: #ffffff59; /* El filo de luz: 1 px interior en el borde superior del botón `primary` y de los modales. Es el único brillo de la interfaz en reposo. */
-  --focus: #7fb0f0; /* Anillo de foco de teclado: 2 px sólido con 2 px de hueco en el color de fondo. ≥5:1 sobre todas las superficies. */
+  --edge-light: #ffffff14; /* Canto superior de paneles y modales: 1 px casi imperceptible (8 % en Space). El brillo visible queda solo para el botón `primary` (`shadow-edge`). */
+  --focus: #c9c6bf; /* Anillo de foco de teclado: 2 px sólido, plateado, con 2 px de hueco en el color de fondo. Sin color de acento. ≥9:1 sobre todas las superficies. */
   --overlay: #0a0a09b8; /* Velo detrás de un modal: atenúa el plano base sin desenfocarlo. */
+  --light: #c9c6bf; /* La luz que recorre un canto: el cuerpo plateado del destello. Solo en movimiento, nunca en reposo ni como relleno. */
+  --light-core: #ffffff; /* La cabeza del destello, el punto más brillante de `light`. */
   --up: #53c556; /* Variación positiva en datos (siempre con ▲). Mismo valor que `moss`. */
   --down: #e2735a; /* Variación negativa en datos (siempre con ▼). Cercano a `clay`; se distingue de `up` por la flecha, no solo por el color. */
-  --moss: #53c556; /* Musgo. El verde de los tiles de Claude Desktop. Glifo del tile, texto de chip y serie de gráfico del plugin que lo tiene asignado. Sobre `moss-tile` ≥4,5:1 en ambos temas. */
-  --moss-tile: #1e301e; /* Fondo del tile y del chip de `moss`: su propio color al 16 % (oscuro) o 13 % (claro) sobre `ground`. Sin borde. */
-  --clay: #d97757; /* Arcilla. El terracota de los tiles de Claude Desktop. Glifo del tile, texto de chip y serie de gráfico del plugin que lo tiene asignado. Sobre `clay-tile` ≥4,5:1 en ambos temas. */
-  --clay-tile: #34241e; /* Fondo del tile y del chip de `clay`: su propio color al 16 % (oscuro) o 13 % (claro) sobre `ground`. Sin borde. */
-  --sky: #4a90e8; /* Cielo. El azul de los tiles de Claude Desktop. Glifo del tile, texto de chip y serie de gráfico del plugin que lo tiene asignado. Sobre `sky-tile` ≥4,5:1 en ambos temas. */
-  --sky-tile: #1d2835; /* Fondo del tile y del chip de `sky`: su propio color al 16 % (oscuro) o 13 % (claro) sobre `ground`. Sin borde. */
-  --sun: #e0a53a; /* Sol. Ámbar. Glifo del tile, texto de chip y serie de gráfico del plugin que lo tiene asignado. Sobre `sun-tile` ≥4,5:1 en ambos temas. */
-  --sun-tile: #352b19; /* Fondo del tile y del chip de `sun`: su propio color al 16 % (oscuro) o 13 % (claro) sobre `ground`. Sin borde. */
-  --nebula: #b08ae6; /* Nebulosa. Violeta; nunca en degradado con `sky`. Glifo del tile, texto de chip y serie de gráfico del plugin que lo tiene asignado. Sobre `nebula-tile` ≥4,5:1 en ambos temas. */
-  --nebula-tile: #2d2735; /* Fondo del tile y del chip de `nebula`: su propio color al 16 % (oscuro) o 13 % (claro) sobre `ground`. Sin borde. */
-  --tide: #3fb8a9; /* Marea. Verde azulado. Glifo del tile, texto de chip y serie de gráfico del plugin que lo tiene asignado. Sobre `tide-tile` ≥4,5:1 en ambos temas. */
-  --tide-tile: #1b2e2b; /* Fondo del tile y del chip de `tide`: su propio color al 16 % (oscuro) o 13 % (claro) sobre `ground`. Sin borde. */
+  --moss: #53c556; /* Musgo. El verde de los tiles de Claude Desktop. Glifo de tiles y badges, serie de gráfico. En Earth es un tono vivo de croma máximo; el texto del badge va en `moss-ink`. */
+  --moss-tile: #1e301e; /* Fondo del tile y de los badges de `moss`: su propio color al 16 % (Space) o al 24 % (Earth) sobre `ground`. Sin borde. */
+  --moss-ink: #53c556; /* Texto de los badges de `moss`. En Space es el mismo tono que el glifo; en Earth, el mismo matiz más profundo, para pasar 4,5:1 sobre `moss-tile` sin apagar el glifo. */
+  --clay: #d97757; /* Arcilla. El terracota de los tiles de Claude Desktop. Glifo de tiles y badges, serie de gráfico. En Earth es un tono vivo de croma máximo; el texto del badge va en `clay-ink`. */
+  --clay-tile: #34241e; /* Fondo del tile y de los badges de `clay`: su propio color al 16 % (Space) o al 24 % (Earth) sobre `ground`. Sin borde. */
+  --clay-ink: #d97757; /* Texto de los badges de `clay`. En Space es el mismo tono que el glifo; en Earth, el mismo matiz más profundo, para pasar 4,5:1 sobre `clay-tile` sin apagar el glifo. */
+  --sky: #4a90e8; /* Cielo. El azul de los tiles de Claude Desktop. Glifo de tiles y badges, serie de gráfico. En Earth es un tono vivo de croma máximo; el texto del badge va en `sky-ink`. */
+  --sky-tile: #1d2835; /* Fondo del tile y de los badges de `sky`: su propio color al 16 % (Space) o al 24 % (Earth) sobre `ground`. Sin borde. */
+  --sky-ink: #4a90e8; /* Texto de los badges de `sky`. En Space es el mismo tono que el glifo; en Earth, el mismo matiz más profundo, para pasar 4,5:1 sobre `sky-tile` sin apagar el glifo. */
+  --sun: #e0a53a; /* Sol. Ámbar. Glifo de tiles y badges, serie de gráfico. En Earth es un tono vivo de croma máximo; el texto del badge va en `sun-ink`. */
+  --sun-tile: #352b19; /* Fondo del tile y de los badges de `sun`: su propio color al 16 % (Space) o al 24 % (Earth) sobre `ground`. Sin borde. */
+  --sun-ink: #e0a53a; /* Texto de los badges de `sun`. En Space es el mismo tono que el glifo; en Earth, el mismo matiz más profundo, para pasar 4,5:1 sobre `sun-tile` sin apagar el glifo. */
+  --nebula: #b08ae6; /* Nebulosa. Violeta; nunca en degradado con `sky`. Glifo de tiles y badges, serie de gráfico. En Earth es un tono vivo de croma máximo; el texto del badge va en `nebula-ink`. */
+  --nebula-tile: #2d2735; /* Fondo del tile y de los badges de `nebula`: su propio color al 16 % (Space) o al 24 % (Earth) sobre `ground`. Sin borde. */
+  --nebula-ink: #b08ae6; /* Texto de los badges de `nebula`. En Space es el mismo tono que el glifo; en Earth, el mismo matiz más profundo, para pasar 4,5:1 sobre `nebula-tile` sin apagar el glifo. */
+  --tide: #3fb8a9; /* Marea. Verde azulado. Glifo de tiles y badges, serie de gráfico. En Earth es un tono vivo de croma máximo; el texto del badge va en `tide-ink`. */
+  --tide-tile: #1b2e2b; /* Fondo del tile y de los badges de `tide`: su propio color al 16 % (Space) o al 24 % (Earth) sobre `ground`. Sin borde. */
+  --tide-ink: #3fb8a9; /* Texto de los badges de `tide`. En Space es el mismo tono que el glifo; en Earth, el mismo matiz más profundo, para pasar 4,5:1 sobre `tide-tile` sin apagar el glifo. */
   --neutral-tile: #262624; /* Fondo del tile de un plugin sin color asignado; el glifo va en `ink`. */
-  --shadow-float: 0 24px 48px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px #2b2a28; /* Lo que flota (modal, paleta, menú). El plano base nunca lleva sombra. */
+  --shadow-float: 0 24px 64px -16px rgba(0, 0, 0, 0.55), 0 0 0 1px #222220; /* Lo que flota sin anclarse: modales de confirmación, paleta de comandos, menús. Sombra amplia y blanda; el plano base nunca lleva sombra. */
+  --shadow-dock: -16px 0 32px -16px rgba(0, 0, 0, 0.6); /* Panel anclado a un borde (detalle de una tarjeta): sombra blanda solo hacia el contenido, sin anillo. El canto lo pone `hairline`. */
   --shadow-edge: inset 0 1px 0 0 rgba(255, 255, 255, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.10), 0 0 16px 0 rgba(255, 255, 255, 0.06); /* El filo de luz del botón `primary`: canto superior iluminado y un halo mínimo. */
 }
 [data-theme="light"] {
-  --ground: #f3f1ea;
-  --ground-raised: #fbfaf7;
-  --ground-sunken: #ebe8df;
-  --ground-hover: #ebe8df;
-  --ground-selected: #e4e0d5;
-  --hairline: #dcd8cc;
-  --line-control: #8e8a7f;
-  --ink: #1c1b18;
-  --ink-muted: #5d5b54;
-  --ink-faint: #8f8c83;
-  --ink-inverse: #f3f1ea;
-  --primary-fill: #1c1b18;
-  --on-primary: #f3f1ea;
-  --edge-light: #ffffffcc;
-  --focus: #2361b0;
-  --overlay: #1c1b1833;
-  --up: #2a6e2f;
-  --down: #a0472a;
-  --moss: #2a6e2f;
-  --moss-tile: #d9e0d2;
-  --clay: #a0472a;
-  --clay-tile: #e8dbd1;
-  --sky: #2361b0;
-  --sky-tile: #d8dee2;
-  --sun: #7d570c;
-  --sun-tile: #e4ddcd;
-  --nebula: #7449b0;
-  --nebula-tile: #e2dbe2;
-  --tide: #186a60;
-  --tide-tile: #d7dfd8;
-  --neutral-tile: #e4e2db;
-  --shadow-float: 0 24px 48px -16px rgba(60, 48, 28, 0.22), 0 0 0 1px #dcd8cc;
-  --shadow-edge: inset 0 1px 0 0 rgba(255, 255, 255, 0.22), 0 1px 2px 0 rgba(28, 27, 24, 0.24);
+  --ground: #e8e8e5;
+  --ground-raised: #f0f0ee;
+  --ground-sunken: #e0e0dc;
+  --ground-hover: #dfdfdb;
+  --ground-selected: #d8d8d4;
+  --hairline: #d6d6d2;
+  --line-control: #7d7d79;
+  --ink: #141414;
+  --ink-muted: #3d3d3b;
+  --ink-faint: #7a7a76;
+  --ink-inverse: #e8e8e5;
+  --primary-fill: #141414;
+  --on-primary: #f0f0ee;
+  --edge-light: #ffffff80;
+  --focus: #141414;
+  --overlay: #1414142e;
+  --light: #7a7a76;
+  --light-core: #141414;
+  --up: #035814;
+  --down: #7e2401;
+  --moss: #03791f;
+  --moss-tile: #b1cdb5;
+  --moss-ink: #035814;
+  --clay: #ab3503;
+  --clay-tile: #d9bdaf;
+  --clay-ink: #7e2401;
+  --sky: #0364b4;
+  --sky-tile: #b1c8d9;
+  --sky-ink: #024884;
+  --sun: #855904;
+  --sun-tile: #d0c6af;
+  --sun-ink: #624001;
+  --nebula: #8002df;
+  --nebula-tile: #cfb1e4;
+  --nebula-ink: #5d02a5;
+  --tide: #00736a;
+  --tide-tile: #b0ccc7;
+  --tide-ink: #01544d;
+  --neutral-tile: #d7d7d4;
+  --shadow-float: 0 24px 48px -16px rgba(0, 0, 0, 0.14), 0 0 0 1px #d6d6d2;
+  --shadow-dock: -16px 0 32px -16px rgba(0, 0, 0, 0.12);
+  --shadow-edge: inset 0 1px 0 0 rgba(255, 255, 255, 0.18), 0 1px 2px 0 rgba(0, 0, 0, 0.20);
 }
 :root {
   --space-1: 4px; /* La unidad. Todo tamaño, hueco e interlineado es múltiplo de 4. */
@@ -77,14 +95,14 @@
   --space-6: 24px; /* Padding de modales; separación entre secciones de un panel. */
   --space-8: 32px; /* Separación entre bloques de página. */
   --space-12: 48px; /* Margen de la portada y de pantallas vacías. */
-  --radius-control: 8px; /* Botones, inputs, filas seleccionadas. */
-  --radius-tile: 12px; /* Tiles de plugin, tarjetas, modales y paneles flotantes. */
-  --radius-pill: 9999px; /* Chips y píldoras de estado. */
+  --radius-none: 0; /* Todo lo estructural: botones, campos, tarjetas, paneles, modales, menús y tooltips. La esquina recta deja que los cantos sigan las rectas de la rejilla. */
+  --radius-badge: 9999px; /* Badges: pestañas de plugin, chips de estado y referencias a tarjetas, en forma de píldora completa. La curva marca que es un objeto con color propio, no parte de la estructura. */
+  --radius-tile: 12px; /* Tiles de plugin de 52 px, exactamente como en Claude Desktop. */
   --size-icon: 20px; /* Caja de icono estándar (glifo de ~17 px centrado ópticamente). */
   --size-control: 32px; /* Altura de botones, inputs, chips grandes y pestañas. */
   --size-row: 40px; /* Altura de fila en tablas, listas y la paleta de comandos. */
   --size-header: 48px; /* Altura de cabecera de panel, de columna y de la barra de pestañas. */
-  --size-tile: 52px; /* Tile de plugin, como en Claude Desktop. */
+  --size-tile: 52px; /* Tile de plugin, como en Claude Desktop: glifo de 20 en un cuadrado de 52 con esquina de 12; el resto es aura. */
   --grid-columns: 12; /* Columnas de la rejilla. Los anchos válidos son 3, 4, 6, 8, 9 y 12 columnas. */
   --grid-gutter: 16px; /* Hueco entre columnas y entre filas de la rejilla. */
   --grid-margin: 16px; /* Margen exterior de la página: igual al gutter. */

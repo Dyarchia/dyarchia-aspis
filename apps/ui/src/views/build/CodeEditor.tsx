@@ -32,15 +32,15 @@ const look = EditorView.theme({
 });
 
 const highlight = HighlightStyle.define([
-    { tag: [tags.keyword, tags.operatorKeyword, tags.modifier, tags.definitionKeyword], color: "var(--nebula)" },
-    { tag: [tags.function(tags.variableName), tags.function(tags.propertyName), tags.heading], color: "var(--sky)", fontWeight: "500" },
-    { tag: [tags.string, tags.number, tags.bool, tags.null, tags.atom], color: "var(--moss)" },
-    { tag: [tags.propertyName, tags.attributeName, tags.variableName, tags.labelName], color: "var(--tide)" },
+    { tag: [tags.keyword, tags.operatorKeyword, tags.modifier, tags.definitionKeyword], color: "var(--nebula-ink)" },
+    { tag: [tags.function(tags.variableName), tags.function(tags.propertyName), tags.heading], color: "var(--sky-ink)", fontWeight: "500" },
+    { tag: [tags.string, tags.number, tags.bool, tags.null, tags.atom], color: "var(--moss-ink)" },
+    { tag: [tags.propertyName, tags.attributeName, tags.variableName, tags.labelName], color: "var(--tide-ink)" },
     { tag: [tags.comment, tags.meta, tags.processingInstruction, tags.contentSeparator], color: "var(--ink-muted)" },
     { tag: [tags.emphasis], fontStyle: "italic" },
     { tag: [tags.strong], fontWeight: "600" },
-    { tag: [tags.link, tags.url], color: "var(--sky)", textDecoration: "underline" },
-    { tag: [tags.monospace], color: "var(--moss)" },
+    { tag: [tags.link, tags.url], color: "var(--sky-ink)", textDecoration: "underline" },
+    { tag: [tags.monospace], color: "var(--moss-ink)" },
 ]);
 
 /*
@@ -91,7 +91,7 @@ export function CodeEditor({ path, value, onChange, onSave }: { path: string; va
 
     return (
         <>
-            <div ref={host} className="min-h-0 flex-1 overflow-hidden rounded-[var(--radius-control)] bg-[var(--ground-sunken)] shadow-[inset_0_0_0_1px_var(--hairline)]" />
+            <div ref={host} className="min-h-0 flex-1 overflow-hidden bg-[var(--ground-sunken)] shadow-[inset_0_0_0_1px_var(--hairline)]" />
             <VisuallyHidden id={hint}>Tab indents. Press Escape, then Tab, to leave the editor.</VisuallyHidden>
         </>
     );

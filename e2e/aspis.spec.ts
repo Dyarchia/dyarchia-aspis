@@ -98,15 +98,14 @@ test("settings fits the smallest window, and Escape gives focus back to the gear
     await expect(gear).toBeFocused();
 });
 
-test("the theme is one switch in Settings", async ({ page }) => {
+test("the theme is one square button beside Settings, named after the theme it switches to", async ({ page }) => {
     await open(page, "dark");
-    await page.keyboard.press("s");
-    const light = settings(page).getByRole("switch", { name: "Light" });
-    await expect(light).toHaveAttribute("aria-checked", "false");
-    await light.click();
+    await page.getByRole("button", { name: "Use the light theme" }).click();
     await expect(page.locator('html[data-theme="light"]')).toBeAttached();
-    await light.click();
+    await page.getByRole("button", { name: "Use the dark theme" }).click();
     await expect(page.locator('html[data-theme="dark"]')).toBeAttached();
+    await page.keyboard.press("s");
+    await expect(settings(page).getByRole("switch", { name: "Light" })).toHaveCount(0);
 });
 
 for (const theme of themes) {

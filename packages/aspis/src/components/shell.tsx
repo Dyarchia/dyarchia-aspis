@@ -55,7 +55,8 @@ export const useSidebar = () => useContext(Sidebar);
 /*
  * The shell, laid out as shadcn's collapsible sidebar: the app and what it works on at the top, the views under it,
  * and a view that holds things (Build) opens into its folders and their files, each level one indent and one guide
- * line deeper. The server state and the pinned links (Settings) sit at the foot. Ctrl B or the button at the start
+ * line deeper. The server state and the pinned links (Settings) sit at the foot, with a corner for square quiet
+ * buttons beside them (the theme). Ctrl B or the button at the start
  * of every page bar hides the sidebar altogether; under 1100px it narrows to icons and the tree closes.
  */
 export function AppShell<T extends string>({
@@ -65,6 +66,7 @@ export function AppShell<T extends string>({
     brand,
     status,
     links,
+    corner,
     state,
     children,
 }: {
@@ -74,6 +76,7 @@ export function AppShell<T extends string>({
     brand: ShellBrand;
     status: ReactNode;
     links: readonly ShellLink[];
+    corner?: ReactNode;
     state?: string;
     children: ReactNode;
 }) {
@@ -164,11 +167,14 @@ export function AppShell<T extends string>({
                     <div className="aspis-shell__status" role="status">
                         {status}
                     </div>
-                    <ul className="aspis-shell__menu">
-                        {links.map((entry) => (
-                            <li key={entry.label}>{link({ icon: entry.icon, label: entry.label, hotkey: entry.hotkey, onClick: entry.onClick })}</li>
-                        ))}
-                    </ul>
+                    <div className="aspis-shell__tools">
+                        <ul className="aspis-shell__menu">
+                            {links.map((entry) => (
+                                <li key={entry.label}>{link({ icon: entry.icon, label: entry.label, hotkey: entry.hotkey, onClick: entry.onClick })}</li>
+                            ))}
+                        </ul>
+                        {corner}
+                    </div>
                 </div>
                 <main id="aspis-main" className="aspis-shell__main" tabIndex={-1}>
                     {children}

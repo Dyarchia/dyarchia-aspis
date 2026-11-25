@@ -73,8 +73,9 @@ title is painted in the bar's own colour, since the sidebar already names the ap
 - A builder and library for the pieces agents work with: skills, agents, commands, prompts, rules, hooks, plugins
   and mods, in Claude Code's formats; commands are the exception, console scripts for Git Bash, PowerShell or cmd.
 - The library is a GitHub repository of the user's, picked from the head of the sidebar: it lists the repositories
-  the GitHub CLI can see, offers to create a new owner/name (private, with a develop branch) and has None. The
-  choice stays until it is changed. Each repository is cloned under `~/.dyarchia-aspis/library/<owner>/<name>` and
+  the GitHub CLI can see and has None. New repository is always there, even with nothing to list or when listing
+  fails: a bare name goes under the signed-in login, owner/name under an organization, and it is created private
+  with a develop branch. The choice stays until it is changed. Each repository is cloned under `~/.dyarchia-aspis/library/<owner>/<name>` and
   kept there, so switching away never loses unpublished work.
 - The library lives in the sidebar: Build opens into one folder per kind and one file per piece, with a dot on
   what is not published yet and a + on each folder. With nothing open, Build shows a card per kind and the changes
@@ -94,9 +95,15 @@ title is painted in the bar's own colour, since the sidebar already names the ap
 
 ## Projects
 
-- The Kanban's project folders, in the sidebar. A + on one opens a terminal session under it; sessions live while
-  the app is open. A session runs a stand-in for `syn`, the TUI still to come, drawn to Synthic's TUI guide in
-  xterm.js with the Synthic Space and Earth schemes, so both themes can be judged in a real terminal.
+- The Kanban's project folders, in the sidebar. A + on one opens a terminal session under it, a real console started
+  in the project's folder: Git Bash by default, or PowerShell or cmd as chosen in Settings. Git Bash is found
+  through git, never as a bare `bash` (on Windows that can be WSL); on macOS and Linux the same choice is the
+  system's own bash, so commands and scripts written for it run everywhere.
+- The console runs in a PTY in the server (ConPTY on Windows) and reaches xterm.js over a WebSocket that checks the
+  token and the page's origin. Sessions outlive leaving the view or reloading the window: the server replays what
+  the shell printed meanwhile. Closing a session kills its whole process tree; a shell that exits ends its session.
+- xterm.js draws with the Synthic Space and Earth schemes from `the_design/Synthic`, through WebGL, on Google Sans
+  Code. `ASPIS_SHELL` replaces the console with one command line for tests.
 
 ## Stack
 
@@ -108,18 +115,21 @@ title is painted in the bar's own colour, since the sidebar already names the ap
 ## Aspis
 
 Aspis is the Synthic design system (`the_design/Synthic`) reproduced: one flat ground, lines drawn as inset
-shadows, relief only for what floats, every size a multiple of 4, Google Sans Flex and Google Sans Code bundled,
-duotone icons. Dark and light are the same page, with every box in the same place, and differ only in colour.
+shadows, square corners on everything structural, fields as an underline that a light runs along on focus, cards
+with no fill until selected, the card panel docked with a soft shadow, badges in their hue's ink on its tint, no
+accent colour (what is interactive turns silver), every size a multiple of 4, Google Sans Flex and Google Sans
+Code bundled, duotone icons and a glyph per board phase in its colour. Dark and light are the same page, with every box in the same place, and differ only in colour.
 
 - `tokens/synthic.css` is Synthic's `tokens.css` copied verbatim; `tokens/geometry.css` adds the few sizes Aspis
   needs (sidebar, label column, chip and target heights) and points the font tokens at the bundled files.
 - `base.css` lays out and paints every component and reads tokens only.
 - `aspis.test.ts` checks that both themes share one vocabulary and hold only colours and shadows, that no rule
-  names a theme, that lines never take space, and that text reaches 4.5:1 and control boundaries and focus 3:1.
+  names a theme, that lines never take space, that text (ink, and each hue's ink) reaches 4.5:1, glyphs in their
+  vivid hue 3:1, and control boundaries and focus 3:1.
 - `e2e/support/audit.ts` measures every aspis element in both themes and fails on a 1px drift, and runs axe
   (WCAG 2.2 AA) on every view; serious and critical findings fail CI.
-- The theme lives in `state.db` and is pushed to every open client. It is one switch in Settings, `T` toggles
-  it, `S` opens Settings and `Ctrl K` opens commands.
+- The theme lives in `state.db` and is pushed to every open client. It is one square button with the theme glyph
+  beside Settings, `T` toggles it, `S` opens Settings and `Ctrl K` opens commands.
   Single-key shortcuts can be switched off in Settings and never fire while typing or with a dialog open.
 
 It is a desktop app, not a web page: panes fill the window and every pane opens on the sidebar's top line. The

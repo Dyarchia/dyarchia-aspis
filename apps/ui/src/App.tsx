@@ -1,4 +1,4 @@
-import { AppShell, type Command, CommandPalette, type NavEntry, Status, Toaster, setSingleKeyHotkeys, useHotkeys, useToast } from "@dyarchia/aspis";
+import { AppShell, type Command, CommandPalette, IconButton, type NavEntry, Status, Toaster, setSingleKeyHotkeys, useHotkeys, useToast } from "@dyarchia/aspis";
 import type { Theme } from "@dyarchia/core";
 import { type KindId, kindIds, kinds } from "@dyarchia/library";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -212,6 +212,7 @@ function Workspace() {
                 state={server.error ? "error" : server.live ? "live" : "connecting"}
                 status={<ServerStatus server={server} />}
                 links={[{ label: "Settings", icon: "settings", hotkey: "S", onClick: () => setSettings(true) }]}
+                corner={<IconButton icon="theme" label={`Use the ${otherTheme} theme`} hotkey="T" onClick={() => chooseTheme(otherTheme)} />}
             >
                 {view === "home" && <Home />}
                 {view === "kanban" && <Kanban server={server} />}
@@ -222,7 +223,7 @@ function Workspace() {
                     <Build library={library} selection={selection} onSelect={select} creating={creating} onCreated={() => setCreating(undefined)} tutorial={tutorial} />
                 )}
             </AppShell>
-            <Settings open={settings} onClose={() => setSettings(false)} server={server} updates={updates} onTheme={chooseTheme} singleKeys={singleKeys} onSingleKeys={chooseKeys} tutorial={tutorial} onTutorial={chooseTutorial} />
+            <Settings open={settings} onClose={() => setSettings(false)} server={server} updates={updates} singleKeys={singleKeys} onSingleKeys={chooseKeys} tutorial={tutorial} onTutorial={chooseTutorial} />
             <CommandPalette open={palette} onClose={() => setPalette(false)} commands={commands} />
         </>
     );

@@ -1,5 +1,5 @@
 import { Button, Chip, Dialog, GroupHeader, Select, Switch } from "@dyarchia/aspis";
-import { Console, ConsoleChoice, type Theme } from "@dyarchia/core";
+import { Console, ConsoleChoice } from "@dyarchia/core";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { request } from "../server.ts";
@@ -36,7 +36,6 @@ export function Settings({
     onClose,
     server,
     updates,
-    onTheme,
     singleKeys,
     onSingleKeys,
     tutorial,
@@ -46,7 +45,6 @@ export function Settings({
     onClose: () => void;
     server: ServerState;
     updates: Updates;
-    onTheme: (theme: Theme) => void;
     singleKeys: boolean;
     onSingleKeys: (enabled: boolean) => void;
     tutorial: boolean;
@@ -54,7 +52,7 @@ export function Settings({
 }) {
     return (
         <Dialog open={open} onClose={onClose} title="Settings" placement="center">
-            {open && <SettingsBody server={server} updates={updates} onTheme={onTheme} singleKeys={singleKeys} onSingleKeys={onSingleKeys} tutorial={tutorial} onTutorial={onTutorial} />}
+            {open && <SettingsBody server={server} updates={updates} singleKeys={singleKeys} onSingleKeys={onSingleKeys} tutorial={tutorial} onTutorial={onTutorial} />}
         </Dialog>
     );
 }
@@ -62,7 +60,6 @@ export function Settings({
 function SettingsBody({
     server,
     updates,
-    onTheme,
     singleKeys,
     onSingleKeys,
     tutorial,
@@ -70,7 +67,6 @@ function SettingsBody({
 }: {
     server: ServerState;
     updates: Updates;
-    onTheme: (theme: Theme) => void;
     singleKeys: boolean;
     onSingleKeys: (enabled: boolean) => void;
     tutorial: boolean;
@@ -86,8 +82,6 @@ function SettingsBody({
 
     return (
         <>
-            <Switch off="Dark" label="Light" checked={server.settings.theme === "light"} onChange={(light) => onTheme(light ? "light" : "dark")} />
-
             <Select
                 label="Console"
                 hint="Project sessions open in it"
