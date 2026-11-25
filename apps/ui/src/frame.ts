@@ -2,8 +2,8 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 
 /*
  * Windows draws the title bar and Aspis only paints it: the caption takes the theme's ground and the window edge
- * the hairline between panes. The title is painted in the caption's own colour, so the bar shows only the icon and
- * Windows' buttons while the taskbar and Alt Tab still name the window; the sidebar already names the app. Tokens
+ * the hairline between panes. The shell tells the bar to draw neither icon nor title, so only Windows' buttons
+ * show while the taskbar and Alt Tab still name the window; the sidebar already names the app. Tokens
  * may carry alpha, so each colour is laid over the ground on a one-pixel canvas and read back as the opaque colour
  * the eye sees.
  */
@@ -21,7 +21,6 @@ export function paintFrame() {
     };
     void invoke("paint_frame", {
         caption: seen("--ground"),
-        text: seen("--ground"),
         border: seen("--ground", "--hairline"),
     }).catch(() => undefined);
 }
