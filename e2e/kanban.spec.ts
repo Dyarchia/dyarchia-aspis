@@ -18,7 +18,7 @@ async function call<T = { id: number }>(request: APIRequestContext, path: string
 
 async function card(request: APIRequestContext, title: string, extra: Record<string, unknown> = {}) {
     const { id } = await call(request, "/cards", "POST", { title, board: await project(request) });
-    await call(request, `/cards/${id}`, "PATCH", { brief: `Brief for ${title}`, implementer: runner, auditor, folder: "C:/repos/ivirma-crm", baseBranch: "develop", ...extra });
+    await call(request, `/cards/${id}`, "PATCH", { brief: `Brief for ${title}`, implementer: runner, auditor, folder: "C:/repos/acme-crm", baseBranch: "develop", ...extra });
     return id;
 }
 
@@ -36,7 +36,7 @@ async function openBoard(page: Page, theme: "dark" | "light" = "dark") {
     await page.goto("/");
     await live(page);
     await page.keyboard.press("k");
-    await page.getByRole("combobox", { name: "Board" }).selectOption({ label: "ivirma-crm" });
+    await page.getByRole("combobox", { name: "Board" }).selectOption({ label: "acme-crm" });
     await expect(column(page, "Triage")).toBeVisible();
 }
 
@@ -98,7 +98,7 @@ test("a board is a project: made from +, remembered, archived; a card is born in
     await page.keyboard.press("h");
     await page.keyboard.press("k");
     await expect(picker.locator("option:checked")).toHaveText("site");
-    await expect(picker.locator("option")).toHaveText(["ivirma-crm", "site"]);
+    await expect(picker.locator("option")).toHaveText(["acme-crm", "site"]);
 
     await page.getByRole("button", { name: "Board settings" }).click();
     const settings = page.getByRole("dialog", { name: "Board settings" });
@@ -116,7 +116,7 @@ test("a board is a project: made from +, remembered, archived; a card is born in
     await page.getByRole("button", { name: "Board settings" }).click();
     await expect(settings.getByLabel("Implementer model")).toHaveValue("claude-opus-5-5");
     await settings.getByRole("button", { name: "Archive board" }).click();
-    await expect(picker.locator("option:checked")).toHaveText("ivirma-crm");
+    await expect(picker.locator("option:checked")).toHaveText("acme-crm");
     await expect(picker.locator('optgroup[label="Archived"] option')).toHaveText(["site"]);
 });
 

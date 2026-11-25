@@ -127,7 +127,7 @@ test("the palette stacks over a dialog, and Escape closes only the palette", asy
     const { id } = await (await page.request.post(`${api}/cards`, { headers, data: { title: "Palette over a panel", board: await project(page.request) } })).json();
     await open(page, "dark");
     await page.keyboard.press("k");
-    await page.getByRole("combobox", { name: "Board" }).selectOption({ label: "ivirma-crm" });
+    await page.getByRole("combobox", { name: "Board" }).selectOption({ label: "acme-crm" });
     const tile = page.getByRole("button", { name: "Palette over a panel" });
     await tile.click();
     const panel = page.getByRole("complementary", { name: `#${id} Palette over a panel` });

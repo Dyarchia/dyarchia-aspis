@@ -107,9 +107,6 @@ export function AppShell<T extends string>({
                 </a>
                 <nav className="aspis-shell__nav" aria-label="Primary">
                     <button type="button" className="aspis-shell__brand" popoverTarget="shell-menu" aria-label={`${brand.label}: ${brand.detail}`}>
-                        <span className="aspis-shell__logo" aria-hidden="true">
-                            {brand.name.slice(0, 1)}
-                        </span>
                         <span className="aspis-shell__label">
                             <span className="aspis-shell__name">{brand.name}</span>
                             <span className="aspis-shell__detail">{brand.detail}</span>

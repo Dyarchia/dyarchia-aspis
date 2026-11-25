@@ -9,10 +9,10 @@ export type ThemeName = "dark" | "light";
 /* The project every e2e card lives on unless a test makes its own, made the first time a spec asks for it. */
 export async function project(request: APIRequestContext): Promise<number> {
     const boards = (await (await request.get(`${api}/boards`, { headers })).json()) as { id: number; name: string }[];
-    const found = boards.find((board) => board.name === "ivirma-crm");
+    const found = boards.find((board) => board.name === "acme-crm");
     if (found) return found.id;
-    const folder = join(process.env.ASPIS_E2E_HOME!, "repos", "ivirma-crm");
-    const created = await request.post(`${api}/boards`, { headers, data: { name: "ivirma-crm", folder } });
+    const folder = join(process.env.ASPIS_E2E_HOME!, "repos", "acme-crm");
+    const created = await request.post(`${api}/boards`, { headers, data: { name: "acme-crm", folder } });
     expect(created.ok(), await created.text()).toBe(true);
     return ((await created.json()) as { id: number }).id;
 }

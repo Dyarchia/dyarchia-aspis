@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { accessible, api, headers, live, project, saysEverythingOnce, useTheme } from "./support/audit.ts";
 
 const sidebar = (page: Page) => page.getByRole("navigation", { name: "Primary" });
-const folder = () => join(process.env.ASPIS_E2E_HOME!, "repos", "ivirma-crm");
+const folder = () => join(process.env.ASPIS_E2E_HOME!, "repos", "acme-crm");
 
 async function openProjects(page: Page) {
     await page.request.put(`${api}/settings`, { headers, data: { theme: "dark", console: "git-bash" } });
@@ -28,8 +28,8 @@ test.afterEach(async ({ request }) => {
 test("a + on a project opens a real console in its folder, which outlives leaving the view, and closing it ends it", async ({ page }) => {
     await openProjects(page);
     await expect(page.getByText("Open a session with + on a project")).toBeVisible();
-    await sidebar(page).getByRole("button", { name: "ivirma-crm", exact: true }).hover();
-    await sidebar(page).getByRole("button", { name: "New session in ivirma-crm" }).click();
+    await sidebar(page).getByRole("button", { name: "acme-crm", exact: true }).hover();
+    await sidebar(page).getByRole("button", { name: "New session in acme-crm" }).click();
     await expect(page.locator(".aspis-terminal .xterm")).toBeVisible();
     await expect(sidebar(page).getByRole("button", { name: "Session 1" })).toHaveAttribute("aria-current", "page");
 
@@ -38,17 +38,17 @@ test("a + on a project opens a real console in its folder, which outlives leavin
     await page.locator(".aspis-terminal .xterm").click();
     await page.keyboard.type("pwd > where.txt");
     await page.keyboard.press("Enter");
-    await expect.poll(() => existsSync(proof) && readFileSync(proof, "utf8"), { timeout: 20_000 }).toContain("ivirma-crm");
+    await expect.poll(() => existsSync(proof) && readFileSync(proof, "utf8"), { timeout: 20_000 }).toContain("acme-crm");
     rmSync(proof, { force: true });
 
     await page.keyboard.press("Escape");
     await page.reload();
     await live(page);
-    await sidebar(page).getByRole("button", { name: "ivirma-crm 1", exact: true }).click();
+    await sidebar(page).getByRole("button", { name: "acme-crm 1", exact: true }).click();
     await expect(sidebar(page).getByRole("button", { name: "Session 1" })).toBeVisible();
 
     await sidebar(page).getByRole("button", { name: "Session 1" }).click();
-    await sidebar(page).getByRole("button", { name: "New session in ivirma-crm" }).click();
+    await sidebar(page).getByRole("button", { name: "New session in acme-crm" }).click();
     await expect(sidebar(page).getByRole("button", { name: "Session 2" })).toHaveAttribute("aria-current", "page");
     await saysEverythingOnce(page);
     await accessible(page);
@@ -70,7 +70,7 @@ for (const theme of ["dark", "light"] as const) {
     test(`a session in ${theme}`, async ({ page }) => {
         await openProjects(page);
         await useTheme(page, theme);
-        await sidebar(page).getByRole("button", { name: "New session in ivirma-crm" }).click({ force: true });
+        await sidebar(page).getByRole("button", { name: "New session in acme-crm" }).click({ force: true });
         await expect(page.locator(".aspis-terminal .xterm")).toBeVisible();
         await page.waitForTimeout(300);
         await expect(page).toHaveScreenshot(`projects-${theme}.png`, { mask: [page.locator(".aspis-terminal")] });

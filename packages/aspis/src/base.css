@@ -1313,18 +1313,6 @@ a {
     transition: background-color var(--aspis-fast) ease;
 }
 
-.aspis-shell__logo {
-    display: grid;
-    flex: none;
-    place-items: center;
-    width: var(--size-control);
-    height: var(--size-control);
-    border-radius: var(--radius-none);
-    background: var(--neutral-tile);
-    font: var(--text-heading);
-    color: var(--ink);
-}
-
 .aspis-shell__name,
 .aspis-shell__detail {
     display: block;
