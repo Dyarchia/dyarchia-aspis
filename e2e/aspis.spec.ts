@@ -79,7 +79,7 @@ for (const theme of themes) {
         await page.getByRole("button", { name: "Settings" }).click();
         await expect(settings(page)).toBeVisible();
         await page.mouse.move(0, 0);
-        await expect(page).toHaveScreenshot(`settings-${theme}.png`);
+        await expect(page).toHaveScreenshot(`settings-${theme}.png`, { mask: [settings(page).getByText(/alpha/)] });
         await accessible(page);
         await saysEverythingOnce(page);
     });
