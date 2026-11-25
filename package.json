@@ -1,0 +1,20 @@
+{
+    "name": "dyarchia-aspis",
+    "version": "0.7.11-alpha",
+    "private": true,
+    "type": "module",
+    "workspaces": ["packages/*", "apps/*"],
+    "scripts": {
+        "dev": "bun run --cwd apps/desktop tauri dev",
+        "dev:web": "bun run --filter '@dyarchia/server' --filter '@dyarchia/ui' dev",
+        "typecheck": "bun run --filter '*' typecheck",
+        "test": "bun test packages apps/server",
+        "e2e": "playwright test",
+        "sidecar": "bun run --cwd apps/server compile",
+        "release": "bun run --cwd apps/desktop tauri build"
+    },
+    "devDependencies": {
+        "@axe-core/playwright": "4.13.0",
+        "@playwright/test": "1.64.0"
+    }
+}

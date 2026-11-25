@@ -1,0 +1,175 @@
+/* Synthic — generated from tokens.json */
+:root, [data-theme="dark"] {
+  --ground: #141413; /* Fondo de página y de todo lo que no flota: un solo plano. En Space, casi negro; en Earth, un gris muy claro y neutro (92 %), no blanco: las grandes superficies son las que deslumbran, así que bajan de luz mientras el texto sigue casi negro. */
+  --ground-raised: #1a1a18; /* Superficie de lo que se superpone al plano: paneles anclados, modales, paleta y menús. En Earth apenas más clara que `ground`, nunca blanco puro. Con `shadow-dock` si va anclado, `shadow-float` si flota. */
+  --ground-sunken: #10100f; /* Pozos: inputs, áreas de texto, la pista de una barra de progreso. */
+  --ground-hover: #1f1f1d; /* Fila o celda bajo el cursor en listas, tablas y la paleta. Solo hover, nunca selección. */
+  --ground-selected: #24241f; /* Fila, tarjeta u opción seleccionada; también relleno del botón `primary` en Space. Nunca como relleno en reposo. */
+  --hairline: #222220; /* La única línea del sistema: 1 px para separar columnas, filas, el canto de las tarjetas y el borde de los paneles anclados, y el subrayado de los campos. Casi invisible a propósito: insinúa, no corta. Decorativa, no transmite estado. */
+  --line-control: #6a6964; /* El gris plateado del hover: subrayado de un campo y canto de una tarjeta bajo el cursor, y borde del botón `default`. 3,2:1 sobre `ground` en Space y 3,1:1 en Earth. */
+  --ink: #f3f1ec; /* Texto principal y titulares sobre `ground`, `ground-raised` y `ground-sunken`. No es blanco puro: evita el halo de las letras sobre oscuro (16:1 / 15:1). */
+  --ink-muted: #a3a19a; /* Texto secundario: etiquetas, metadatos, cabeceras de columna, ejes. En Earth es casi tinta (8:1), no un gris: el texto secundario se distingue por tamaño y peso tanto como por tono. ≥6:1 sobre `ground` y `ground-raised` en ambos temas. */
+  --ink-faint: #6e6c66; /* Solo deshabilitado y placeholder. No pasa 4,5:1: nunca para texto que haya que leer. */
+  --ink-inverse: #141413; /* Texto sobre un relleno `ink` (botón primario en claro, tooltip). */
+  --primary-fill: #24241f; /* Relleno del botón `primary`: metal oscuro en el tema Space, tinta en Earth. Siempre con `shadow-edge`. */
+  --on-primary: #f3f1ec; /* Texto e icono sobre `primary-fill` (13,8:1 / 15,2:1). */
+  --edge-light: #ffffff14; /* Canto superior de paneles y modales: 1 px casi imperceptible (8 % en Space). El brillo visible queda solo para el botón `primary` (`shadow-edge`). */
+  --focus: #c9c6bf; /* Anillo de foco de teclado: 2 px sólido, plateado, con 2 px de hueco en el color de fondo. Sin color de acento. ≥9:1 sobre todas las superficies. */
+  --overlay: #0a0a09b8; /* Velo detrás de un modal: atenúa el plano base sin desenfocarlo. */
+  --light: #c9c6bf; /* La luz que recorre un canto: el cuerpo plateado del destello. Solo en movimiento, nunca en reposo ni como relleno. */
+  --light-core: #ffffff; /* La cabeza del destello, el punto más brillante de `light`. */
+  --up: #53c556; /* Variación positiva en datos (siempre con ▲). Mismo valor que `moss`. */
+  --down: #e2735a; /* Variación negativa en datos (siempre con ▼). Cercano a `clay`; se distingue de `up` por la flecha, no solo por el color. */
+  --moss: #53c556; /* Musgo. El verde de los tiles de Claude Desktop. Glifo de tiles y badges, serie de gráfico. En Earth es un tono vivo de croma máximo; el texto del badge va en `moss-ink`. */
+  --moss-tile: #1e301e; /* Fondo del tile y de los badges de `moss`: su propio color al 16 % (Space) o al 24 % (Earth) sobre `ground`. Sin borde. */
+  --moss-ink: #53c556; /* Texto de los badges de `moss`. En Space es el mismo tono que el glifo; en Earth, el mismo matiz más profundo, para pasar 4,5:1 sobre `moss-tile` sin apagar el glifo. */
+  --clay: #d97757; /* Arcilla. El terracota de los tiles de Claude Desktop. Glifo de tiles y badges, serie de gráfico. En Earth es un tono vivo de croma máximo; el texto del badge va en `clay-ink`. */
+  --clay-tile: #34241e; /* Fondo del tile y de los badges de `clay`: su propio color al 16 % (Space) o al 24 % (Earth) sobre `ground`. Sin borde. */
+  --clay-ink: #d97757; /* Texto de los badges de `clay`. En Space es el mismo tono que el glifo; en Earth, el mismo matiz más profundo, para pasar 4,5:1 sobre `clay-tile` sin apagar el glifo. */
+  --sky: #4a90e8; /* Cielo. El azul de los tiles de Claude Desktop. Glifo de tiles y badges, serie de gráfico. En Earth es un tono vivo de croma máximo; el texto del badge va en `sky-ink`. */
+  --sky-tile: #1d2835; /* Fondo del tile y de los badges de `sky`: su propio color al 16 % (Space) o al 24 % (Earth) sobre `ground`. Sin borde. */
+  --sky-ink: #4a90e8; /* Texto de los badges de `sky`. En Space es el mismo tono que el glifo; en Earth, el mismo matiz más profundo, para pasar 4,5:1 sobre `sky-tile` sin apagar el glifo. */
+  --sun: #e0a53a; /* Sol. Ámbar. Glifo de tiles y badges, serie de gráfico. En Earth es un tono vivo de croma máximo; el texto del badge va en `sun-ink`. */
+  --sun-tile: #352b19; /* Fondo del tile y de los badges de `sun`: su propio color al 16 % (Space) o al 24 % (Earth) sobre `ground`. Sin borde. */
+  --sun-ink: #e0a53a; /* Texto de los badges de `sun`. En Space es el mismo tono que el glifo; en Earth, el mismo matiz más profundo, para pasar 4,5:1 sobre `sun-tile` sin apagar el glifo. */
+  --nebula: #b08ae6; /* Nebulosa. Violeta; nunca en degradado con `sky`. Glifo de tiles y badges, serie de gráfico. En Earth es un tono vivo de croma máximo; el texto del badge va en `nebula-ink`. */
+  --nebula-tile: #2d2735; /* Fondo del tile y de los badges de `nebula`: su propio color al 16 % (Space) o al 24 % (Earth) sobre `ground`. Sin borde. */
+  --nebula-ink: #b08ae6; /* Texto de los badges de `nebula`. En Space es el mismo tono que el glifo; en Earth, el mismo matiz más profundo, para pasar 4,5:1 sobre `nebula-tile` sin apagar el glifo. */
+  --tide: #3fb8a9; /* Marea. Verde azulado. Glifo de tiles y badges, serie de gráfico. En Earth es un tono vivo de croma máximo; el texto del badge va en `tide-ink`. */
+  --tide-tile: #1b2e2b; /* Fondo del tile y de los badges de `tide`: su propio color al 16 % (Space) o al 24 % (Earth) sobre `ground`. Sin borde. */
+  --tide-ink: #3fb8a9; /* Texto de los badges de `tide`. En Space es el mismo tono que el glifo; en Earth, el mismo matiz más profundo, para pasar 4,5:1 sobre `tide-tile` sin apagar el glifo. */
+  --neutral-tile: #262624; /* Fondo del tile de un plugin sin color asignado; el glifo va en `ink`. */
+  --shadow-float: 0 24px 64px -16px rgba(0, 0, 0, 0.55), 0 0 0 1px #222220; /* Lo que flota sin anclarse: modales de confirmación, paleta de comandos, menús. Sombra amplia y blanda; el plano base nunca lleva sombra. */
+  --shadow-dock: -16px 0 32px -16px rgba(0, 0, 0, 0.6); /* Panel anclado a un borde (detalle de una tarjeta): sombra blanda solo hacia el contenido, sin anillo. El canto lo pone `hairline`. */
+  --shadow-edge: inset 0 1px 0 0 rgba(255, 255, 255, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.10), 0 0 16px 0 rgba(255, 255, 255, 0.06); /* El filo de luz del botón `primary`: canto superior iluminado y un halo mínimo. */
+}
+[data-theme="light"] {
+  --ground: #e8e8e5;
+  --ground-raised: #f0f0ee;
+  --ground-sunken: #e0e0dc;
+  --ground-hover: #dfdfdb;
+  --ground-selected: #d8d8d4;
+  --hairline: #d6d6d2;
+  --line-control: #7d7d79;
+  --ink: #141414;
+  --ink-muted: #3d3d3b;
+  --ink-faint: #7a7a76;
+  --ink-inverse: #e8e8e5;
+  --primary-fill: #141414;
+  --on-primary: #f0f0ee;
+  --edge-light: #ffffff80;
+  --focus: #141414;
+  --overlay: #1414142e;
+  --light: #7a7a76;
+  --light-core: #141414;
+  --up: #035814;
+  --down: #7e2401;
+  --moss: #03791f;
+  --moss-tile: #b1cdb5;
+  --moss-ink: #035814;
+  --clay: #ab3503;
+  --clay-tile: #d9bdaf;
+  --clay-ink: #7e2401;
+  --sky: #0364b4;
+  --sky-tile: #b1c8d9;
+  --sky-ink: #024884;
+  --sun: #855904;
+  --sun-tile: #d0c6af;
+  --sun-ink: #624001;
+  --nebula: #8002df;
+  --nebula-tile: #cfb1e4;
+  --nebula-ink: #5d02a5;
+  --tide: #00736a;
+  --tide-tile: #b0ccc7;
+  --tide-ink: #01544d;
+  --neutral-tile: #d7d7d4;
+  --shadow-float: 0 24px 48px -16px rgba(0, 0, 0, 0.14), 0 0 0 1px #d6d6d2;
+  --shadow-dock: -16px 0 32px -16px rgba(0, 0, 0, 0.12);
+  --shadow-edge: inset 0 1px 0 0 rgba(255, 255, 255, 0.18), 0 1px 2px 0 rgba(0, 0, 0, 0.20);
+}
+:root {
+  --space-1: 4px; /* La unidad. Todo tamaño, hueco e interlineado es múltiplo de 4. */
+  --space-2: 8px; /* Hueco entre icono y texto; entre chips. */
+  --space-3: 12px; /* Padding horizontal de controles. */
+  --space-4: 16px; /* Gutter y margen de la rejilla; padding de tarjetas y paneles. */
+  --space-6: 24px; /* Padding de modales; separación entre secciones de un panel. */
+  --space-8: 32px; /* Separación entre bloques de página. */
+  --space-12: 48px; /* Margen de la portada y de pantallas vacías. */
+  --radius-none: 0; /* Todo lo estructural: botones, campos, tarjetas, paneles, modales, menús y tooltips. La esquina recta deja que los cantos sigan las rectas de la rejilla. */
+  --radius-badge: 9999px; /* Badges: pestañas de plugin, chips de estado y referencias a tarjetas, en forma de píldora completa. La curva marca que es un objeto con color propio, no parte de la estructura. */
+  --radius-tile: 12px; /* Tiles de plugin de 52 px, exactamente como en Claude Desktop. */
+  --size-icon: 20px; /* Caja de icono estándar (glifo de ~17 px centrado ópticamente). */
+  --size-control: 32px; /* Altura de botones, inputs, chips grandes y pestañas. */
+  --size-row: 40px; /* Altura de fila en tablas, listas y la paleta de comandos. */
+  --size-header: 48px; /* Altura de cabecera de panel, de columna y de la barra de pestañas. */
+  --size-tile: 52px; /* Tile de plugin, como en Claude Desktop: glifo de 20 en un cuadrado de 52 con esquina de 12; el resto es aura. */
+  --grid-columns: 12; /* Columnas de la rejilla. Los anchos válidos son 3, 4, 6, 8, 9 y 12 columnas. */
+  --grid-gutter: 16px; /* Hueco entre columnas y entre filas de la rejilla. */
+  --grid-margin: 16px; /* Margen exterior de la página: igual al gutter. */
+  --font-sans: "Google Sans Flex", system-ui, sans-serif;
+  --font-mono: "Google Sans Code", ui-monospace, monospace;
+  --text-display: 500 56px/60px var(--font-sans); /* Solo en momentos de espectáculo: portada, pantalla vacía sobre `Ambient`. Una vez por pantalla. */
+  --text-kpi: 500 32px/40px var(--font-sans); /* Cifra principal de `Stat`. Numerales tabulares. */
+  --text-title: 500 20px/28px var(--font-sans); /* Título de panel o modal. */
+  --text-heading: 600 14px/20px var(--font-sans); /* Cabecera de sección dentro de un panel. */
+  --text-body: 400 14px/20px var(--font-sans); /* Texto de lectura y de controles. */
+  --text-caption: 400 12px/16px var(--font-sans); /* Metadatos bajo un título; etiquetas de tile. */
+  --text-label: 500 11px/16px var(--font-mono); /* Cabeceras de columna y de grupo, en MAYÚSCULAS, color `ink-muted`. */
+  --text-data: 400 13px/20px var(--font-mono); /* Cifras en tablas, ejes y valores de formulario técnicos. Numerales tabulares. */
+}
+.display {
+  font-family: var(--font-sans);
+  font-size: 56px;
+  line-height: 60px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.kpi {
+  font-family: var(--font-sans);
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.title {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.heading {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.caption {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+.data {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 400;
+  letter-spacing: 0;
+}

@@ -1,0 +1,2407 @@
+/*
+ * The app drawn in Synthic: one flat ground, lines drawn as inset shadows so they never take space, square corners on
+ * everything structural, relief only for what overlaps (the docked panel with shadow-dock, what floats with
+ * shadow-float), every size a multiple of 4. Colour identifies and never decorates: there is no accent colour, and
+ * what is interactive turns silver under the pointer. It reads only
+ * Synthic's tokens and the few Aspis adds in tokens/geometry.css, so dark (Space) and light (Earth) lay out the
+ * same page to the pixel and differ only in the values of those tokens.
+ */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+:root[data-theme] {
+    background: var(--ground);
+    color: var(--ink);
+    font: var(--text-body);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+body {
+    margin: 0;
+    background: var(--ground);
+}
+
+h1,
+h2,
+h3,
+p {
+    margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+    color: inherit;
+}
+
+a {
+    color: inherit;
+}
+
+::selection {
+    background: var(--sky-tile);
+    color: var(--ink);
+}
+
+:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+[tabindex="-1"]:focus {
+    outline: none;
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ink-faint) transparent;
+}
+
+[data-theme-switching] *,
+[data-theme-switching] *::before,
+[data-theme-switching] *::after {
+    transition:
+        background-color var(--aspis-theme) var(--aspis-ease),
+        color var(--aspis-theme) var(--aspis-ease),
+        border-color var(--aspis-theme) var(--aspis-ease),
+        box-shadow var(--aspis-theme) var(--aspis-ease),
+        fill var(--aspis-theme) var(--aspis-ease),
+        stroke var(--aspis-theme) var(--aspis-ease) !important;
+}
+
+@keyframes aspis-blink {
+    50% {
+        opacity: 0;
+    }
+}
+
+@keyframes aspis-rise {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+@keyframes aspis-fade {
+    from {
+        opacity: 0;
+    }
+}
+
+@keyframes aspis-slide {
+    from {
+        opacity: 0;
+        transform: translateX(24px);
+    }
+}
+
+.aspis-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.aspis-icon {
+    flex: none;
+    vertical-align: middle;
+}
+
+.aspis-kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    min-width: var(--aspis-chip-h);
+    height: var(--aspis-chip-h);
+    padding: 0 var(--space-1);
+    font: var(--text-label);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    white-space: nowrap;
+}
+
+/*
+ * A tone is a spectrum colour in its three parts: the glyph, the tint a badge sits on, and the ink its text takes,
+ * which in Earth is the same hue deeper so it reads on its own tint.
+ */
+.aspis-status,
+.aspis-chip,
+.aspis-toast {
+    --aspis-tone: var(--moss);
+    --aspis-tone-tile: var(--moss-tile);
+    --aspis-tone-ink: var(--moss-ink);
+}
+
+[data-tone="warn"] {
+    --aspis-tone: var(--sun);
+    --aspis-tone-tile: var(--sun-tile);
+    --aspis-tone-ink: var(--sun-ink);
+}
+
+[data-tone="danger"] {
+    --aspis-tone: var(--clay);
+    --aspis-tone-tile: var(--clay-tile);
+    --aspis-tone-ink: var(--clay-ink);
+}
+
+[data-tone="info"] {
+    --aspis-tone: var(--sky);
+    --aspis-tone-tile: var(--sky-tile);
+    --aspis-tone-ink: var(--sky-ink);
+}
+
+[data-tone="idle"] {
+    --aspis-tone: var(--ink-faint);
+    --aspis-tone-tile: var(--neutral-tile);
+    --aspis-tone-ink: var(--ink-muted);
+}
+
+.aspis-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font: var(--text-caption);
+    color: var(--ink-muted);
+}
+
+.aspis-status__dot,
+.aspis-chip__dot,
+.aspis-toast__dot {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--aspis-tone);
+}
+
+.aspis-chip,
+.aspis-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    flex: none;
+    width: fit-content;
+    height: var(--aspis-chip-h);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-badge);
+    background: var(--neutral-tile);
+    font: var(--text-caption);
+    font-weight: 500;
+    color: var(--ink-muted);
+    white-space: nowrap;
+}
+
+.aspis-chip[data-tone] {
+    background: var(--aspis-tone-tile);
+    color: var(--aspis-tone-ink);
+}
+
+.aspis-mark__glyph {
+    font-family: var(--font-sans);
+}
+
+.aspis-mark[data-state="ok"] .aspis-mark__glyph {
+    color: var(--moss-ink);
+}
+
+.aspis-mark[data-state="no"] .aspis-mark__glyph {
+    color: var(--down);
+}
+
+.aspis-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    height: var(--size-control);
+    padding: 0 var(--space-3);
+    border: 1px solid transparent;
+    border-radius: var(--radius-none);
+    background: none;
+    font: var(--text-body);
+    font-weight: 500;
+    color: var(--ink);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition:
+        color var(--aspis-fast) ease,
+        background-color var(--aspis-fast) ease,
+        border-color var(--aspis-fast) ease,
+        box-shadow var(--aspis-base) ease;
+}
+
+.aspis-button__label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.aspis-button[aria-expanded] .aspis-icon {
+    transition: transform var(--aspis-fast) var(--aspis-ease);
+}
+
+.aspis-button[aria-expanded="true"] .aspis-icon {
+    transform: rotate(180deg);
+}
+
+.aspis-button[data-variant="primary"] {
+    background: var(--primary-fill);
+    color: var(--on-primary);
+    box-shadow: var(--shadow-edge);
+}
+
+.aspis-button[data-variant="secondary"] {
+    border-color: var(--line-control);
+    color: var(--ink);
+}
+
+.aspis-button[data-variant="primary"]:hover:not(:disabled) {
+    box-shadow: var(--shadow-edge), 0 0 24px 0 var(--edge-light);
+}
+
+.aspis-button[data-variant="secondary"]:hover:not(:disabled) {
+    background: var(--ground-hover);
+}
+
+.aspis-button[data-variant="quiet"] {
+    color: var(--ink-muted);
+}
+
+.aspis-button[data-variant="quiet"]:hover {
+    background: var(--ground-hover);
+    color: var(--ink);
+}
+
+.aspis-button:disabled {
+    border-color: var(--hairline);
+    background: none;
+    box-shadow: none;
+    color: var(--ink-faint);
+    cursor: default;
+}
+
+.aspis-tabs {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    width: fit-content;
+    max-width: 100%;
+}
+
+.aspis-tabs__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--size-control);
+    padding: 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-none);
+    background: none;
+    font: var(--text-body);
+    font-weight: 500;
+    color: var(--ink-muted);
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        color var(--aspis-fast) ease,
+        background-color var(--aspis-fast) ease;
+}
+
+.aspis-tabs__tab:hover {
+    background: var(--ground-hover);
+    color: var(--ink);
+}
+
+.aspis-tabs__tab[aria-selected="true"] {
+    background: var(--ground-selected);
+    color: var(--ink);
+}
+
+.aspis-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.aspis-field__label {
+    color: var(--ink-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.aspis-field__control {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/*
+ * A field is not a box: text on the ground over a 1px underline in hairline, silver under the pointer. Focus shows
+ * on that line, never as a ring around it: a light runs along it from left to right and leaves a 2px line in ink
+ * behind. The light is decoration and slow on purpose, so it is seen travelling, and the field takes keys from the
+ * first instant. Contrast themes get a ring back below.
+ */
+.aspis-field__input {
+    width: 100%;
+    height: var(--size-control);
+    padding: 0;
+    appearance: none;
+    border: 0;
+    border-radius: var(--radius-none);
+    background: transparent;
+    color: var(--ink);
+    font: var(--text-body);
+    box-shadow: inset 0 -1px 0 var(--hairline);
+    transition: box-shadow var(--aspis-fast) ease;
+}
+
+.aspis-field__input:hover:not(:disabled) {
+    box-shadow: inset 0 -1px 0 var(--line-control);
+}
+
+.aspis-field__input:focus {
+    outline: none;
+    box-shadow: inset 0 -1px 0 var(--line-control);
+    background-image: linear-gradient(90deg, transparent, var(--light) 75%, var(--light-core)), linear-gradient(var(--ink), var(--ink));
+    background-repeat: no-repeat;
+    background-size:
+        30% 2px,
+        100% 2px;
+    background-position:
+        150% 100%,
+        0 100%;
+    animation: aspis-sweep 1.6s cubic-bezier(0.45, 0, 0.25, 1);
+}
+
+@keyframes aspis-sweep {
+    from {
+        background-size:
+            30% 2px,
+            0% 2px;
+        background-position:
+            -50% 100%,
+            0 100%;
+    }
+}
+
+.aspis-field__input::placeholder {
+    color: var(--ink-faint);
+}
+
+.aspis-field__input:disabled {
+    color: var(--ink-faint);
+    cursor: default;
+}
+
+/*
+ * A choice from a list is a key that opens a menu, not a field: nothing is typed into it, so it has no line. The
+ * select is the platform's own in its customisable form, so the list it opens is drawn here and not by Windows: the
+ * raised ground and a hairline, rows with room on both sides, and the chosen one marked with a check instead of a
+ * filled bar. A dangerous option says so in the danger colour.
+ */
+.aspis-field__control[data-kind="select"] .aspis-field__input,
+.aspis-field__control[data-kind="select"] .aspis-field__input::picker(select) {
+    appearance: base-select;
+}
+
+.aspis-field__control[data-kind="select"] .aspis-field__input {
+    display: flex;
+    align-items: center;
+    padding-right: var(--space-8);
+    cursor: pointer;
+}
+
+/* A choice takes no light: its line thickens in the focus colour, since the menu it opens answers at once. */
+.aspis-field__control[data-kind="select"] .aspis-field__input:focus {
+    background-image: none;
+    animation: none;
+}
+
+.aspis-field__control[data-kind="select"] .aspis-field__input:focus-visible {
+    box-shadow: inset 0 -2px 0 var(--focus);
+}
+
+.aspis-field__control[data-kind="select"] .aspis-field__input::picker-icon {
+    display: none;
+}
+
+.aspis-field__control[data-kind="select"] .aspis-field__input::picker(select) {
+    min-width: max(anchor-size(width), 200px);
+    margin-block: var(--space-1);
+    padding: var(--space-2);
+    border: 0;
+    border-radius: var(--radius-none);
+    background: var(--ground-raised);
+    color: var(--ink);
+    box-shadow: inset 0 1px 0 0 var(--edge-light), var(--shadow-float);
+}
+
+.aspis-field__input option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--size-control);
+    padding: 0 var(--space-3) 0 var(--space-2);
+    border-radius: var(--radius-none);
+    background: transparent;
+    color: var(--ink);
+    font: var(--text-body);
+    cursor: pointer;
+}
+
+.aspis-field__input option:hover,
+.aspis-field__input option:focus-visible {
+    outline: none;
+    background: var(--ground-hover);
+    color: var(--ink);
+}
+
+.aspis-field__input option:checked {
+    background: transparent;
+    color: var(--ink);
+}
+
+.aspis-field__input option::checkmark {
+    color: var(--ink);
+}
+
+.aspis-field__input option:disabled {
+    color: var(--ink-faint);
+    cursor: default;
+}
+
+.aspis-field__input option[data-tone="danger"] {
+    color: var(--down);
+}
+
+.aspis-field__input optgroup {
+    padding-top: var(--space-2);
+    font: var(--text-label);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+}
+
+.aspis-field__control[data-variant="quiet"] .aspis-field__input {
+    width: auto;
+    field-sizing: content;
+}
+
+.aspis-field__control[data-variant="quiet"] .aspis-field__input:not(:focus-visible) {
+    box-shadow: none;
+}
+
+.aspis-field__control[data-kind="area"] .aspis-field__input {
+    height: auto;
+    min-height: 88px;
+    padding: var(--space-2) 0;
+    resize: vertical;
+}
+
+/*
+ * A one-row area starts as tall as any other field, so a button beside it lines up with it, and grows with what is
+ * written instead of being dragged.
+ */
+.aspis-field__control[data-kind="area"] .aspis-field__input[rows="1"] {
+    min-height: var(--size-control);
+    padding-top: 5px;
+    padding-bottom: 5px;
+    field-sizing: content;
+    resize: none;
+}
+
+.aspis-field__chevron {
+    position: absolute;
+    right: 0;
+    color: var(--ink-muted);
+    pointer-events: none;
+    transition: transform var(--aspis-fast) var(--aspis-ease);
+}
+
+.aspis-field__control:has(.aspis-field__input:open) .aspis-field__chevron {
+    transform: rotate(180deg);
+}
+
+.aspis-field__hint {
+    font: var(--text-caption);
+    color: var(--ink-muted);
+}
+
+.aspis-field__hint[data-tone="danger"] {
+    color: var(--down);
+}
+
+.aspis-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: fit-content;
+    min-height: var(--size-control);
+    cursor: pointer;
+}
+
+.aspis-switch__track {
+    position: relative;
+    flex: none;
+    width: 36px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid var(--line-control);
+    border-radius: var(--radius-none);
+    background: var(--ground-sunken);
+    cursor: pointer;
+    transition:
+        background-color var(--aspis-fast) ease,
+        border-color var(--aspis-fast) ease;
+}
+
+.aspis-switch__thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: var(--radius-none);
+    background: var(--ink-muted);
+    transition:
+        transform var(--aspis-fast) var(--aspis-ease),
+        background-color var(--aspis-fast) ease;
+}
+
+.aspis-switch__track[aria-checked="true"] .aspis-switch__thumb {
+    background: var(--ink-inverse);
+    transform: translateX(16px);
+}
+
+.aspis-switch__track[aria-checked="true"] {
+    border-color: var(--ink);
+    background: var(--ink);
+}
+
+.aspis-switch__label {
+    font: var(--text-body);
+    color: var(--ink);
+}
+
+.aspis-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.aspis-page__bar {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--size-header);
+    padding: 0 var(--space-4) 0 var(--space-2);
+    box-shadow: inset 0 -1px 0 var(--hairline);
+}
+
+.aspis-page__rule {
+    flex: none;
+    width: 1px;
+    height: var(--space-4);
+    margin: 0 var(--space-2) 0 var(--space-1);
+    background: var(--hairline);
+}
+
+.aspis-page__title {
+    margin: 0;
+    font: var(--text-body);
+    color: var(--ink);
+    white-space: nowrap;
+}
+
+.aspis-page__title:focus {
+    outline: none;
+}
+
+.aspis-page__actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-2);
+    margin-left: auto;
+}
+
+.aspis-page__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.aspis-crumbs ol,
+.aspis-crumbs li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--ink-muted);
+}
+
+.aspis-crumbs ol {
+    margin-right: var(--space-2);
+}
+
+.aspis-crumbs__link {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: var(--text-body);
+    color: var(--ink-muted);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.aspis-crumbs__link:hover {
+    color: var(--ink);
+}
+
+/*
+ * Cards of a page grid share one radius, one hairline and one head height, so cards in a row line up on every edge:
+ * heads, bodies and feet. Only the body scrolls.
+ */
+.aspis-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border-radius: var(--radius-none);
+    box-shadow: inset 0 0 0 1px var(--hairline);
+}
+
+.aspis-card__head,
+.aspis-card__foot {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-4);
+}
+
+.aspis-card__head {
+    justify-content: space-between;
+    height: var(--size-header);
+    box-shadow: inset 0 -1px 0 var(--hairline);
+}
+
+.aspis-card__foot {
+    height: var(--size-header);
+    box-shadow: inset 0 1px 0 var(--hairline);
+}
+
+.aspis-card__title {
+    margin: 0;
+    font: var(--text-heading);
+    color: var(--ink);
+}
+
+.aspis-card__meta {
+    min-width: 0;
+    overflow: hidden;
+    font: var(--text-caption);
+    color: var(--ink-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aspis-card__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-height: 0;
+    padding: var(--space-4);
+    overflow-y: auto;
+}
+
+.aspis-stat {
+    display: grid;
+    grid-template-rows: 24px 40px 20px;
+    row-gap: var(--space-2);
+    min-width: 0;
+    padding: var(--space-4);
+    border-radius: var(--radius-none);
+    box-shadow: inset 0 0 0 1px var(--hairline);
+}
+
+.aspis-stat__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.aspis-stat__top .aspis-icon-button {
+    width: var(--aspis-target);
+    height: var(--aspis-target);
+}
+
+.aspis-stat__label {
+    margin: 0;
+    font: var(--text-caption);
+    color: var(--ink-muted);
+}
+
+.aspis-stat__value {
+    font: var(--text-kpi);
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+}
+
+.aspis-stat__note {
+    margin: 0;
+    overflow: hidden;
+    font: var(--text-caption);
+    line-height: 20px;
+    color: var(--ink-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aspis-stepper {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    list-style: none;
+    border-radius: var(--radius-none);
+    box-shadow: inset 0 0 0 1px var(--hairline);
+}
+
+.aspis-stepper li {
+    display: flex;
+    min-width: 0;
+}
+
+.aspis-stepper li + li {
+    box-shadow: inset 1px 0 0 var(--hairline);
+}
+
+.aspis-stepper__step {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+    padding: var(--space-3) var(--space-4);
+    border: 0;
+    background: none;
+    color: var(--ink-muted);
+    text-align: left;
+    cursor: pointer;
+}
+
+.aspis-stepper__step:hover {
+    background: var(--ground-hover);
+}
+
+.aspis-stepper__step[data-state="done"] {
+    color: var(--ink-muted);
+}
+
+.aspis-stepper__step[data-state="now"] {
+    background: var(--ground-selected);
+    color: var(--ink);
+}
+
+.aspis-stepper__step:focus-visible {
+    outline-offset: -2px;
+}
+
+.aspis-stepper__index {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font: var(--text-label);
+    letter-spacing: 0.06em;
+}
+
+.aspis-stepper__label {
+    font: var(--text-body);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aspis-group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--size-control);
+}
+
+.aspis-group__label {
+    font: var(--text-label);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+}
+
+.aspis-column__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    min-width: var(--aspis-chip-h);
+    height: var(--aspis-chip-h);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-badge);
+    background: var(--neutral-tile);
+    font: var(--text-label);
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.aspis-group__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-left: auto;
+}
+
+.aspis-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-12) var(--space-6);
+    text-align: center;
+}
+
+.aspis-empty__title {
+    font: var(--text-body);
+    color: var(--ink-muted);
+}
+
+.aspis-empty__action {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-end;
+    gap: var(--space-3);
+}
+
+.aspis-code {
+    margin: 0;
+    border-radius: var(--radius-none);
+    background: var(--ground-sunken);
+    box-shadow: inset 0 0 0 1px var(--hairline);
+    overflow: hidden;
+}
+
+.aspis-code__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    height: var(--size-row);
+    padding: 0 var(--space-2) 0 var(--space-4);
+    box-shadow: inset 0 -1px 0 var(--hairline);
+    font: var(--text-label);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+}
+
+.aspis-code__title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aspis-code__lang {
+    text-transform: none;
+    color: var(--ink-muted);
+}
+
+.aspis-code__copy {
+    min-width: var(--size-control);
+    height: var(--aspis-chip-h);
+    margin-left: auto;
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-none);
+    background: none;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: var(--ink-muted);
+    cursor: pointer;
+}
+
+.aspis-code__copy:hover {
+    background: var(--ground-hover);
+    color: var(--ink);
+}
+
+.aspis-code__body {
+    margin: 0;
+    padding: var(--space-4);
+    overflow-x: auto;
+    font: var(--text-data);
+    color: var(--ink);
+}
+
+.aspis-code[data-wrap] .aspis-code__body {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.aspis-code__line[data-diff] {
+    display: block;
+    margin: 0 calc(-1 * var(--space-4));
+    padding: 0 var(--space-4);
+}
+
+.aspis-code__line[data-diff="add"] {
+    color: var(--up);
+    background: var(--moss-tile);
+}
+
+.aspis-code__line[data-diff="del"] {
+    color: var(--down);
+    background: var(--clay-tile);
+}
+
+.aspis-code__token[data-kind="keyword"] {
+    color: var(--nebula-ink);
+}
+
+.aspis-code__token[data-kind="function"] {
+    color: var(--sky-ink);
+}
+
+.aspis-code__token[data-kind="literal"] {
+    color: var(--moss-ink);
+}
+
+.aspis-code__token[data-kind="argument"] {
+    color: var(--tide-ink);
+}
+
+.aspis-code__token[data-kind="comment"] {
+    color: var(--ink-muted);
+}
+
+.aspis-log {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    border-radius: var(--radius-none);
+    background: var(--ground);
+    box-shadow: inset 0 0 0 1px var(--hairline);
+    color: var(--ink);
+    overflow: hidden;
+}
+
+.aspis-log__bar {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-3);
+    height: var(--size-row);
+    padding: 0 var(--space-2) 0 var(--space-4);
+    box-shadow: inset 0 -1px 0 var(--hairline);
+}
+
+.aspis-log__title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: var(--text-label);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+}
+
+.aspis-log__screen {
+    display: flex;
+    flex: 1;
+    flex-direction: column-reverse;
+    min-height: 0;
+    padding: var(--space-4);
+    overflow-y: auto;
+    font: var(--text-data);
+}
+
+.aspis-log__screen:focus-visible {
+    outline-offset: -2px;
+}
+
+.aspis-log__line {
+    display: grid;
+    grid-template-columns: 2ch minmax(0, 1fr);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.aspis-log__line[data-kind="gap"] {
+    height: 1lh;
+}
+
+.aspis-log__line[data-kind="prompt"] .aspis-log__text {
+    background: var(--ground-selected);
+    box-decoration-break: clone;
+}
+
+.aspis-log__line[data-kind="tool"] .aspis-log__gutter {
+    color: var(--moss-ink);
+}
+
+.aspis-log__line[data-kind="dim"],
+.aspis-log__line[data-kind="prompt"] .aspis-log__gutter {
+    color: var(--ink-muted);
+}
+
+.aspis-log__line[data-kind="add"] {
+    color: var(--up);
+    background: var(--moss-tile);
+}
+
+.aspis-log__line[data-kind="del"] {
+    color: var(--down);
+    background: var(--clay-tile);
+}
+
+.aspis-log__caret {
+    display: inline-block;
+    width: 1ch;
+    height: 1lh;
+    background: var(--ink);
+    vertical-align: text-bottom;
+    animation: aspis-blink 1.05s step-end infinite;
+}
+
+.aspis-palette {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: calc(var(--size-header) * 2) var(--space-4) 0;
+    border: 0;
+    background: var(--overlay);
+    animation: aspis-fade var(--aspis-fast) var(--aspis-ease);
+}
+
+.aspis-palette[open] {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.aspis-palette::backdrop {
+    background: transparent;
+}
+
+.aspis-palette__box {
+    position: relative;
+    width: 560px;
+    max-width: 100%;
+    border-radius: var(--radius-none);
+    background: var(--ground-raised);
+    box-shadow: inset 0 1px 0 0 var(--edge-light), var(--shadow-float);
+    overflow: hidden;
+    animation: aspis-rise var(--aspis-base) var(--aspis-ease);
+}
+
+.aspis-palette__prompt {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--size-header);
+    padding: 0 var(--space-4);
+    box-shadow: inset 0 -1px 0 var(--hairline);
+    color: var(--ink-muted);
+}
+
+.aspis-palette__icon {
+    color: var(--ink-muted);
+}
+
+.aspis-palette__input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    outline: none;
+    background: none;
+    font: var(--text-body);
+    color: var(--ink);
+    caret-color: var(--ink);
+}
+
+.aspis-palette__input::placeholder {
+    color: var(--ink-muted);
+}
+
+.aspis-palette__list {
+    max-height: 50vh;
+    margin: 0;
+    padding: var(--space-2);
+    overflow-y: auto;
+    list-style: none;
+}
+
+.aspis-palette__option {
+    display: grid;
+    grid-template-columns: minmax(0, auto) 1fr auto;
+    align-items: center;
+    gap: var(--space-3);
+    height: var(--size-control);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-none);
+    font: var(--text-body);
+    color: var(--ink-muted);
+    cursor: pointer;
+}
+
+.aspis-palette__option[aria-selected="true"] {
+    background: var(--ground-hover);
+}
+
+.aspis-palette__label {
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aspis-palette__none {
+    padding: var(--space-2) var(--space-2) var(--space-3);
+    font: var(--text-body);
+    color: var(--ink-muted);
+}
+
+.aspis-toaster {
+    position: fixed;
+    right: var(--space-4);
+    bottom: var(--space-4);
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-2);
+}
+
+.aspis-toaster__region {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-2);
+}
+
+.aspis-toast {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--size-row);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-none);
+    background: var(--ground-raised);
+    box-shadow: inset 0 1px 0 0 var(--edge-light), var(--shadow-float);
+    font: var(--text-body);
+    color: var(--ink);
+    animation: aspis-rise var(--aspis-base) var(--aspis-ease);
+}
+
+/*
+ * The shell, as shadcn's collapsible sidebar: the app and its library on top, the views under them, and a view that
+ * holds things opens into folders and files, each level one guide line deeper with its icons on that line. The
+ * server state and the pinned links sit at the foot. Collapsed, the sidebar is gone and the view takes the window;
+ * under 1100px it narrows to icons and the tree closes, with the labels kept in the accessibility tree.
+ */
+.aspis-shell {
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--aspis-nav-w) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--ground);
+}
+
+.aspis-shell[data-collapsed] {
+    grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.aspis-shell[data-collapsed] > .aspis-shell__nav,
+.aspis-shell[data-collapsed] > .aspis-shell__foot {
+    display: none;
+}
+
+.aspis-shell__skip {
+    position: absolute;
+    top: var(--space-2);
+    left: var(--space-2);
+    z-index: 2100;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-none);
+    background: var(--primary-fill);
+    box-shadow: var(--shadow-edge);
+    font: var(--text-body);
+    color: var(--on-primary);
+    transform: translateY(-200%);
+}
+
+.aspis-shell__skip:focus {
+    transform: none;
+}
+
+.aspis-shell__nav,
+.aspis-shell__foot {
+    grid-column: 1;
+    min-width: 0;
+    padding: 0 var(--space-2) var(--space-2);
+    background: var(--ground);
+    box-shadow: inset -1px 0 0 var(--hairline);
+}
+
+.aspis-shell__nav {
+    grid-row: 1;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.aspis-shell__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: calc(100% + 2 * var(--space-2));
+    height: var(--size-header);
+    margin: 0 calc(-1 * var(--space-2)) var(--space-2);
+    padding: 0 var(--space-2) 0 var(--space-4);
+    border: 0;
+    background: none;
+    box-shadow: inset 0 -1px 0 var(--hairline), inset -1px 0 0 var(--hairline);
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--aspis-fast) ease;
+}
+
+.aspis-shell__name,
+.aspis-shell__detail {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aspis-shell__name {
+    font: var(--text-heading);
+    color: var(--ink);
+}
+
+.aspis-shell__detail {
+    font: var(--text-caption);
+    color: var(--ink-muted);
+}
+
+.aspis-shell__menu,
+.aspis-shell__sub {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.aspis-shell__sub {
+    margin: 0 0 0 15px;
+    padding-left: var(--space-2);
+    box-shadow: inset 1px 0 0 var(--hairline);
+}
+
+.aspis-shell__row {
+    position: relative;
+    display: flex;
+}
+
+.aspis-shell__link {
+    position: relative;
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    height: var(--size-control);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-none);
+    background: none;
+    font: var(--text-body);
+    color: var(--ink-muted);
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        color var(--aspis-fast) ease,
+        background-color var(--aspis-fast) ease;
+}
+
+.aspis-shell__link:focus-visible {
+    outline-offset: -2px;
+}
+
+.aspis-shell__link:hover,
+.aspis-shell__link[aria-current="page"] {
+    background: var(--ground-hover);
+    color: var(--ink);
+}
+
+.aspis-shell__link[aria-current="page"] {
+    background: var(--ground-selected);
+}
+
+.aspis-shell__brand:hover {
+    background: var(--ground-hover);
+}
+
+.aspis-shell__brand:focus-visible {
+    outline-offset: -2px;
+}
+
+.aspis-shell__label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+}
+
+.aspis-shell__count {
+    font: var(--text-caption);
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.aspis-shell__chevron {
+    color: var(--ink-muted);
+    transition: transform var(--aspis-fast) var(--aspis-ease);
+}
+
+.aspis-shell__link[aria-expanded="true"] .aspis-shell__chevron,
+.aspis-shell__toggle[aria-expanded="true"] .aspis-icon {
+    transform: rotate(90deg);
+}
+
+.aspis-shell__mark {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--sun);
+}
+
+/*
+ * A row's own control (open the tree, add to a folder) sits over the end of the row. The add button shows on
+ * hover or focus, taking the place of the count and the chevron it would otherwise cover.
+ */
+.aspis-shell__toggle,
+.aspis-shell__add {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: var(--aspis-target);
+    height: var(--aspis-target);
+    margin-right: var(--space-1);
+    border-radius: var(--radius-none);
+    transform: translateY(-50%);
+}
+
+.aspis-shell__toggle .aspis-icon {
+    transition: transform var(--aspis-fast) var(--aspis-ease);
+}
+
+.aspis-shell__add {
+    opacity: 0;
+}
+
+.aspis-shell__row:hover > .aspis-shell__add,
+.aspis-shell__row:focus-within > .aspis-shell__add {
+    opacity: 1;
+}
+
+.aspis-shell__row:has(> .aspis-shell__add):is(:hover, :focus-within) .aspis-shell__count,
+.aspis-shell__row:has(> .aspis-shell__add):is(:hover, :focus-within) .aspis-shell__chevron {
+    visibility: hidden;
+}
+
+.aspis-shell__foot {
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+}
+
+.aspis-shell__tools {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.aspis-shell__tools > .aspis-shell__menu {
+    flex: 1;
+    min-width: 0;
+}
+
+.aspis-shell__status {
+    display: flex;
+    align-items: center;
+    min-height: var(--size-control);
+    padding: 0 var(--space-2);
+}
+
+/*
+ * A menu floats under what opened it, anchored to it in the top layer: the raised ground, the light edge and the
+ * float shadow, a search line as tall as a header, then rows as tall as a control. The list scrolls on its own.
+ */
+.aspis-shell__brand {
+    anchor-name: --aspis-brand;
+}
+
+.aspis-menu {
+    position-anchor: --aspis-brand;
+    inset: auto;
+    top: anchor(bottom);
+    left: anchor(left);
+    width: calc(var(--aspis-nav-w) + 2 * var(--size-header));
+    max-height: min(480px, calc(100vh - 2 * var(--size-header)));
+    margin: var(--space-1) 0 0 var(--space-2);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-none);
+    background: var(--ground-raised);
+    box-shadow: inset 0 1px 0 0 var(--edge-light), var(--shadow-float);
+    color: var(--ink);
+    overflow: hidden;
+}
+
+.aspis-menu:popover-open {
+    display: flex;
+    flex-direction: column;
+    animation: aspis-rise var(--aspis-base) var(--aspis-ease);
+}
+
+.aspis-menu__search {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--size-header);
+    padding: 0 var(--space-4);
+    box-shadow: inset 0 -1px 0 var(--hairline);
+    color: var(--ink-muted);
+}
+
+.aspis-menu__input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    outline: none;
+    background: none;
+    font: var(--text-body);
+    color: var(--ink);
+    caret-color: var(--ink);
+}
+
+.aspis-menu__input::placeholder {
+    color: var(--ink-muted);
+}
+
+.aspis-menu__list {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin: 0;
+    padding: var(--space-2);
+    overflow-y: auto;
+    list-style: none;
+}
+
+.aspis-menu__list + .aspis-menu__list {
+    flex: none;
+    box-shadow: inset 0 1px 0 var(--hairline);
+}
+
+.aspis-menu__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    height: var(--size-control);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-none);
+    background: none;
+    font: var(--text-body);
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+}
+
+.aspis-menu__item:hover,
+.aspis-menu__item:focus-visible {
+    outline: none;
+    background: var(--ground-hover);
+}
+
+.aspis-menu__item .aspis-icon {
+    color: var(--ink-muted);
+}
+
+.aspis-menu__item .aspis-menu__check {
+    color: var(--ink);
+}
+
+.aspis-menu__label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aspis-menu__note {
+    margin: 0;
+    padding: var(--space-2);
+    font: var(--text-body);
+    color: var(--ink-muted);
+}
+
+.aspis-icon-button {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: var(--size-control);
+    height: var(--size-control);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-none);
+    background: none;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition:
+        color var(--aspis-fast) ease,
+        background-color var(--aspis-fast) ease;
+}
+
+.aspis-icon-button:hover {
+    background: var(--ground-hover);
+    color: var(--ink);
+}
+
+.aspis-shell__main {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.aspis-shell__main:focus {
+    outline: none;
+}
+
+@media (max-width: 1100px) {
+    .aspis-shell {
+        grid-template-columns: var(--aspis-rail-w) minmax(0, 1fr);
+    }
+
+    .aspis-shell__link,
+    .aspis-shell__status,
+    .aspis-shell__brand {
+        justify-content: center;
+    }
+
+    .aspis-shell__foot {
+        align-items: center;
+    }
+
+    .aspis-shell__tools {
+        flex-direction: column;
+    }
+
+    .aspis-shell__sub,
+    .aspis-shell__toggle,
+    .aspis-shell__count,
+    .aspis-shell__chevron,
+    .aspis-shell__mark {
+        display: none;
+    }
+
+    .aspis-shell__label,
+    .aspis-shell__status .aspis-status__label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+}
+
+/*
+ * Columns share the width of the board and only scroll sideways once each would drop below its minimum. A folded
+ * column keeps a narrow strip with its name and count, and stays a drop target while a card is dragged.
+ */
+.aspis-stage {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.aspis-stage:has(> .aspis-inspector[data-size="half"]) > .aspis-board {
+    margin-right: 50%;
+}
+
+/*
+ * The inspector is a docked panel: the full height of the stage against its right edge, on the raised ground with a
+ * hairline for its edge and a soft shadow that falls only on the board. Its head is as tall as the board's top margin
+ * and a column head together, so its line falls where the column heads end.
+ */
+.aspis-inspector {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    width: 50%;
+    min-width: 0;
+    border-radius: var(--radius-none);
+    background: var(--ground-raised);
+    box-shadow:
+        inset 1px 0 0 var(--hairline),
+        inset 0 1px 0 var(--edge-light),
+        var(--shadow-dock);
+    overflow: hidden;
+}
+
+.aspis-inspector[data-size="full"] {
+    left: 0;
+    width: auto;
+}
+
+.aspis-inspector:focus {
+    outline: none;
+}
+
+.aspis-inspector__head {
+    display: flex;
+    flex: none;
+    align-items: flex-start;
+    gap: var(--space-3);
+    min-height: calc(var(--size-header) + var(--space-2));
+    padding: var(--space-4) var(--space-2) var(--space-2) var(--space-6);
+    box-shadow: inset 0 -1px 0 var(--hairline);
+}
+
+.aspis-inspector__title {
+    flex: 1;
+    min-width: 0;
+}
+
+/* The inspected thing's name reads as a title and shows its line only under the pointer or the caret. */
+.aspis-inspector__title .aspis-field__input:not(:hover, :focus) {
+    box-shadow: none;
+}
+
+.aspis-inspector__title .aspis-field__input {
+    font: var(--text-heading);
+}
+
+.aspis-inspector__tools {
+    display: flex;
+    flex: none;
+    gap: 0;
+}
+
+.aspis-inspector__body {
+    flex: 1;
+    min-height: 0;
+    padding: var(--space-4) var(--space-6) var(--space-6);
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+}
+
+/*
+ * Values never run the width of a wide window: a line across a whole screen reads as a rule, not a field. Numbers
+ * take the width of a number.
+ */
+.aspis-form {
+    display: grid;
+    grid-template-columns: var(--aspis-label-w) minmax(0, 1fr);
+    align-items: start;
+    column-gap: var(--space-4);
+    row-gap: var(--space-2);
+}
+
+.aspis-form > .aspis-field {
+    display: contents;
+}
+
+.aspis-form > .aspis-field > .aspis-field__label,
+.aspis-form__label {
+    grid-column: 1;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    min-height: var(--size-control);
+    font: var(--text-body);
+    color: var(--ink-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.aspis-form > .aspis-field > .aspis-field__control,
+.aspis-form > .aspis-field > .aspis-field__hint,
+.aspis-form > .aspis-field > .aspis-switch,
+.aspis-form__value {
+    grid-column: 2;
+    min-width: 0;
+}
+
+.aspis-form__value {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: var(--size-control);
+}
+
+/*
+ * A wide row takes the width the form already has and never asks for more: a long log line or path would otherwise
+ * widen the label column and push every value out of line.
+ */
+.aspis-form__value[data-wide] {
+    grid-column: 1 / -1;
+    contain: inline-size;
+}
+
+.aspis-form__value:empty {
+    display: none;
+}
+
+.aspis-form > .aspis-field > .aspis-switch {
+    min-height: var(--size-control);
+}
+
+.aspis-form .aspis-field__control:has(> input[type="number"]) {
+    width: 96px;
+}
+
+/*
+ * An icon button that leads a value gives up its own padding on the left, so its glyph starts on the line where
+ * the text of every other value starts.
+ */
+.aspis-form__value > .aspis-icon-button:first-child,
+.aspis-form__value > :first-child > .aspis-icon-button:first-child {
+    margin-left: calc((16px - var(--size-control)) / 2);
+}
+
+.aspis-board {
+    display: flex;
+    gap: var(--space-4);
+    height: 100%;
+    min-height: 0;
+    padding: var(--space-2) var(--space-4) var(--space-4);
+    overflow-x: auto;
+}
+
+.aspis-column {
+    position: relative;
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-width: 160px;
+    min-height: 0;
+    border-radius: var(--radius-none);
+    transition:
+        opacity var(--aspis-base) ease,
+        background-color var(--aspis-fast) ease;
+}
+
+.aspis-column[data-drop="refused"] {
+    opacity: 0.4;
+}
+
+.aspis-column[data-drop="allowed"] {
+    background: var(--ground-hover);
+    box-shadow: inset 0 0 0 1px var(--line-control);
+}
+
+.aspis-column__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--size-header);
+    padding: 0 var(--space-1) 0 var(--space-2);
+}
+
+.aspis-phase {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    color: var(--ink-muted);
+}
+
+.aspis-phase[data-phase="triage"] {
+    color: var(--sun);
+}
+
+.aspis-phase[data-phase="ready"] {
+    color: var(--sky);
+}
+
+.aspis-phase[data-phase="running"] {
+    color: var(--tide);
+}
+
+.aspis-phase[data-phase="blocked"] {
+    color: var(--clay);
+}
+
+.aspis-phase[data-phase="review"] {
+    color: var(--nebula);
+}
+
+.aspis-phase[data-phase="done"] {
+    color: var(--moss);
+}
+
+.aspis-column__title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: var(--text-label);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+}
+
+.aspis-column__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-left: auto;
+}
+
+.aspis-column__fold {
+    display: inline-grid;
+    place-items: center;
+    width: var(--aspis-target);
+    height: var(--aspis-target);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-none);
+    background: none;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition:
+        color var(--aspis-fast) ease,
+        background-color var(--aspis-fast) ease;
+}
+
+.aspis-column__fold .aspis-icon {
+    transform: rotate(90deg);
+}
+
+.aspis-column__fold:hover {
+    background: var(--ground-hover);
+    color: var(--ink);
+}
+
+.aspis-column[data-folded] {
+    flex: 0 0 40px;
+    min-width: 40px;
+}
+
+.aspis-column__strip {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border: 0;
+    border-radius: inherit;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    transition: background-color var(--aspis-fast) ease;
+}
+
+.aspis-column__strip:focus-visible {
+    outline-offset: -2px;
+}
+
+.aspis-column__strip:hover {
+    background: var(--ground-hover);
+}
+
+.aspis-column__strip .aspis-column__title {
+    writing-mode: vertical-rl;
+}
+
+.aspis-column__list {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-height: 0;
+    margin: 0;
+    padding: 0 0 var(--space-4);
+    overflow-y: auto;
+    list-style: none;
+}
+
+.aspis-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-3);
+    border: 0;
+    border-radius: var(--radius-none);
+    background: none;
+    box-shadow: inset 0 0 0 1px var(--hairline);
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+    transition:
+        opacity var(--aspis-base) ease,
+        background-color var(--aspis-fast) ease,
+        box-shadow var(--aspis-fast) ease,
+        transform var(--aspis-base) var(--aspis-ease);
+}
+
+/* A card lies on the plane: a hairline edge, silver under the pointer, and filled only while it is selected. */
+.aspis-tile:hover {
+    box-shadow: inset 0 0 0 1px var(--line-control);
+}
+
+.aspis-tile[aria-current] {
+    background: var(--ground-selected);
+    box-shadow: inset 0 0 0 1px var(--ink-faint);
+}
+
+.aspis-tile:focus-visible {
+    outline-offset: -2px;
+}
+
+.aspis-tile[draggable="true"] {
+    cursor: grab;
+}
+
+.aspis-tile__ref {
+    font: var(--text-label);
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.aspis-tile__title {
+    font: var(--text-body);
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aspis-tile__note {
+    font: var(--text-caption);
+    color: var(--sun-ink);
+}
+
+.aspis-tile__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    font: var(--text-caption);
+    color: var(--ink-muted);
+}
+
+.aspis-tile__marks {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    min-width: 0;
+    margin-left: auto;
+}
+
+/*
+ * Dialogs are native and modal: the page behind them is inert, Escape closes the one on top, and focus returns to
+ * whatever opened it. The element fills the viewport as the scrim; the box inside is the panel.
+ */
+.aspis-dialog {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: var(--overlay);
+    color: var(--ink);
+    animation: aspis-fade var(--aspis-fast) var(--aspis-ease);
+}
+
+.aspis-dialog[open] {
+    display: flex;
+}
+
+.aspis-dialog::backdrop {
+    background: transparent;
+}
+
+.aspis-dialog[data-placement="side"] {
+    justify-content: flex-end;
+}
+
+.aspis-dialog[data-placement="center"] {
+    justify-content: center;
+    align-items: flex-start;
+    padding: calc(var(--size-header) * 2) var(--space-4) var(--space-12);
+}
+
+/*
+ * The box and its scrolling body hold their own absolutely placed pieces (screen-reader text), so nothing
+ * inside can stretch the dialog and give it a second scrollbar beside the body's.
+ */
+.aspis-dialog__box {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
+    overflow: hidden;
+    background: var(--ground-raised);
+    box-shadow: inset 0 1px 0 0 var(--edge-light), var(--shadow-float);
+}
+
+.aspis-dialog__box:focus {
+    outline: none;
+}
+
+.aspis-dialog[data-placement="side"] .aspis-dialog__box {
+    width: min(760px, 94vw);
+    height: 100%;
+    box-shadow:
+        inset 1px 0 0 var(--hairline),
+        inset 0 1px 0 var(--edge-light),
+        var(--shadow-dock);
+    animation: aspis-slide var(--aspis-base) var(--aspis-ease);
+}
+
+.aspis-dialog[data-placement="center"] .aspis-dialog__box {
+    width: 560px;
+    max-width: 100%;
+    border-radius: var(--radius-none);
+    animation: aspis-rise var(--aspis-base) var(--aspis-ease);
+}
+
+.aspis-dialog[data-placement="center"] .aspis-dialog__box:has(.aspis-form) {
+    width: 640px;
+}
+
+.aspis-dialog__head {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-3);
+    height: var(--size-header);
+    padding: 0 var(--space-2) 0 var(--space-6);
+    box-shadow: inset 0 -1px 0 var(--hairline);
+}
+
+.aspis-dialog__title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/*
+ * Close is a bare X on the head's first line. In a side panel, which ends at the window's edge, it is as wide as
+ * Windows' own caption buttons and flush with that edge, so it sits right under the window's X.
+ */
+.aspis-dialog__close {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: var(--size-control);
+    height: var(--size-control);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-none);
+    background: none;
+    color: var(--ink-muted);
+    cursor: pointer;
+}
+
+.aspis-dialog[data-placement="side"] .aspis-dialog__close {
+    width: var(--aspis-caption-w);
+    height: var(--size-header);
+    margin-right: calc(-1 * var(--space-2));
+    border-radius: 0;
+}
+
+.aspis-dialog__close:hover {
+    background: var(--ground-hover);
+    color: var(--ink);
+}
+
+.aspis-dialog__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-4);
+    position: relative;
+    min-height: 0;
+    padding: var(--space-6);
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.aspis-dialog__foot {
+    display: flex;
+    flex: none;
+    justify-content: flex-end;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--size-header);
+    padding: 0 var(--space-4);
+    box-shadow: inset 0 1px 0 var(--hairline);
+}
+
+.aspis-thread {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.aspis-thread__list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.aspis-thread__entry {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr) auto;
+    gap: var(--space-1) var(--space-3);
+    padding: var(--space-2) 0;
+}
+
+.aspis-thread__who {
+    font: var(--text-label);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+    line-height: 20px;
+}
+
+.aspis-thread__text {
+    grid-row: 1;
+    grid-column: 2;
+    font: var(--text-body);
+    color: var(--ink-muted);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.aspis-thread__when {
+    grid-row: 1;
+    grid-column: 3;
+    font: var(--text-caption);
+    line-height: 20px;
+    color: var(--ink-muted);
+    white-space: nowrap;
+}
+
+.aspis-thread__entry[data-kind="note"] .aspis-thread__text,
+.aspis-thread__entry[data-kind="verdict"] .aspis-thread__text {
+    color: var(--ink);
+}
+
+.aspis-ambient {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--ground);
+}
+
+.aspis-ambient__canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.aspis-ambient__content {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    height: 100%;
+    place-items: center;
+}
+
+/*
+ * A terminal session fills its pane with the page margin around it, on the ground: the terminal's own background is
+ * the ground too, so the cells meet the app with no band of another grey.
+ */
+.aspis-terminal {
+    flex: 1;
+    min-height: 0;
+    padding: var(--space-4);
+    background: var(--ground);
+}
+
+.aspis-terminal .xterm {
+    height: 100%;
+}
+
+.aspis-terminal .xterm-viewport {
+    scrollbar-width: none;
+}
+
+.aspis-display {
+    margin: 0;
+    font: var(--text-display);
+    letter-spacing: -0.02em;
+    color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        transition-duration: 1ms !important;
+        animation: none !important;
+    }
+}
+
+/*
+ * Windows contrast themes replace every colour with system ones: boundaries come back as borders, state as
+ * Highlight, and focus as a solid outline, since shadows and backgrounds are dropped in that mode.
+ */
+@media (forced-colors: active) {
+    :focus-visible,
+    .aspis-field__input:focus-visible,
+    .aspis-field__control[data-kind="select"] .aspis-field__input:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+    }
+
+    .aspis-button,
+    .aspis-tabs__tab,
+    .aspis-shell__link,
+    .aspis-icon-button,
+    .aspis-tile,
+    .aspis-column__fold,
+    .aspis-code__copy,
+    .aspis-dialog__close,
+    .aspis-field__input,
+    .aspis-chip,
+    .aspis-mark,
+    .aspis-kbd {
+        border-color: ButtonText;
+    }
+
+    .aspis-tabs__tab[aria-selected="true"],
+    .aspis-shell__link[aria-current="page"],
+    .aspis-tile[aria-current] {
+        border-color: Highlight;
+        outline: 2px solid Highlight;
+        outline-offset: -2px;
+    }
+
+    .aspis-switch__track,
+    .aspis-switch__thumb,
+    .aspis-status__dot,
+    .aspis-chip__dot,
+    .aspis-toast__dot {
+        forced-color-adjust: none;
+    }
+
+    .aspis-switch__track {
+        border-color: ButtonText;
+        background: Canvas;
+    }
+
+    .aspis-field__input {
+        border-bottom: 1px solid ButtonText;
+    }
+
+    .aspis-switch__thumb {
+        background: ButtonText;
+    }
+
+    .aspis-switch__track[aria-checked="true"] {
+        background: Highlight;
+    }
+
+    .aspis-switch__track[aria-checked="true"] .aspis-switch__thumb {
+        background: HighlightText;
+    }
+
+    .aspis-status__dot,
+    .aspis-chip__dot,
+    .aspis-toast__dot {
+        background: CanvasText;
+        box-shadow: none;
+    }
+}
