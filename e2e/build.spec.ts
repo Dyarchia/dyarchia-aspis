@@ -29,11 +29,16 @@ async function create(page: Page, singular: string, name: string) {
 
 const repoMenu = (page: Page) => page.locator("#shell-menu");
 
-test("Build's library is picked from the sidebar head, and a new name is created", async ({ page }) => {
+test("with no repositories yet, New repository creates one under the signed-in login", async ({ page }) => {
     await openBuild(page);
     await expect(sidebar(page).getByRole("button", { name: "Library repository: No repository" })).toBeVisible();
-    await page.getByRole("button", { name: "Choose a repository" }).click();
-    await repoMenu(page).getByRole("textbox", { name: "Find a repository" }).fill("owner/library");
+    await page.getByRole("button", { name: "Set up the library" }).click();
+    await expect(repoMenu(page).getByText("No repositories yet")).toBeVisible();
+    await repoMenu(page).getByRole("button", { name: "New repository" }).click();
+    const name = repoMenu(page).getByRole("textbox", { name: "Name of the new repository" });
+    await expect(name).toHaveValue("owner/");
+    await expect(name).toBeFocused();
+    await name.pressSequentially("library");
     await repoMenu(page).getByRole("button", { name: "Create owner/library" }).click();
     await expect(page.getByText("Library owner/library is ready")).toBeVisible();
     await expect(sidebar(page).getByRole("button", { name: "Library repository: owner/library" })).toBeVisible();
@@ -90,7 +95,7 @@ test("None sets the library aside and picking it again finds the work as it was 
     await openBuild(page);
     await sidebar(page).getByRole("button", { name: "Library repository: owner/library" }).click();
     await repoMenu(page).getByRole("button", { name: "None" }).click();
-    await expect(page.getByText("Choose the repository that holds your library")).toBeVisible();
+    await expect(page.getByText("Choose or create the repository that holds your library")).toBeVisible();
     await expect(sidebar(page).getByRole("button", { name: /^Skills/ })).toHaveCount(0);
     await sidebar(page).getByRole("button", { name: /^Library repository/ }).click();
     await repoMenu(page).getByRole("button", { name: "owner/library" }).click();

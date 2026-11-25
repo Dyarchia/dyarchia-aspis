@@ -64,10 +64,10 @@ export function Build({
         return (
             <Page title="Build">
                 <EmptyState
-                    title="Choose the repository that holds your library"
+                    title="Choose or create the repository that holds your library"
                     action={
                         <Button variant="primary" icon="repo" onClick={() => document.getElementById("shell-menu")?.showPopover()}>
-                            Choose a repository
+                            Set up the library
                         </Button>
                     }
                 />

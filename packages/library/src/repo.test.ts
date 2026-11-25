@@ -3,7 +3,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } fro
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fakeGh } from "./fake-gh.ts";
-import { type Exec, LibraryRepo } from "./repo.ts";
+import { type Exec, LibraryRepo, listRepos } from "./repo.ts";
 
 type Env = Record<string, string | undefined>;
 
@@ -67,6 +67,14 @@ test("connecting to an existing repository clones it", async () => {
     await repo.connect("owner/mantinea");
     expect((await repo.status()).branch).toBe("develop");
     expect(repo.files()).toEqual([]);
+});
+
+test("the repository list carries the login, and a refused listing still leaves the login to create under", async () => {
+    expect(await listRepos({ exec })).toEqual({ login: "owner", repos: [], error: null });
+    onGitHub();
+    expect((await listRepos({ exec })).repos).toEqual(["owner/mantinea"]);
+    const refused: Exec = async (command, cwd) => (command.includes("--paginate") ? { ok: false, out: "", err: "HTTP 403" } : exec(command, cwd));
+    expect(await listRepos({ exec: refused })).toEqual({ login: "owner", repos: [], error: "Could not list your repositories: HTTP 403" });
 });
 
 test("a signed-out GitHub CLI is reported before anything is created", async () => {

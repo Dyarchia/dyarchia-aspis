@@ -14,7 +14,9 @@ const RepoStatus = z.object({
     pr: PullRequest.nullable(),
 });
 const LibraryState = z.object({ repo: z.string().nullable(), status: RepoStatus.nullable() });
+const RepoList = z.object({ login: z.string().nullable(), repos: z.array(z.string()), error: z.string().nullable() });
 export type LibraryState = z.infer<typeof LibraryState>;
+export type RepoList = z.infer<typeof RepoList>;
 export type PullRequest = z.infer<typeof PullRequest>;
 
 const json = (method: string, body: unknown): RequestInit => ({ method, body: JSON.stringify(body) });
@@ -64,7 +66,7 @@ export function useLibrary({ conn, changes }: ServerState) {
         files,
         busy,
         reload,
-        repos: () => api("/library/repos", z.array(z.string())),
+        repos: () => api("/library/repos", RepoList),
         connect: (repo: string) => act(() => api("/library/connect", LibraryState, json("POST", { repo })), () => `Library ${repo} is ready`),
         disconnect: () => act(() => api("/library", LibraryState, { method: "DELETE" })),
         read: (path: string) => api(`/library/file?path=${encodeURIComponent(path)}`, z.object({ path: z.string(), text: z.string() })).then((file) => file.text),
