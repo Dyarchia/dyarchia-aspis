@@ -1,4 +1,4 @@
-import { AppShell, type Command, CommandPalette, IconButton, type NavEntry, Status, Toaster, setSingleKeyHotkeys, useHotkeys, useToast } from "@dyarchia/aspis";
+import { AppShell, type Command, CommandPalette, IconButton, type NavEntry, Status, Toaster, setSingleKeyHotkeys, useHotkeys } from "@dyarchia/aspis";
 import type { Theme } from "@dyarchia/core";
 import { type KindId, kindIds, kinds } from "@dyarchia/library";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -42,7 +42,6 @@ export function App() {
  */
 function Workspace() {
     const server = useServer();
-    const toast = useToast();
     const stored = readHint("view");
     const [view, setView] = useState<View>(isView(stored) ? stored : "home");
     const [palette, setPalette] = useState(false);
@@ -60,7 +59,7 @@ function Workspace() {
     const [projectTree, setProjectTree] = useState(readHint("projects.tree") !== "closed");
     const [projectFolders, setProjectFolders] = useState(() => new Set((readHint("projects.folders") ?? "").split(",").filter(Boolean)));
     const moved = useRef(false);
-    const updates = useUpdates((info) => toast({ text: `Version ${info.version} is available. Install it from Settings`, tone: "info" }));
+    const updates = useUpdates();
 
     useEffect(() => setSingleKeyHotkeys(singleKeys), [singleKeys]);
 
@@ -211,7 +210,12 @@ function Workspace() {
                 }}
                 state={server.error ? "error" : server.live ? "live" : "connecting"}
                 status={<ServerStatus server={server} />}
-                links={[{ label: "Settings", icon: "settings", hotkey: "S", onClick: () => setSettings(true) }]}
+                links={[
+                    ...(updates.state.kind === "available" || updates.state.kind === "installing"
+                        ? [{ label: updates.state.kind === "installing" ? `Installing ${updates.state.info.version}` : `Install ${updates.state.info.version}`, icon: "upload" as const, onClick: () => void updates.install() }]
+                        : []),
+                    { label: "Settings", icon: "settings", hotkey: "S", onClick: () => setSettings(true) },
+                ]}
                 corner={<IconButton icon="theme" label={`Use the ${otherTheme} theme`} hotkey="T" onClick={() => chooseTheme(otherTheme)} />}
             >
                 {view === "home" && <Home />}
