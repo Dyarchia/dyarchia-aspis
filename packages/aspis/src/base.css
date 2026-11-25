@@ -1,6 +1,8 @@
 /*
- * The app drawn in Synthic: one flat ground, lines drawn as inset shadows so they never take space, relief only for
- * what floats (ground-raised, shadow-float and the light edge on top), every size a multiple of 4. It reads only
+ * The app drawn in Synthic: one flat ground, lines drawn as inset shadows so they never take space, square corners on
+ * everything structural, relief only for what overlaps (the docked panel with shadow-dock, what floats with
+ * shadow-float), every size a multiple of 4. Colour identifies and never decorates: there is no accent colour, and
+ * what is interactive turns silver under the pointer. It reads only
  * Synthic's tokens and the few Aspis adds in tokens/geometry.css, so dark (Space) and light (Earth) lay out the
  * same page to the pixel and differ only in the values of those tokens.
  */
@@ -131,26 +133,40 @@ a {
     white-space: nowrap;
 }
 
+/*
+ * A tone is a spectrum colour in its three parts: the glyph, the tint a badge sits on, and the ink its text takes,
+ * which in Earth is the same hue deeper so it reads on its own tint.
+ */
 .aspis-status,
 .aspis-chip,
 .aspis-toast {
     --aspis-tone: var(--moss);
+    --aspis-tone-tile: var(--moss-tile);
+    --aspis-tone-ink: var(--moss-ink);
 }
 
 [data-tone="warn"] {
     --aspis-tone: var(--sun);
+    --aspis-tone-tile: var(--sun-tile);
+    --aspis-tone-ink: var(--sun-ink);
 }
 
 [data-tone="danger"] {
-    --aspis-tone: var(--down);
+    --aspis-tone: var(--clay);
+    --aspis-tone-tile: var(--clay-tile);
+    --aspis-tone-ink: var(--clay-ink);
 }
 
 [data-tone="info"] {
     --aspis-tone: var(--sky);
+    --aspis-tone-tile: var(--sky-tile);
+    --aspis-tone-ink: var(--sky-ink);
 }
 
 [data-tone="idle"] {
     --aspis-tone: var(--ink-faint);
+    --aspis-tone-tile: var(--neutral-tile);
+    --aspis-tone-ink: var(--ink-muted);
 }
 
 .aspis-status {
@@ -180,7 +196,7 @@ a {
     width: fit-content;
     height: var(--aspis-chip-h);
     padding: 0 var(--space-2);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-badge);
     background: var(--neutral-tile);
     font: var(--text-caption);
     font-weight: 500;
@@ -188,12 +204,17 @@ a {
     white-space: nowrap;
 }
 
+.aspis-chip[data-tone] {
+    background: var(--aspis-tone-tile);
+    color: var(--aspis-tone-ink);
+}
+
 .aspis-mark__glyph {
     font-family: var(--font-sans);
 }
 
 .aspis-mark[data-state="ok"] .aspis-mark__glyph {
-    color: var(--moss);
+    color: var(--moss-ink);
 }
 
 .aspis-mark[data-state="no"] .aspis-mark__glyph {
@@ -209,7 +230,7 @@ a {
     height: var(--size-control);
     padding: 0 var(--space-3);
     border: 1px solid transparent;
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     background: none;
     font: var(--text-body);
     font-weight: 500;
@@ -289,7 +310,7 @@ a {
     height: var(--size-control);
     padding: 0 var(--space-3);
     border: 0;
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     background: none;
     font: var(--text-body);
     font-weight: 500;
@@ -331,26 +352,53 @@ a {
     align-items: center;
 }
 
+/*
+ * A field is not a box: text on the ground over a 1px underline in hairline, silver under the pointer. Focus shows
+ * on that line, never as a ring around it: a light runs along it from left to right and leaves a 2px line in ink
+ * behind. The light is decoration and slow on purpose, so it is seen travelling, and the field takes keys from the
+ * first instant. Contrast themes get a ring back below.
+ */
 .aspis-field__input {
     width: 100%;
     height: var(--size-control);
-    padding: 0 var(--space-3);
+    padding: 0;
     appearance: none;
-    border: 1px solid var(--line-control);
-    border-radius: var(--radius-control);
-    background: var(--ground-sunken);
+    border: 0;
+    border-radius: var(--radius-none);
+    background: transparent;
     color: var(--ink);
     font: var(--text-body);
-    transition: border-color var(--aspis-fast) ease;
+    box-shadow: inset 0 -1px 0 var(--hairline);
+    transition: box-shadow var(--aspis-fast) ease;
 }
 
-/*
- * A field shows focus on its own line (the theme lights it up), so the ring every other control gets would only
- * draw a second, heavier box around it. Contrast themes get the ring back below.
- */
-.aspis-field__input:focus-visible {
-    outline: 2px solid var(--focus);
-    outline-offset: 2px;
+.aspis-field__input:hover:not(:disabled) {
+    box-shadow: inset 0 -1px 0 var(--line-control);
+}
+
+.aspis-field__input:focus {
+    outline: none;
+    box-shadow: inset 0 -1px 0 var(--line-control);
+    background-image: linear-gradient(90deg, transparent, var(--light) 75%, var(--light-core)), linear-gradient(var(--ink), var(--ink));
+    background-repeat: no-repeat;
+    background-size:
+        30% 2px,
+        100% 2px;
+    background-position:
+        150% 100%,
+        0 100%;
+    animation: aspis-sweep 1.6s cubic-bezier(0.45, 0, 0.25, 1);
+}
+
+@keyframes aspis-sweep {
+    from {
+        background-size:
+            30% 2px,
+            0% 2px;
+        background-position:
+            -50% 100%,
+            0 100%;
+    }
 }
 
 .aspis-field__input::placeholder {
@@ -358,7 +406,6 @@ a {
 }
 
 .aspis-field__input:disabled {
-    border-color: var(--hairline);
     color: var(--ink-faint);
     cursor: default;
 }
@@ -381,8 +428,14 @@ a {
     cursor: pointer;
 }
 
-.aspis-field__control[data-kind="select"] .aspis-field__input:hover:not(:disabled) {
-    background: var(--ground-hover);
+/* A choice takes no light: its line thickens in the focus colour, since the menu it opens answers at once. */
+.aspis-field__control[data-kind="select"] .aspis-field__input:focus {
+    background-image: none;
+    animation: none;
+}
+
+.aspis-field__control[data-kind="select"] .aspis-field__input:focus-visible {
+    box-shadow: inset 0 -2px 0 var(--focus);
 }
 
 .aspis-field__control[data-kind="select"] .aspis-field__input::picker-icon {
@@ -394,7 +447,7 @@ a {
     margin-block: var(--space-1);
     padding: var(--space-2);
     border: 0;
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     background: var(--ground-raised);
     color: var(--ink);
     box-shadow: inset 0 1px 0 0 var(--edge-light), var(--shadow-float);
@@ -406,7 +459,7 @@ a {
     gap: var(--space-2);
     min-height: var(--size-control);
     padding: 0 var(--space-3) 0 var(--space-2);
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     background: transparent;
     color: var(--ink);
     font: var(--text-body);
@@ -449,15 +502,16 @@ a {
 .aspis-field__control[data-variant="quiet"] .aspis-field__input {
     width: auto;
     field-sizing: content;
-    padding-left: 0;
-    border-color: transparent;
-    background: transparent;
+}
+
+.aspis-field__control[data-variant="quiet"] .aspis-field__input:not(:focus-visible) {
+    box-shadow: none;
 }
 
 .aspis-field__control[data-kind="area"] .aspis-field__input {
     height: auto;
     min-height: 88px;
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-2) 0;
     resize: vertical;
 }
 
@@ -475,7 +529,7 @@ a {
 
 .aspis-field__chevron {
     position: absolute;
-    right: var(--space-2);
+    right: 0;
     color: var(--ink-muted);
     pointer-events: none;
     transition: transform var(--aspis-fast) var(--aspis-ease);
@@ -510,7 +564,7 @@ a {
     height: 20px;
     padding: 0;
     border: 1px solid var(--line-control);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-none);
     background: var(--ground-sunken);
     cursor: pointer;
     transition:
@@ -524,7 +578,7 @@ a {
     left: 3px;
     width: 12px;
     height: 12px;
-    border-radius: 50%;
+    border-radius: var(--radius-none);
     background: var(--ink-muted);
     transition:
         transform var(--aspis-fast) var(--aspis-ease),
@@ -636,7 +690,7 @@ a {
     min-width: 0;
     min-height: 0;
     overflow: hidden;
-    border-radius: var(--radius-tile);
+    border-radius: var(--radius-none);
     box-shadow: inset 0 0 0 1px var(--hairline);
 }
 
@@ -691,7 +745,7 @@ a {
     row-gap: var(--space-2);
     min-width: 0;
     padding: var(--space-4);
-    border-radius: var(--radius-tile);
+    border-radius: var(--radius-none);
     box-shadow: inset 0 0 0 1px var(--hairline);
 }
 
@@ -737,7 +791,7 @@ a {
     padding: 0;
     overflow: hidden;
     list-style: none;
-    border-radius: var(--radius-tile);
+    border-radius: var(--radius-none);
     box-shadow: inset 0 0 0 1px var(--hairline);
 }
 
@@ -819,7 +873,7 @@ a {
     min-width: var(--aspis-chip-h);
     height: var(--aspis-chip-h);
     padding: 0 var(--space-2);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-badge);
     background: var(--neutral-tile);
     font: var(--text-label);
     color: var(--ink-muted);
@@ -857,7 +911,7 @@ a {
 
 .aspis-code {
     margin: 0;
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     background: var(--ground-sunken);
     box-shadow: inset 0 0 0 1px var(--hairline);
     overflow: hidden;
@@ -894,7 +948,7 @@ a {
     margin-left: auto;
     padding: 0 var(--space-2);
     border: 0;
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     background: none;
     font: inherit;
     letter-spacing: inherit;
@@ -938,19 +992,19 @@ a {
 }
 
 .aspis-code__token[data-kind="keyword"] {
-    color: var(--nebula);
+    color: var(--nebula-ink);
 }
 
 .aspis-code__token[data-kind="function"] {
-    color: var(--sky);
+    color: var(--sky-ink);
 }
 
 .aspis-code__token[data-kind="literal"] {
-    color: var(--moss);
+    color: var(--moss-ink);
 }
 
 .aspis-code__token[data-kind="argument"] {
-    color: var(--tide);
+    color: var(--tide-ink);
 }
 
 .aspis-code__token[data-kind="comment"] {
@@ -962,7 +1016,7 @@ a {
     flex-direction: column;
     height: 100%;
     min-height: 0;
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     background: var(--ground);
     box-shadow: inset 0 0 0 1px var(--hairline);
     color: var(--ink);
@@ -1022,7 +1076,7 @@ a {
 }
 
 .aspis-log__line[data-kind="tool"] .aspis-log__gutter {
-    color: var(--moss);
+    color: var(--moss-ink);
 }
 
 .aspis-log__line[data-kind="dim"],
@@ -1077,7 +1131,7 @@ a {
     position: relative;
     width: 560px;
     max-width: 100%;
-    border-radius: var(--radius-tile);
+    border-radius: var(--radius-none);
     background: var(--ground-raised);
     box-shadow: inset 0 1px 0 0 var(--edge-light), var(--shadow-float);
     overflow: hidden;
@@ -1129,7 +1183,7 @@ a {
     gap: var(--space-3);
     height: var(--size-control);
     padding: 0 var(--space-2);
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     font: var(--text-body);
     color: var(--ink-muted);
     cursor: pointer;
@@ -1176,7 +1230,7 @@ a {
     gap: var(--space-3);
     min-height: var(--size-row);
     padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     background: var(--ground-raised);
     box-shadow: inset 0 1px 0 0 var(--edge-light), var(--shadow-float);
     font: var(--text-body);
@@ -1215,7 +1269,7 @@ a {
     left: var(--space-2);
     z-index: 2100;
     padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     background: var(--primary-fill);
     box-shadow: var(--shadow-edge);
     font: var(--text-body);
@@ -1257,18 +1311,6 @@ a {
     text-align: left;
     cursor: pointer;
     transition: background-color var(--aspis-fast) ease;
-}
-
-.aspis-shell__logo {
-    display: grid;
-    flex: none;
-    place-items: center;
-    width: var(--size-control);
-    height: var(--size-control);
-    border-radius: var(--radius-control);
-    background: var(--neutral-tile);
-    font: var(--text-heading);
-    color: var(--ink);
 }
 
 .aspis-shell__name,
@@ -1320,7 +1362,7 @@ a {
     height: var(--size-control);
     padding: 0 var(--space-2);
     border: 0;
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     background: none;
     font: var(--text-body);
     color: var(--ink-muted);
@@ -1397,7 +1439,7 @@ a {
     width: var(--aspis-target);
     height: var(--aspis-target);
     margin-right: var(--space-1);
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     transform: translateY(-50%);
 }
 
@@ -1425,6 +1467,17 @@ a {
     flex-direction: column;
 }
 
+.aspis-shell__tools {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.aspis-shell__tools > .aspis-shell__menu {
+    flex: 1;
+    min-width: 0;
+}
+
 .aspis-shell__status {
     display: flex;
     align-items: center;
@@ -1450,7 +1503,7 @@ a {
     margin: var(--space-1) 0 0 var(--space-2);
     padding: 0;
     border: 0;
-    border-radius: var(--radius-tile);
+    border-radius: var(--radius-none);
     background: var(--ground-raised);
     box-shadow: inset 0 1px 0 0 var(--edge-light), var(--shadow-float);
     color: var(--ink);
@@ -1513,7 +1566,7 @@ a {
     height: var(--size-control);
     padding: 0 var(--space-2);
     border: 0;
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     background: none;
     font: var(--text-body);
     color: var(--ink);
@@ -1558,7 +1611,7 @@ a {
     height: var(--size-control);
     padding: 0;
     border: 0;
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     background: none;
     color: var(--ink-muted);
     cursor: pointer;
@@ -1600,6 +1653,10 @@ a {
         align-items: center;
     }
 
+    .aspis-shell__tools {
+        flex-direction: column;
+    }
+
     .aspis-shell__sub,
     .aspis-shell__toggle,
     .aspis-shell__count,
@@ -1632,31 +1689,35 @@ a {
 }
 
 .aspis-stage:has(> .aspis-inspector[data-size="half"]) > .aspis-board {
-    margin-right: calc(50% - var(--space-4));
+    margin-right: 50%;
 }
 
 /*
- * The inspector keeps the board's own margin on every side: it opens on the columns' top line, ends where the board
- * ends, and at half width takes the right half of the stage, so it breathes the same on all four borders.
+ * The inspector is a docked panel: the full height of the stage against its right edge, on the raised ground with a
+ * hairline for its edge and a soft shadow that falls only on the board. Its head is as tall as the board's top margin
+ * and a column head together, so its line falls where the column heads end.
  */
 .aspis-inspector {
     position: absolute;
-    top: var(--space-2);
-    right: var(--space-4);
-    bottom: var(--space-4);
+    top: 0;
+    right: 0;
+    bottom: 0;
     z-index: 2;
     display: flex;
     flex-direction: column;
-    width: calc(50% - var(--space-4) - var(--space-2));
+    width: 50%;
     min-width: 0;
-    border-radius: var(--radius-tile);
+    border-radius: var(--radius-none);
     background: var(--ground-raised);
-    box-shadow: inset 0 1px 0 0 var(--edge-light), var(--shadow-float);
+    box-shadow:
+        inset 1px 0 0 var(--hairline),
+        inset 0 1px 0 var(--edge-light),
+        var(--shadow-dock);
     overflow: hidden;
 }
 
 .aspis-inspector[data-size="full"] {
-    left: var(--space-4);
+    left: 0;
     width: auto;
 }
 
@@ -1669,8 +1730,8 @@ a {
     flex: none;
     align-items: flex-start;
     gap: var(--space-3);
-    min-height: var(--size-header);
-    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+    min-height: calc(var(--size-header) + var(--space-2));
+    padding: var(--space-4) var(--space-2) var(--space-2) var(--space-6);
     box-shadow: inset 0 -1px 0 var(--hairline);
 }
 
@@ -1679,14 +1740,12 @@ a {
     min-width: 0;
 }
 
-/* The inspected thing's name reads as a title and becomes a field only under the pointer or the caret. */
+/* The inspected thing's name reads as a title and shows its line only under the pointer or the caret. */
 .aspis-inspector__title .aspis-field__input:not(:hover, :focus) {
-    border-color: transparent;
-    background: transparent;
+    box-shadow: none;
 }
 
 .aspis-inspector__title .aspis-field__input {
-    margin-left: calc(-1 * var(--space-3));
     font: var(--text-heading);
 }
 
@@ -1699,7 +1758,7 @@ a {
 .aspis-inspector__body {
     flex: 1;
     min-height: 0;
-    padding: var(--space-4);
+    padding: var(--space-4) var(--space-6) var(--space-6);
     overflow-x: hidden;
     overflow-y: auto;
     scrollbar-gutter: stable;
@@ -1797,7 +1856,7 @@ a {
     flex-direction: column;
     min-width: 160px;
     min-height: 0;
-    border-radius: var(--radius-tile);
+    border-radius: var(--radius-none);
     transition:
         opacity var(--aspis-base) ease,
         background-color var(--aspis-fast) ease;
@@ -1818,6 +1877,37 @@ a {
     gap: var(--space-2);
     height: var(--size-header);
     padding: 0 var(--space-1) 0 var(--space-2);
+}
+
+.aspis-phase {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    color: var(--ink-muted);
+}
+
+.aspis-phase[data-phase="triage"] {
+    color: var(--sun);
+}
+
+.aspis-phase[data-phase="ready"] {
+    color: var(--sky);
+}
+
+.aspis-phase[data-phase="running"] {
+    color: var(--tide);
+}
+
+.aspis-phase[data-phase="blocked"] {
+    color: var(--clay);
+}
+
+.aspis-phase[data-phase="review"] {
+    color: var(--nebula);
+}
+
+.aspis-phase[data-phase="done"] {
+    color: var(--moss);
 }
 
 .aspis-column__title {
@@ -1845,7 +1935,7 @@ a {
     height: var(--aspis-target);
     padding: 0;
     border: 0;
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     background: none;
     color: var(--ink-muted);
     cursor: pointer;
@@ -1915,7 +2005,7 @@ a {
     width: 100%;
     padding: var(--space-3);
     border: 0;
-    border-radius: var(--radius-tile);
+    border-radius: var(--radius-none);
     background: none;
     box-shadow: inset 0 0 0 1px var(--hairline);
     color: var(--ink);
@@ -1924,15 +2014,18 @@ a {
     transition:
         opacity var(--aspis-base) ease,
         background-color var(--aspis-fast) ease,
+        box-shadow var(--aspis-fast) ease,
         transform var(--aspis-base) var(--aspis-ease);
 }
 
+/* A card lies on the plane: a hairline edge, silver under the pointer, and filled only while it is selected. */
 .aspis-tile:hover {
-    background: var(--ground-hover);
+    box-shadow: inset 0 0 0 1px var(--line-control);
 }
 
 .aspis-tile[aria-current] {
     background: var(--ground-selected);
+    box-shadow: inset 0 0 0 1px var(--ink-faint);
 }
 
 .aspis-tile:focus-visible {
@@ -1960,7 +2053,7 @@ a {
 
 .aspis-tile__note {
     font: var(--text-caption);
-    color: var(--sun);
+    color: var(--sun-ink);
 }
 
 .aspis-tile__meta {
@@ -2038,13 +2131,17 @@ a {
 .aspis-dialog[data-placement="side"] .aspis-dialog__box {
     width: min(760px, 94vw);
     height: 100%;
+    box-shadow:
+        inset 1px 0 0 var(--hairline),
+        inset 0 1px 0 var(--edge-light),
+        var(--shadow-dock);
     animation: aspis-slide var(--aspis-base) var(--aspis-ease);
 }
 
 .aspis-dialog[data-placement="center"] .aspis-dialog__box {
     width: 560px;
     max-width: 100%;
-    border-radius: var(--radius-tile);
+    border-radius: var(--radius-none);
     animation: aspis-rise var(--aspis-base) var(--aspis-ease);
 }
 
@@ -2085,7 +2182,7 @@ a {
     height: var(--size-control);
     padding: 0;
     border: 0;
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-none);
     background: none;
     color: var(--ink-muted);
     cursor: pointer;
@@ -2243,8 +2340,10 @@ a {
  */
 @media (forced-colors: active) {
     :focus-visible,
-    .aspis-field__input:focus-visible {
+    .aspis-field__input:focus-visible,
+    .aspis-field__control[data-kind="select"] .aspis-field__input:focus-visible {
         outline: 2px solid Highlight;
+        outline-offset: 2px;
     }
 
     .aspis-button,
@@ -2281,6 +2380,10 @@ a {
     .aspis-switch__track {
         border-color: ButtonText;
         background: Canvas;
+    }
+
+    .aspis-field__input {
+        border-bottom: 1px solid ButtonText;
     }
 
     .aspis-switch__thumb {

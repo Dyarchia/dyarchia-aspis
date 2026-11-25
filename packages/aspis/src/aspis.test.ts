@@ -93,7 +93,7 @@ describe("purity", () => {
     });
 
     test("structure reads only Synthic's tokens and the few Aspis adds", () => {
-        const known = new Set([...palettes.dark.keys(), ...shared.keys(), ...geometry.keys(), "--aspis-tone"]);
+        const known = new Set([...palettes.dark.keys(), ...shared.keys(), ...geometry.keys(), "--aspis-tone", "--aspis-tone-tile", "--aspis-tone-ink"]);
         expect([...all(base, /var\((--[a-z0-9-]+)/g)].filter((name) => !known.has(name))).toEqual([]);
     });
 
@@ -101,8 +101,12 @@ describe("purity", () => {
         expect(rules(base).flatMap((rule) => rule.selectors).filter((selector) => /data-theme="/.test(selector))).toEqual([]);
     });
 
+    /*
+     * Only controls of a fixed height may have a border, and only the button and the switch do: fields are an
+     * underline drawn as an inset shadow. Contrast themes give the field its border back, as shadows are dropped there.
+     */
     test("lines never take space: free-height boxes draw them as inset shadows", () => {
-        const fixed = /aspis-(button|field__input|switch__track)/;
+        const fixed = /aspis-(button|switch__track)|^\.aspis-field__input$/;
         const bordered = rules(base).filter((rule) => rule.declarations.some(([name, value]) => /^border(-(top|right|bottom|left))?$/.test(name) && /\d+px solid/.test(value) && !/transparent/.test(value)));
         expect(bordered.flatMap((rule) => rule.selectors).filter((selector) => !fixed.test(selector))).toEqual([]);
     });
@@ -133,14 +137,26 @@ const contrast = (front: Rgb, back: Rgb) => {
 describe.each(themes)("contrast in %s", (theme) => {
     const color = (token: string) => parseColor(palettes[theme].get(`--${token}`)!);
     const grounds = ["ground", "ground-raised", "ground-sunken", "ground-hover", "ground-selected"];
-    const text = ["ink", "ink-muted", "up", "down", "moss", "clay", "sky", "sun", "nebula", "tide"];
+    const hues = ["moss", "clay", "sky", "sun", "nebula", "tide"];
+    const text = ["ink", "ink-muted", "up", "down", ...hues.map((hue) => `${hue}-ink`)];
     const ratios = (fronts: string[], backs: string[]) => fronts.flatMap((front) => backs.map((back) => [`${front} on ${back}`, contrast(color(front), color(back))] as const));
 
     test("text reaches 4.5:1 on every surface", () => {
         expect(ratios(text, grounds).filter(([, ratio]) => ratio < 4.5)).toEqual([]);
         expect(ratios(["on-primary"], ["primary-fill"]).filter(([, ratio]) => ratio < 4.5)).toEqual([]);
         expect(ratios(["ink-inverse"], ["ink"]).filter(([, ratio]) => ratio < 4.5)).toEqual([]);
-        for (const hue of ["moss", "clay", "sky", "sun", "nebula", "tide"]) expect(ratios([hue], [`${hue}-tile`]).filter(([, ratio]) => ratio < 4.5)).toEqual([]);
+        for (const hue of hues) expect(ratios([`${hue}-ink`], [`${hue}-tile`]).filter(([, ratio]) => ratio < 4.5)).toEqual([]);
+    });
+
+    /* The vivid hues are glyphs, never text: an icon is read at 3:1, on the ground and on its own tint. */
+    test("glyphs in their hue reach 3:1 on the grounds and their tint", () => {
+        expect(ratios(hues, ["ground", "ground-raised"]).filter(([, ratio]) => ratio < 3)).toEqual([]);
+        for (const hue of hues) expect(ratios([hue], [`${hue}-tile`]).filter(([, ratio]) => ratio < 3)).toEqual([]);
+    });
+
+    test("text in a hue always takes its ink, never the vivid glyph colour", () => {
+        const painted = rules(base).filter((rule) => rule.declarations.some(([name, value]) => name === "color" && hues.some((hue) => value === `var(--${hue})`)));
+        expect(painted.flatMap((rule) => rule.selectors).filter((selector) => !/aspis-phase|__dot|__glyph/.test(selector))).toEqual([]);
     });
 
     /* A control's edge is read against what surrounds it, the ground or a floating surface, never its own well. */

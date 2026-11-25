@@ -37,7 +37,7 @@ function useColumns(ref: RefObject<HTMLElement | null>) {
 const inline = (text: string) =>
     text.split(/(`[^`]+`)/).map((part, index) =>
         part.startsWith("`") && part.endsWith("`") ? (
-            <code key={index} className="rounded-[var(--radius-control)] bg-[var(--ground-selected)] px-1.5 py-px [font:var(--text-data)] text-[var(--ink)]">
+            <code key={index} className="bg-[var(--ground-selected)] px-1.5 py-px [font:var(--text-data)] text-[var(--ink)]">
                 {part.slice(1, -1)}
             </code>
         ) : (

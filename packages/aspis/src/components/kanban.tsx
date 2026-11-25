@@ -11,12 +11,35 @@ export function Board({ children, label }: { children: ReactNode; label: string 
 
 export type DropState = "allowed" | "refused" | undefined;
 
+export type PhaseName = "triage" | "scheduled" | "ready" | "running" | "blocked" | "review" | "done" | "archived";
+
+const phaseIcons = {
+    triage: "phaseTriage",
+    scheduled: "phaseScheduled",
+    ready: "phaseReady",
+    running: "phaseRunning",
+    blocked: "phaseBlocked",
+    review: "phaseReview",
+    done: "phaseDone",
+    archived: "phaseArchived",
+} as const;
+
+/* A phase's glyph, in the spectrum colour Synthic gives that phase; Scheduled and Archived stay neutral. */
+export function PhaseGlyph({ phase }: { phase: PhaseName }) {
+    return (
+        <span className="aspis-phase" data-phase={phase}>
+            <Icon name={phaseIcons[phase]} />
+        </span>
+    );
+}
+
 /*
  * Folding swaps the head for a narrow strip and back. When that happens under the keyboard, focus follows to the
  * control that replaces the one just pressed instead of falling to the page.
  */
 export function Column({
     title,
+    phase,
     count,
     actions,
     drop,
@@ -27,6 +50,7 @@ export function Column({
     children,
 }: {
     title: string;
+    phase?: PhaseName;
     count: number;
     actions?: ReactNode;
     drop?: DropState;
@@ -51,12 +75,14 @@ export function Column({
         <section className="aspis-column" data-drop={drop} data-folded={folded || undefined} aria-label={title} onDragOver={onDragOver} onDrop={onDrop}>
             {folded ? (
                 <button ref={toggle} type="button" className="aspis-column__strip" aria-expanded="false" aria-label={`Show ${title} (${count})`} onClick={fold}>
+                    {phase && <PhaseGlyph phase={phase} />}
                     {count > 0 && <span className="aspis-column__count">{count}</span>}
                     <span className="aspis-column__title">{title}</span>
                 </button>
             ) : (
                 <>
                     <header className="aspis-column__head">
+                        {phase && <PhaseGlyph phase={phase} />}
                         <h2 className="aspis-column__title">{title}</h2>
                         {count > 0 && <span className="aspis-column__count">{count}</span>}
                         {(actions || onFold) && (

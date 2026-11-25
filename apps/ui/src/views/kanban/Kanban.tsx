@@ -187,6 +187,7 @@ export function Kanban({ server }: { server: ServerState }) {
                                 <Column
                                     key={phase}
                                     title={phaseLabels[phase]}
+                                    phase={phase}
                                     count={column.length}
                                     drop={dropState(phase)}
                                     folded={folded.has(phase)}

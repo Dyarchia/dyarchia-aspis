@@ -3,17 +3,18 @@ import { WebglAddon } from "@xterm/addon-webgl";
 import { type ITheme, Terminal as XTerm } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { useEffect, useRef } from "react";
-import { SynScreen, readPalette } from "./syn.ts";
+import type { Connection } from "../../server.ts";
 
 /*
- * The Synthic Space and Synthic Earth schemes from the design system's Windows Terminal settings, so the session
- * looks as syn will in the user's own terminal. The background is the ground: the TUI never paints its own.
+ * The Synthic Space and Synthic Earth schemes from the design system's Windows Terminal settings, so a session looks
+ * as it would in the user's own terminal and a TUI that leaves the background alone sits on the ground.
  */
 const schemes: Record<"dark" | "light", ITheme> = {
     dark: {
         background: "#141413",
         foreground: "#f3f1ec",
         cursor: "#f3f1ec",
+        cursorAccent: "#141413",
         selectionBackground: "#24241f",
         black: "#2b2a28",
         red: "#e2735a",
@@ -33,40 +34,41 @@ const schemes: Record<"dark" | "light", ITheme> = {
         brightWhite: "#f3f1ec",
     },
     light: {
-        background: "#f3f1ea",
-        foreground: "#1c1b18",
-        cursor: "#1c1b18",
-        selectionBackground: "#e4e0d5",
-        black: "#1c1b18",
-        red: "#a0472a",
-        green: "#2a6e2f",
-        yellow: "#7d570c",
-        blue: "#2361b0",
-        magenta: "#7449b0",
-        cyan: "#186a60",
-        white: "#dcd8cc",
-        brightBlack: "#5d5b54",
-        brightRed: "#833a22",
-        brightGreen: "#225a27",
-        brightYellow: "#67470a",
-        brightBlue: "#1d5090",
-        brightMagenta: "#5f3c90",
-        brightCyan: "#14574f",
-        brightWhite: "#fbfaf7",
+        background: "#e8e8e5",
+        foreground: "#141414",
+        cursor: "#141414",
+        cursorAccent: "#e8e8e5",
+        selectionBackground: "#d8d8d4",
+        black: "#141414",
+        red: "#7e2401",
+        green: "#035814",
+        yellow: "#624001",
+        blue: "#024884",
+        magenta: "#5d02a5",
+        cyan: "#01544d",
+        white: "#d6d6d2",
+        brightBlack: "#3d3d3b",
+        brightRed: "#ab3503",
+        brightGreen: "#03791f",
+        brightYellow: "#855904",
+        brightBlue: "#0364b4",
+        brightMagenta: "#8002df",
+        brightCyan: "#00736a",
+        brightWhite: "#f0f0ee",
     },
 };
 
 const theme = () => (document.documentElement.dataset.theme === "light" ? "light" : "dark");
 
 /*
- * One session: xterm.js fitted to its pane, running the syn mock. The terminal opens once Google Sans Code has
- * loaded, so cells are measured on the real font, and draws through WebGL, which paints box and block characters
- * itself and keeps every line on the cell grid (Windows Terminal's builtin glyphs do the same); without WebGL the DOM
- * renderer takes over. The mock repaints in
- * truecolor from the live tokens, so a theme switch recolours both the scheme and the TUI on the next frame. Under
- * reduced motion the screen only redraws when something changes.
+ * One session: xterm.js fitted to its pane and wired to the server's PTY over a WebSocket. Output arrives as raw bytes
+ * and is written as bytes, so a UTF-8 character split across two chunks is never mangled; keys go back as input and
+ * every refit tells the PTY the new size. The terminal opens once Google Sans Code has loaded, so cells are measured
+ * on the real font, and draws through WebGL, which paints box and block characters itself and keeps every line on
+ * the cell grid; without WebGL the DOM renderer takes over. Leaving the view only detaches: the shell keeps running
+ * and the server replays what it printed when the session is shown again.
  */
-export function Terminal({ project, label }: { project: string; label: string }) {
+export function Terminal({ conn, id, label }: { conn: Connection; id: string; label: string }) {
     const host = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -79,7 +81,7 @@ export function Terminal({ project, label }: { project: string; label: string })
             cancelled = true;
             stop();
         };
-    }, [project, label]);
+    }, [conn, id, label]);
 
     const start = () => {
         const terminal = new XTerm({
@@ -87,9 +89,9 @@ export function Terminal({ project, label }: { project: string; label: string })
             fontFamily: '"Google Sans Code Variable", "Google Sans Code", ui-monospace, monospace',
             fontSize: 13,
             lineHeight: 1,
-            cursorBlink: false,
-            allowProposedApi: false,
-            screenReaderMode: false,
+            cursorStyle: "bar",
+            cursorBlink: !matchMedia("(prefers-reduced-motion: reduce)").matches,
+            scrollback: 5000,
         });
         const fit = new FitAddon();
         terminal.loadAddon(fit);
@@ -100,37 +102,29 @@ export function Terminal({ project, label }: { project: string; label: string })
             terminal.loadAddon(webgl);
         } catch {}
         terminal.textarea?.setAttribute("aria-label", label);
-        const screen = new SynScreen(terminal.cols, terminal.rows, readPalette(), () => (theme() === "light" ? "contours" : "stars"), project);
-        const draw = () => terminal.write(screen.render());
+
+        const socket = new WebSocket(`${conn.base.replace(/^http/, "ws")}/terminals/${id}/ws?token=${encodeURIComponent(conn.token)}`);
+        socket.binaryType = "arraybuffer";
+        const send = (message: object) => socket.readyState === WebSocket.OPEN && socket.send(JSON.stringify(message));
+        const size = () => send({ type: "resize", cols: terminal.cols, rows: terminal.rows });
+        socket.onopen = size;
+        socket.onmessage = (event) => terminal.write(new Uint8Array(event.data as ArrayBuffer));
+        const typing = terminal.onData((data) => send({ type: "input", data }));
+        const resized = terminal.onResize(size);
         const refit = () => {
-            fit.fit();
-            screen.resize(terminal.cols, terminal.rows);
-            draw();
+            if (host.current?.offsetWidth) fit.fit();
         };
         refit();
-        const typing = terminal.onData((data) => {
-            screen.key(data);
-            draw();
-        });
         const sized = new ResizeObserver(refit);
         sized.observe(host.current!);
-        const themed = new MutationObserver(() => {
-            terminal.options.theme = schemes[theme()];
-            screen.repaint(readPalette());
-            draw();
-        });
+        const themed = new MutationObserver(() => (terminal.options.theme = schemes[theme()]));
         themed.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-        const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const timer = still
-            ? undefined
-            : setInterval(() => {
-                  screen.tick();
-                  draw();
-              }, 120);
         terminal.focus();
         return () => {
-            clearInterval(timer);
+            socket.onmessage = null;
+            socket.close();
             typing.dispose();
+            resized.dispose();
             sized.disconnect();
             themed.disconnect();
             terminal.dispose();

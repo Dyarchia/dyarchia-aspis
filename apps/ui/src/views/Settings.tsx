@@ -1,5 +1,8 @@
-import { Button, Chip, Dialog, GroupHeader, Switch } from "@dyarchia/aspis";
-import type { Theme } from "@dyarchia/core";
+import { Button, Chip, Dialog, GroupHeader, Select, Switch } from "@dyarchia/aspis";
+import { Console, ConsoleChoice } from "@dyarchia/core";
+import { useEffect, useState } from "react";
+import { z } from "zod";
+import { request } from "../server.ts";
 import { useAgents } from "../use-agents.ts";
 import type { ServerState } from "../use-server.ts";
 import type { UpdateState, Updates } from "../use-updates.ts";
@@ -33,7 +36,6 @@ export function Settings({
     onClose,
     server,
     updates,
-    onTheme,
     singleKeys,
     onSingleKeys,
     tutorial,
@@ -43,7 +45,6 @@ export function Settings({
     onClose: () => void;
     server: ServerState;
     updates: Updates;
-    onTheme: (theme: Theme) => void;
     singleKeys: boolean;
     onSingleKeys: (enabled: boolean) => void;
     tutorial: boolean;
@@ -51,7 +52,7 @@ export function Settings({
 }) {
     return (
         <Dialog open={open} onClose={onClose} title="Settings" placement="center">
-            {open && <SettingsBody server={server} updates={updates} onTheme={onTheme} singleKeys={singleKeys} onSingleKeys={onSingleKeys} tutorial={tutorial} onTutorial={onTutorial} />}
+            {open && <SettingsBody server={server} updates={updates} singleKeys={singleKeys} onSingleKeys={onSingleKeys} tutorial={tutorial} onTutorial={onTutorial} />}
         </Dialog>
     );
 }
@@ -59,7 +60,6 @@ export function Settings({
 function SettingsBody({
     server,
     updates,
-    onTheme,
     singleKeys,
     onSingleKeys,
     tutorial,
@@ -67,7 +67,6 @@ function SettingsBody({
 }: {
     server: ServerState;
     updates: Updates;
-    onTheme: (theme: Theme) => void;
     singleKeys: boolean;
     onSingleKeys: (enabled: boolean) => void;
     tutorial: boolean;
@@ -75,10 +74,22 @@ function SettingsBody({
 }) {
     const agents = useAgents(server);
     const status = updateStatus(updates.state);
+    const [consoles, setConsoles] = useState<ConsoleChoice[]>();
+
+    useEffect(() => {
+        if (server.conn) void request(server.conn, "/terminals/consoles", z.array(ConsoleChoice)).then(setConsoles, () => setConsoles([]));
+    }, [server.conn]);
 
     return (
         <>
-            <Switch off="Dark" label="Light" checked={server.settings.theme === "light"} onChange={(light) => onTheme(light ? "light" : "dark")} />
+            <Select
+                label="Console"
+                hint="Project sessions open in it"
+                options={(consoles ?? []).map((choice) => ({ value: choice.id, label: choice.label }))}
+                value={server.settings.console}
+                disabled={!consoles?.length}
+                onChange={(event) => void server.saveSettings({ console: Console.parse(event.target.value) })}
+            />
 
             <div className="flex items-center gap-[var(--space-3)]">
                 <span className="aspis-field__hint flex-1">{[server.health?.version ?? "…", status].filter(Boolean).join(" · ")}</span>

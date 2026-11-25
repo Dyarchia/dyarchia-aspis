@@ -55,15 +55,23 @@ const slug = (text: string) =>
 
 /*
  * The repositories the signed-in user can pick as a library: their own, those they collaborate on and those of
- * their organizations, most recently pushed first.
+ * their organizations, most recently pushed first, with the login a bare new name is created under. A listing that
+ * fails still answers with the login when it has one, so a new repository can be created all the same.
  */
-export async function listRepos(options: { gh?: string[]; exec?: Exec } = {}): Promise<string[]> {
-    const done = await (options.exec ?? run)([...(options.gh ?? ["gh"]), "api", "--paginate", "user/repos?per_page=100&sort=pushed&affiliation=owner,collaborator,organization_member", "--jq", ".[].full_name"]);
-    if (!done.ok) throw new LibraryError(`Could not list your repositories: ${done.err || done.out || "GitHub CLI failed"}`);
-    return done.out
+export async function listRepos(options: { gh?: string[]; exec?: Exec } = {}): Promise<{ login: string | null; repos: string[]; error: string | null }> {
+    const exec = options.exec ?? run;
+    const gh = options.gh ?? ["gh"];
+    const [user, listed] = await Promise.all([
+        exec([...gh, "api", "user", "--jq", ".login"]),
+        exec([...gh, "api", "--paginate", "user/repos?per_page=100&sort=pushed&affiliation=owner,collaborator,organization_member", "--jq", ".[].full_name"]),
+    ]);
+    const login = user.ok && user.out ? user.out : null;
+    if (!listed.ok) return { login, repos: [], error: `Could not list your repositories: ${listed.err || listed.out || "GitHub CLI failed"}` };
+    const repos = listed.out
         .split("\n")
         .map((line) => line.trim())
         .filter(Boolean);
+    return { login, repos, error: null };
 }
 
 /*

@@ -1,4 +1,4 @@
-import { AppShell, type Command, CommandPalette, type NavEntry, Status, Toaster, setSingleKeyHotkeys, useHotkeys, useToast } from "@dyarchia/aspis";
+import { AppShell, type Command, CommandPalette, IconButton, type NavEntry, Status, Toaster, setSingleKeyHotkeys, useHotkeys, useToast } from "@dyarchia/aspis";
 import type { Theme } from "@dyarchia/core";
 import { type KindId, kindIds, kinds } from "@dyarchia/library";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -12,7 +12,7 @@ import { Home } from "./views/Home.tsx";
 import { Build } from "./views/build/Build.tsx";
 import { type Selection, piecesOf, unpublished } from "./views/build/pieces.ts";
 import { Kanban } from "./views/kanban/Kanban.tsx";
-import { Projects, type Session } from "./views/projects/Projects.tsx";
+import { Projects } from "./views/projects/Projects.tsx";
 import { Settings } from "./views/Settings.tsx";
 
 const views = [
@@ -55,8 +55,7 @@ function Workspace() {
     const [creating, setCreating] = useState<KindId>();
     const [tree, setTree] = useState(readHint("build.tree") !== "closed");
     const [folders, setFolders] = useState(() => new Set((readHint("build.folders") ?? "skills").split(",").filter((id): id is KindId => kindIds.includes(id as KindId))));
-    const projects = useProjects(server);
-    const [sessions, setSessions] = useState<Session[]>([]);
+    const { projects, sessions, ...terminals } = useProjects(server);
     const [session, setSession] = useState<string>();
     const [projectTree, setProjectTree] = useState(readHint("projects.tree") !== "closed");
     const [projectFolders, setProjectFolders] = useState(() => new Set((readHint("projects.folders") ?? "").split(",").filter(Boolean)));
@@ -113,18 +112,15 @@ function Workspace() {
         setProjectFolders(next);
         writeHint("projects.folders", [...next].join(","));
     };
-    /* Sessions are numbered per project and never reuse a number while the app is open. */
-    const openSession = (board: number) => {
-        const taken = sessions.filter((entry) => entry.board === board).map((entry) => Number(entry.label.split(" ")[1]));
-        const label = `Session ${Math.max(0, ...taken) + 1}`;
-        const id = `${board}-${Date.now()}`;
-        setSessions([...sessions, { id, board, label }]);
-        setSession(id);
+    const openSession = async (board: number) => {
+        const opened = await terminals.open(board);
+        if (!opened) return;
+        setSession(opened.id);
         toggleProject(String(board), true);
         go("projects");
     };
     const closeSession = (id: string) => {
-        setSessions(sessions.filter((entry) => entry.id !== id));
+        void terminals.close(id);
         if (session === id) setSession(undefined);
     };
     const pieces = useMemo(() => piecesOf(library.files), [library.files]);
@@ -146,7 +142,7 @@ function Workspace() {
                 count: mine.length,
                 open: projectFolders.has(id),
                 onToggle: () => toggleProject(id),
-                add: { label: `New session in ${project.name}`, onAdd: () => openSession(project.id) },
+                add: { label: `New session in ${project.name}`, onAdd: () => void openSession(project.id) },
                 items: mine.map((entry) => ({
                     id: entry.id,
                     label: entry.label,
@@ -216,17 +212,18 @@ function Workspace() {
                 state={server.error ? "error" : server.live ? "live" : "connecting"}
                 status={<ServerStatus server={server} />}
                 links={[{ label: "Settings", icon: "settings", hotkey: "S", onClick: () => setSettings(true) }]}
+                corner={<IconButton icon="theme" label={`Use the ${otherTheme} theme`} hotkey="T" onClick={() => chooseTheme(otherTheme)} />}
             >
                 {view === "home" && <Home />}
                 {view === "kanban" && <Kanban server={server} />}
                 {view === "projects" && (
-                    <Projects projects={projects} sessions={sessions} current={session} onClose={closeSession} onRoot={() => setSession(undefined)} />
+                    <Projects conn={server.conn} projects={projects} sessions={sessions} current={session} onClose={closeSession} onRoot={() => setSession(undefined)} />
                 )}
                 {view === "build" && (
                     <Build library={library} selection={selection} onSelect={select} creating={creating} onCreated={() => setCreating(undefined)} tutorial={tutorial} />
                 )}
             </AppShell>
-            <Settings open={settings} onClose={() => setSettings(false)} server={server} updates={updates} onTheme={chooseTheme} singleKeys={singleKeys} onSingleKeys={chooseKeys} tutorial={tutorial} onTutorial={chooseTutorial} />
+            <Settings open={settings} onClose={() => setSettings(false)} server={server} updates={updates} singleKeys={singleKeys} onSingleKeys={chooseKeys} tutorial={tutorial} onTutorial={chooseTutorial} />
             <CommandPalette open={palette} onClose={() => setPalette(false)} commands={commands} />
         </>
     );

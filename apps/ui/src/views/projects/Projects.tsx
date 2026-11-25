@@ -1,24 +1,21 @@
 import { EmptyState, IconButton, Page } from "@dyarchia/aspis";
-import type { Board } from "@dyarchia/core";
+import type { Board, Terminal as Session } from "@dyarchia/core";
+import type { Connection } from "../../server.ts";
 import { Terminal } from "./Terminal.tsx";
 
-export interface Session {
-    id: string;
-    board: number;
-    label: string;
-}
-
 /*
- * Projects are the Kanban's project folders. A + on one opens a terminal session in it; sessions live while the app
- * is open and are listed under their project in the sidebar. The open session fills the pane.
+ * Projects are the Kanban's project folders. A + on one opens a terminal session in it, running the console chosen
+ * in Settings; sessions are listed under their project in the sidebar and the open one fills the pane.
  */
 export function Projects({
+    conn,
     projects,
     sessions,
     current,
     onClose,
     onRoot,
 }: {
+    conn?: Connection;
     projects: readonly Board[];
     sessions: readonly Session[];
     current?: string;
@@ -28,7 +25,7 @@ export function Projects({
     const session = sessions.find((entry) => entry.id === current);
     const project = projects.find((entry) => entry.id === session?.board);
 
-    if (!session || !project)
+    if (!conn || !session || !project)
         return (
             <Page title="Projects">
                 <EmptyState title={projects.length === 0 ? "Add a project from the Kanban first" : "Open a session with + on a project"} />
@@ -37,7 +34,7 @@ export function Projects({
 
     return (
         <Page title={session.label} crumbs={[{ label: "Projects", onClick: onRoot }, { label: project.name, onClick: onRoot }]} actions={<IconButton icon="close" label={`Close ${session.label}`} onClick={() => onClose(session.id)} />}>
-            <Terminal key={session.id} project={project.name} label={`${project.name} ${session.label}`} />
+            <Terminal key={session.id} conn={conn} id={session.id} label={`${project.name} ${session.label}`} />
         </Page>
     );
 }

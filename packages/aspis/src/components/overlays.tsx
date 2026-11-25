@@ -1,4 +1,4 @@
-import { type InputHTMLAttributes, type KeyboardEvent, type ReactNode, createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
+import { type ComponentPropsWithRef, type KeyboardEvent, type ReactNode, createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon, type IconName, Kbd, type Tone, VisuallyHidden } from "./primitives.tsx";
 
@@ -172,7 +172,7 @@ export const useToast = () => useContext(ToastContext);
  * The pieces of a floating menu (the sidebar head's, for one): a search line on top, one row per choice with the
  * current one checked, and a quiet line for a state that has no rows (loading, an error, nothing found).
  */
-export function MenuSearch({ label, ...rest }: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
+export function MenuSearch({ label, ...rest }: { label: string } & ComponentPropsWithRef<"input">) {
     return (
         <label className="aspis-menu__search">
             <Icon name="search" />

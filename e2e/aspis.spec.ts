@@ -79,7 +79,7 @@ for (const theme of themes) {
         await page.getByRole("button", { name: "Settings" }).click();
         await expect(settings(page)).toBeVisible();
         await page.mouse.move(0, 0);
-        await expect(page).toHaveScreenshot(`settings-${theme}.png`);
+        await expect(page).toHaveScreenshot(`settings-${theme}.png`, { mask: [settings(page).getByText(/alpha/)] });
         await accessible(page);
         await saysEverythingOnce(page);
     });
@@ -98,15 +98,14 @@ test("settings fits the smallest window, and Escape gives focus back to the gear
     await expect(gear).toBeFocused();
 });
 
-test("the theme is one switch in Settings", async ({ page }) => {
+test("the theme is one square button beside Settings, named after the theme it switches to", async ({ page }) => {
     await open(page, "dark");
-    await page.keyboard.press("s");
-    const light = settings(page).getByRole("switch", { name: "Light" });
-    await expect(light).toHaveAttribute("aria-checked", "false");
-    await light.click();
+    await page.getByRole("button", { name: "Use the light theme" }).click();
     await expect(page.locator('html[data-theme="light"]')).toBeAttached();
-    await light.click();
+    await page.getByRole("button", { name: "Use the dark theme" }).click();
     await expect(page.locator('html[data-theme="dark"]')).toBeAttached();
+    await page.keyboard.press("s");
+    await expect(settings(page).getByRole("switch", { name: "Light" })).toHaveCount(0);
 });
 
 for (const theme of themes) {
@@ -128,7 +127,7 @@ test("the palette stacks over a dialog, and Escape closes only the palette", asy
     const { id } = await (await page.request.post(`${api}/cards`, { headers, data: { title: "Palette over a panel", board: await project(page.request) } })).json();
     await open(page, "dark");
     await page.keyboard.press("k");
-    await page.getByRole("combobox", { name: "Board" }).selectOption({ label: "ivirma-crm" });
+    await page.getByRole("combobox", { name: "Board" }).selectOption({ label: "acme-crm" });
     const tile = page.getByRole("button", { name: "Palette over a panel" });
     await tile.click();
     const panel = page.getByRole("complementary", { name: `#${id} Palette over a panel` });
