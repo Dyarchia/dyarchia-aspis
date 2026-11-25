@@ -121,7 +121,12 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(update::PendingUpdate::default())
-        .setup(spawn_sidecar)
+        .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = frame::bare_caption(&window);
+            }
+            spawn_sidecar(app)
+        })
         .invoke_handler(tauri::generate_handler![server_info, open_link, frame::paint_frame, update::check_update, update::install_update])
         .build(tauri::generate_context!())
         .expect("failed to build the Aspis app")
