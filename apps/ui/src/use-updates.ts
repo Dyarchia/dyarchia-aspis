@@ -1,5 +1,5 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 
 const repo = "Dyarchia/dyarchia-aspis";
@@ -34,25 +34,22 @@ async function newestManifest() {
 const checkEvery = 6 * 60 * 60 * 1000;
 const recheck = 10 * 60 * 1000;
 
-export function useUpdates(onAvailable: (info: UpdateInfo) => void) {
+/*
+ * Once an update is found it stays offered until it is installed: a later check never hides it while it runs, and
+ * a check that fails (offline, rate limited) keeps the version already found instead of replacing it with an error.
+ */
+export function useUpdates() {
     const supported = isTauri();
     const [state, setState] = useState<UpdateState>(supported ? { kind: "idle" } : { kind: "unsupported" });
-    const notify = useRef(onAvailable);
-    notify.current = onAvailable;
-    const told = useRef<string | undefined>(undefined);
 
     const check = useCallback(async () => {
         if (!supported) return;
-        setState({ kind: "checking" });
+        setState((current) => (current.kind === "available" ? current : { kind: "checking" }));
         try {
             const info = UpdateInfo.nullable().parse(await invoke("check_update", { manifest: await newestManifest() }));
-            setState(info ? { kind: "available", info } : { kind: "current" });
-            if (info && info.version !== told.current) {
-                told.current = info.version;
-                notify.current(info);
-            }
+            setState((current) => (info ? { kind: "available", info } : current.kind === "available" ? current : { kind: "current" }));
         } catch (reason) {
-            setState({ kind: "error", message: String(reason) });
+            setState((current) => (current.kind === "available" ? current : { kind: "error", message: String(reason) }));
         }
     }, [supported]);
 
@@ -68,7 +65,7 @@ export function useUpdates(onAvailable: (info: UpdateInfo) => void) {
 
     /*
      * A release lands minutes after its merge, so the app looks again whenever the window comes back to the front, at
-     * most every ten minutes, besides once at start and every six hours; each version is announced once.
+     * most every ten minutes, besides once at start and every six hours.
      */
     useEffect(() => {
         if (!supported) return;
